@@ -16,6 +16,9 @@ NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]*[a-z0-9]$")
 RUNTIME_RE = re.compile(r"^\d+\.\d+\.\d+$")
 MEMORY_UNITS = {"Ki": 1024, "Mi": 1024**2, "Gi": 1024**3, "Ti": 1024**4}
 TRANSIENT_CONDITION_TYPES = {"Scaling"}
+VALID_DIGEST_ALGORITHMS = {"SHA-256", "SHA-384", "SHA-512"}
+VALID_ENCRYPTION_SOURCES = {"None", "Secret", "Service"}
+VALID_CLIENT_MODES = {"None", "Authenticate", "Validate"}
 
 
 # --- Output helpers ---
@@ -29,7 +32,7 @@ def make_error(field, type_, message):
 
 
 def error_out(errors):
-    print_json({"errors": errors})
+    print_json({"errors": sorted(errors, key=lambda e: (e["field"], e["type"]))})
 
 
 # --- Store ---
@@ -347,12 +350,161 @@ def validate_and_build(doc, is_update=False):
                     if cpu_req_val is not None:
                         cpu = {"limit": cpu_limit_str, "request": cpu_req_str}
 
-    # spec.access.authentication.enabled
+    # spec.access
     raw_access = spec.get("access")
-    raw_auth = raw_access.get("authentication") if isinstance(raw_access, dict) else None
+    has_access = isinstance(raw_access, dict)
+    raw_auth = raw_access.get("authentication") if has_access else None
+
     auth_enabled = True
     if isinstance(raw_auth, dict) and "enabled" in raw_auth:
         auth_enabled = raw_auth["enabled"]
+
+    # spec.access.authentication.digestAlgorithm
+    digest_algorithm = None
+    has_digest = isinstance(raw_auth, dict) and "digestAlgorithm" in raw_auth
+    if has_digest:
+        raw_digest = raw_auth["digestAlgorithm"]
+        if not auth_enabled:
+            errors.append(make_error(
+                "spec.access.authentication.digestAlgorithm", "forbidden",
+                "digestAlgorithm must be absent when authentication is disabled",
+            ))
+        elif raw_digest not in VALID_DIGEST_ALGORITHMS:
+            errors.append(make_error(
+                "spec.access.authentication.digestAlgorithm", "invalid",
+                "digestAlgorithm must be one of SHA-256, SHA-384, SHA-512",
+            ))
+        else:
+            digest_algorithm = raw_digest
+    elif auth_enabled:
+        digest_algorithm = "SHA-256"
+
+    # spec.access.credentialRef
+    credential_ref = None
+    has_credential_ref = has_access and "credentialRef" in raw_access
+    if has_credential_ref:
+        if not auth_enabled:
+            errors.append(make_error(
+                "spec.access.credentialRef", "forbidden",
+                "credentialRef must be absent when authentication is disabled",
+            ))
+        else:
+            credential_ref = raw_access["credentialRef"]
+
+    # spec.access.permissions
+    raw_permissions = raw_access.get("permissions") if has_access else None
+    permissions_enabled = False
+    if isinstance(raw_permissions, dict) and "enabled" in raw_permissions:
+        permissions_enabled = bool(raw_permissions["enabled"])
+
+    roles = None
+    if permissions_enabled:
+        raw_roles = raw_permissions.get("roles") if isinstance(raw_permissions, dict) else None
+        if not isinstance(raw_roles, list) or len(raw_roles) == 0:
+            errors.append(make_error(
+                "spec.access.permissions.roles", "required",
+                "roles is required and must not be empty when permissions are enabled",
+            ))
+        else:
+            seen_role_names = {}
+            for i, role in enumerate(raw_roles):
+                role_dict = role if isinstance(role, dict) else {}
+                role_name = role_dict.get("name")
+                role_perms = role_dict.get("permissions")
+                if not isinstance(role_name, str) or not role_name:
+                    errors.append(make_error(
+                        f"spec.access.permissions.roles[{i}].name", "required",
+                        "role name is required and must not be empty",
+                    ))
+                else:
+                    seen_role_names.setdefault(role_name, []).append(i)
+                if not isinstance(role_perms, list) or len(role_perms) == 0:
+                    errors.append(make_error(
+                        f"spec.access.permissions.roles[{i}].permissions", "required",
+                        "role permissions is required and must be a non-empty array",
+                    ))
+            for rname, indices in seen_role_names.items():
+                if len(indices) > 1:
+                    errors.append(make_error(
+                        "spec.access.permissions.roles", "duplicate",
+                        f"duplicate role name: {rname!r}",
+                    ))
+            roles = raw_roles
+
+    # spec.access.encryption
+    raw_encryption = raw_access.get("encryption") if has_access else None
+    has_encryption = isinstance(raw_encryption, dict)
+
+    enc_source = "None"
+    enc_client_mode = "None"
+    enc_cert_ref = None
+    enc_cert_service_ref = None
+
+    if has_encryption:
+        raw_source = raw_encryption.get("source", "None")
+        if raw_source not in VALID_ENCRYPTION_SOURCES:
+            errors.append(make_error(
+                "spec.access.encryption.source", "invalid",
+                "encryption.source must be one of None, Secret, Service",
+            ))
+        else:
+            enc_source = raw_source
+
+        raw_client_mode = raw_encryption.get("clientMode", "None")
+        if raw_client_mode not in VALID_CLIENT_MODES:
+            errors.append(make_error(
+                "spec.access.encryption.clientMode", "invalid",
+                "encryption.clientMode must be one of None, Authenticate, Validate",
+            ))
+        else:
+            enc_client_mode = raw_client_mode
+
+        if raw_source in VALID_ENCRYPTION_SOURCES:
+            has_cert_ref = "certRef" in raw_encryption
+            has_cert_service_ref = "certServiceRef" in raw_encryption
+
+            if raw_source == "Secret":
+                if not has_cert_ref:
+                    errors.append(make_error(
+                        "spec.access.encryption.certRef", "required",
+                        "certRef is required when encryption.source is 'Secret'",
+                    ))
+                else:
+                    enc_cert_ref = raw_encryption["certRef"]
+                if has_cert_service_ref:
+                    errors.append(make_error(
+                        "spec.access.encryption.certServiceRef", "forbidden",
+                        "certServiceRef must be absent when encryption.source is 'Secret'",
+                    ))
+            elif raw_source == "Service":
+                if not has_cert_service_ref:
+                    errors.append(make_error(
+                        "spec.access.encryption.certServiceRef", "required",
+                        "certServiceRef is required when encryption.source is 'Service'",
+                    ))
+                else:
+                    enc_cert_service_ref = raw_encryption["certServiceRef"]
+                if has_cert_ref:
+                    errors.append(make_error(
+                        "spec.access.encryption.certRef", "forbidden",
+                        "certRef must be absent when encryption.source is 'Service'",
+                    ))
+            else:  # raw_source == "None"
+                if has_cert_ref:
+                    errors.append(make_error(
+                        "spec.access.encryption.certRef", "forbidden",
+                        "certRef must be absent when encryption.source is 'None'",
+                    ))
+                if has_cert_service_ref:
+                    errors.append(make_error(
+                        "spec.access.encryption.certServiceRef", "forbidden",
+                        "certServiceRef must be absent when encryption.source is 'None'",
+                    ))
+                if raw_client_mode in VALID_CLIENT_MODES and raw_client_mode != "None":
+                    errors.append(make_error(
+                        "spec.access.encryption.clientMode", "invalid",
+                        "clientMode must be 'None' when encryption.source is 'None'",
+                    ))
 
     # spec.migration.strategy
     strategy = "FullStop"
@@ -432,10 +584,29 @@ def validate_and_build(doc, is_update=False):
     if errors:
         return None, errors
 
+    if auth_enabled:
+        auth_out = {"enabled": True, "digestAlgorithm": digest_algorithm}
+    else:
+        auth_out = {"enabled": False}
+
+    permissions_out = {"enabled": permissions_enabled}
+    if permissions_enabled and roles is not None:
+        permissions_out["roles"] = roles
+
+    encryption_out = {"source": enc_source, "clientMode": enc_client_mode}
+    if enc_source == "Secret":
+        encryption_out["certRef"] = enc_cert_ref
+    elif enc_source == "Service":
+        encryption_out["certServiceRef"] = enc_cert_service_ref
+
+    access_out = {"authentication": auth_out, "permissions": permissions_out, "encryption": encryption_out}
+    if credential_ref is not None:
+        access_out["credentialRef"] = credential_ref
+
     out_spec = {
         "instances": instances,
         "resources": {"memory": memory},
-        "access": {"authentication": {"enabled": auth_enabled}},
+        "access": access_out,
         "migration": {"strategy": strategy},
         "network": {
             "storage": storage,
