@@ -10,6 +10,7 @@ import tempfile
 import yaml
 
 STORE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "store.json")
+VAULT_STORE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "vault_store.json")
 
 NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]*[a-z0-9]$")
 RUNTIME_RE = re.compile(r"^\d+\.\d+\.\d+$")
@@ -47,6 +48,28 @@ def save_store(store):
         with os.fdopen(fd, "w") as f:
             json.dump(store, f)
         os.replace(tmp, STORE_PATH)
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+
+def load_vault_store():
+    if not os.path.exists(VAULT_STORE_PATH):
+        return {}
+    with open(VAULT_STORE_PATH) as f:
+        return json.load(f)
+
+
+def save_vault_store(store):
+    dir_ = os.path.dirname(VAULT_STORE_PATH)
+    fd, tmp = tempfile.mkstemp(dir=dir_)
+    try:
+        with os.fdopen(fd, "w") as f:
+            json.dump(store, f)
+        os.replace(tmp, VAULT_STORE_PATH)
     except Exception:
         try:
             os.unlink(tmp)
@@ -457,6 +480,103 @@ def check_immutable(stored_spec, merged_spec):
     return errors
 
 
+# --- Vault validation ---
+
+def validate_vault(doc, mesh_store=None):
+    errors = []
+
+    if "metadata" not in doc or "spec" not in doc:
+        return None, [make_error("", "parse", "document must have 'metadata' and 'spec' keys")]
+
+    metadata = doc["metadata"]
+    spec = doc["spec"]
+
+    if not isinstance(metadata, dict):
+        metadata = {}
+    if not isinstance(spec, dict):
+        spec = {}
+
+    # metadata.name
+    name = None
+    raw_name = metadata.get("name")
+    if raw_name is None or raw_name == "":
+        errors.append(make_error("metadata.name", "required", "name is required and must not be empty"))
+    elif not isinstance(raw_name, str):
+        errors.append(make_error("metadata.name", "required", "name must be a non-empty string"))
+    elif not NAME_RE.match(raw_name):
+        errors.append(make_error(
+            "metadata.name", "invalid",
+            "name must be lowercase alphanumeric with interior hyphens only, minimum 2 characters",
+        ))
+    else:
+        name = raw_name
+
+    # spec.meshRef
+    mesh_ref = None
+    raw_mesh_ref = spec.get("meshRef")
+    if raw_mesh_ref is None or raw_mesh_ref == "":
+        errors.append(make_error("spec.meshRef", "required", "meshRef is required"))
+    elif not isinstance(raw_mesh_ref, str):
+        errors.append(make_error("spec.meshRef", "required", "meshRef must be a non-empty string"))
+    else:
+        mesh_ref = raw_mesh_ref
+        if mesh_store is not None and mesh_ref not in mesh_store:
+            errors.append(make_error(
+                "spec.meshRef", "invalid",
+                f"mesh '{mesh_ref}' not found",
+            ))
+            mesh_ref = None
+
+    # spec.vaultName (default to metadata.name)
+    vault_name = spec.get("vaultName") or name
+
+    # spec.updatePolicy (default "retain")
+    update_policy = spec.get("updatePolicy")
+    if update_policy is None:
+        update_policy = "retain"
+    elif update_policy not in ("retain", "recreate"):
+        errors.append(make_error(
+            "spec.updatePolicy", "invalid",
+            f"updatePolicy must be 'retain' or 'recreate', got {update_policy!r}",
+        ))
+        update_policy = None
+
+    # template exclusivity
+    template = spec.get("template")
+    template_ref = spec.get("templateRef")
+    if template is not None and template_ref is not None:
+        errors.append(make_error(
+            "spec.template", "invalid",
+            "spec.template and spec.templateRef are mutually exclusive",
+        ))
+
+    if errors:
+        return None, errors
+
+    out_spec = {
+        "meshRef": mesh_ref,
+        "vaultName": vault_name,
+        "updatePolicy": update_policy,
+    }
+    if template is not None:
+        out_spec["template"] = template
+    if template_ref is not None:
+        out_spec["templateRef"] = template_ref
+
+    return {"metadata": {"name": name}, "spec": out_spec}, []
+
+
+# --- Vault status helper ---
+
+def build_vault_status(mesh):
+    stable = mesh.get("status", {}).get("stable", False)
+    ready_status = "True" if stable else "False"
+    return {
+        "state": "Ready" if stable else "Pending",
+        "conditions": [{"type": "Ready", "status": ready_status, "message": ""}],
+    }
+
+
 # --- Lifecycle helpers (tasks 4.1, 4.2) ---
 
 def detect_lifecycle(old_instances, new_instances, old_conditions):
@@ -577,6 +697,14 @@ def cmd_delete(args):
     if name not in store:
         error_out([make_error("metadata.name", "not_found", f"mesh '{name}' not found")])
         return
+    vault_store = load_vault_store()
+    dependent = sorted(v["metadata"]["name"] for v in vault_store.values() if v["spec"]["meshRef"] == name)
+    if dependent:
+        error_out([make_error(
+            "metadata.name", "conflict",
+            f"mesh '{name}' is referenced by vault(s): {', '.join(dependent)}",
+        )])
+        return
     del store[name]
     save_store(store)
     print_json({"message": f"mesh '{name}' deleted", "metadata": {"name": name}})
@@ -661,6 +789,130 @@ def cmd_update(args):  # tasks 3.3, 4.3
     print_json(format_resource_for_output(result))
 
 
+# --- Vault command handlers ---
+
+def vault_cmd_create(args):
+    doc, errs = load_yaml_file(args.file)
+    if errs:
+        error_out(errs)
+        return
+
+    mesh_store = load_store()
+    result, errs = validate_vault(doc, mesh_store)
+    if errs:
+        error_out(errs)
+        return
+
+    name = result["metadata"]["name"]
+    vault_store = load_vault_store()
+
+    if name in vault_store:
+        error_out([make_error("metadata.name", "duplicate", f"vault '{name}' already exists")])
+        return
+
+    mesh_ref = result["spec"]["meshRef"]
+    vault_name = result["spec"]["vaultName"]
+    for v in vault_store.values():
+        if v["spec"]["meshRef"] == mesh_ref and v["spec"]["vaultName"] == vault_name:
+            error_out([make_error(
+                "spec.vaultName", "duplicate",
+                f"vault identity '{mesh_ref}/{vault_name}' already exists",
+            )])
+            return
+
+    result["status"] = build_vault_status(mesh_store[mesh_ref])
+    vault_store[name] = result
+    save_vault_store(vault_store)
+    print_json(result)
+
+
+def vault_cmd_list(_args):
+    vault_store = load_vault_store()
+    items = sorted(
+        [{"name": v["metadata"]["name"], "status": {"state": v["status"]["state"]}} for v in vault_store.values()],
+        key=lambda x: x["name"],
+    )
+    print_json(items)
+
+
+def vault_cmd_describe(args):
+    vault_store = load_vault_store()
+    if args.name not in vault_store:
+        error_out([make_error("metadata.name", "not_found", f"vault '{args.name}' not found")])
+        return
+    print_json(vault_store[args.name])
+
+
+def vault_cmd_delete(args):
+    vault_store = load_vault_store()
+    name = args.name
+    if name not in vault_store:
+        error_out([make_error("metadata.name", "not_found", f"vault '{name}' not found")])
+        return
+    del vault_store[name]
+    save_vault_store(vault_store)
+    print_json({"message": f"vault '{name}' deleted", "metadata": {"name": name}})
+
+
+def vault_cmd_update(args):
+    doc, errs = load_yaml_file(args.file)
+    if errs:
+        error_out(errs)
+        return
+
+    if not isinstance(doc, dict) or "metadata" not in doc:
+        error_out([make_error("", "parse", "document must have 'metadata' and 'spec' keys")])
+        return
+
+    metadata = doc.get("metadata") or {}
+    if not isinstance(metadata, dict):
+        metadata = {}
+
+    raw_name = metadata.get("name")
+    if not raw_name:
+        error_out([make_error("metadata.name", "required", "name is required")])
+        return
+
+    vault_store = load_vault_store()
+    if raw_name not in vault_store:
+        error_out([make_error("metadata.name", "not_found", f"vault '{raw_name}' not found")])
+        return
+
+    stored = vault_store[raw_name]
+    update_spec = doc.get("spec") or {}
+    if not isinstance(update_spec, dict):
+        update_spec = {}
+
+    imm_errors = []
+    if "meshRef" in update_spec and update_spec["meshRef"] is not None and update_spec["meshRef"] != stored["spec"]["meshRef"]:
+        imm_errors.append(make_error(
+            "spec.meshRef", "immutable",
+            "field 'spec.meshRef' is immutable after creation",
+        ))
+    if "vaultName" in update_spec and update_spec["vaultName"] is not None and update_spec["vaultName"] != stored["spec"]["vaultName"]:
+        imm_errors.append(make_error(
+            "spec.vaultName", "immutable",
+            "field 'spec.vaultName' is immutable after creation",
+        ))
+    if imm_errors:
+        error_out(imm_errors)
+        return
+
+    merged_spec = deep_merge(stored["spec"], update_spec)
+    merged_doc = {"metadata": {"name": raw_name}, "spec": merged_spec}
+
+    mesh_store = load_store()
+    result, errs = validate_vault(merged_doc, mesh_store)
+    if errs:
+        error_out(errs)
+        return
+
+    result["status"] = build_vault_status(mesh_store[result["spec"]["meshRef"]])
+    vault_store[raw_name] = result
+    save_vault_store(vault_store)
+    print_json(result)
+
+
 # --- CLI entry point (tasks 5.1, 5.2) ---
 
 def main():
@@ -684,19 +936,50 @@ def main():
     update_p = mesh_sub.add_parser("update")
     update_p.add_argument("-f", dest="file", required=True)
 
+    vault_p = top_sub.add_parser("vault")
+    vault_sub = vault_p.add_subparsers(dest="operation")
+
+    vault_create_p = vault_sub.add_parser("create")
+    vault_create_p.add_argument("-f", dest="file", required=True)
+
+    vault_sub.add_parser("list")
+
+    vault_describe_p = vault_sub.add_parser("describe")
+    vault_describe_p.add_argument("name")
+
+    vault_delete_p = vault_sub.add_parser("delete")
+    vault_delete_p.add_argument("name")
+
+    vault_update_p = vault_sub.add_parser("update")
+    vault_update_p.add_argument("-f", dest="file", required=True)
+
     args = parser.parse_args()
 
-    if args.command != "mesh" or not args.operation:
+    if args.command == "mesh":
+        if not args.operation:
+            parser.print_usage(sys.stderr)
+            sys.exit(1)
+        {
+            "create": cmd_create,
+            "list": cmd_list,
+            "describe": cmd_describe,
+            "delete": cmd_delete,
+            "update": cmd_update,
+        }[args.operation](args)
+    elif args.command == "vault":
+        if not args.operation:
+            parser.print_usage(sys.stderr)
+            sys.exit(1)
+        {
+            "create": vault_cmd_create,
+            "list": vault_cmd_list,
+            "describe": vault_cmd_describe,
+            "delete": vault_cmd_delete,
+            "update": vault_cmd_update,
+        }[args.operation](args)
+    else:
         parser.print_usage(sys.stderr)
         sys.exit(1)
-
-    {
-        "create": cmd_create,
-        "list": cmd_list,
-        "describe": cmd_describe,
-        "delete": cmd_delete,
-        "update": cmd_update,
-    }[args.operation](args)
 
 
 if __name__ == "__main__":
