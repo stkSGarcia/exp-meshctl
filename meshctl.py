@@ -29,6 +29,14 @@ RUNTIME_CATALOG = {
 
 VALID_MIGRATION_STRATEGIES = {"FullStop", "LiveMigration", "RollingPatch"}
 
+VALID_EXPOSURE_TYPES = {"Gateway", "DirectPort", "Balancer"}
+EXPOSURE_ALLOWED_FIELDS = {
+    "Gateway": {"type", "hostname", "annotations"},
+    "DirectPort": {"type", "port", "directPort"},
+    "Balancer": {"type", "port"},
+}
+DEFAULT_EXPOSURE_PORT = 443
+
 MIGRATION_STAGES = {
     "FullStop": ["Migrate"],
     "RollingPatch": ["Migrate"],
@@ -184,6 +192,50 @@ def validate_runtime_catalog(version):
     return errors, warnings
 
 
+# --- Exposure validation and connection helpers ---
+
+def validate_exposure(spec, errors):
+    raw_exposure = spec.get("exposure")
+    if not isinstance(raw_exposure, dict):
+        return raw_exposure  # None or non-dict: no exposure
+    exp_type = raw_exposure.get("type")
+    if not exp_type:
+        errors.append(make_error("spec.exposure.type", "required", "exposure.type is required"))
+        return raw_exposure
+    if exp_type not in VALID_EXPOSURE_TYPES:
+        errors.append(make_error(
+            "spec.exposure.type", "invalid",
+            f"exposure.type must be one of Gateway, DirectPort, Balancer, got {exp_type!r}",
+        ))
+        return raw_exposure
+    allowed = EXPOSURE_ALLOWED_FIELDS[exp_type]
+    for field in raw_exposure:
+        if field not in allowed:
+            errors.append(make_error(
+                f"spec.exposure.{field}", "forbidden",
+                f"field 'spec.exposure.{field}' is not allowed for exposure type '{exp_type}'",
+            ))
+    return raw_exposure
+
+
+def compute_connection_details(name, exposure):
+    exp_type = exposure["type"]
+    if exp_type == "Gateway":
+        host = exposure.get("hostname") or f"{name}-gateway"
+        port = DEFAULT_EXPOSURE_PORT
+    elif exp_type == "DirectPort":
+        host = name
+        port = exposure.get("directPort") or DEFAULT_EXPOSURE_PORT
+    else:  # Balancer
+        host = f"{name}-external"
+        port = exposure.get("port") or DEFAULT_EXPOSURE_PORT
+    return {"host": host, "port": port, "protocol": "https"}
+
+
+def compute_management_connection_details(name):
+    return {"host": f"{name}-admin", "port": 9990, "protocol": "https"}
+
+
 # --- Stability helper ---
 
 def compute_stable(status):
@@ -245,12 +297,18 @@ def build_initial_status(instances):
 def format_resource_for_output(resource):
     """Apply output rules: storage format, hide desiredInstancesOnResume when running."""
     out = copy.deepcopy(resource)
+    name = out.get("metadata", {}).get("name", "")
     network = out.get("spec", {}).get("network")
     if network and "storage" in network:
         network["storage"] = format_storage(network["storage"])
     status = out.get("status", {})
     if status.get("state") != "Stopped":
         status.pop("desiredInstancesOnResume", None)
+    exposure = out.get("spec", {}).get("exposure")
+    if isinstance(exposure, dict) and exposure.get("type"):
+        status["connectionDetails"] = compute_connection_details(name, exposure)
+    if out.get("spec", {}).get("management", {}).get("enabled"):
+        status["managementConnectionDetails"] = compute_management_connection_details(name)
     return out
 
 
@@ -664,6 +722,17 @@ def validate_and_build(doc, is_update=False):
             ))
             rf = None
 
+    # spec.exposure
+    exposure_out = validate_exposure(spec, errors)
+
+    # spec.management.enabled
+    raw_management = spec.get("management")
+    management_enabled = False
+    if isinstance(raw_management, dict):
+        raw_mgmt_enabled = raw_management.get("enabled")
+        if raw_mgmt_enabled is not None:
+            management_enabled = bool(raw_mgmt_enabled)
+
     if errors:
         return None, errors, warnings
 
@@ -695,11 +764,14 @@ def validate_and_build(doc, is_update=False):
             "storage": storage,
             "replicationFactor": rf,
         },
+        "management": {"enabled": management_enabled},
     }
     if has_runtime:
         out_spec["runtime"] = runtime
     if has_cpu:
         out_spec["resources"]["cpu"] = cpu
+    if isinstance(exposure_out, dict):
+        out_spec["exposure"] = exposure_out
 
     return {"metadata": {"name": name}, "spec": out_spec}, [], warnings
 
@@ -723,13 +795,19 @@ def check_immutable(stored_spec, merged_spec):
     """Return immutable errors for fields that changed after creation."""
     errors = []
     stored_size = (stored_spec.get("network") or {}).get("storage", {}).get("size")
-    if stored_size is None:
-        return errors
-    merged_size = (merged_spec.get("network") or {}).get("storage", {}).get("size")
-    if merged_size != stored_size:
+    if stored_size is not None:
+        merged_size = (merged_spec.get("network") or {}).get("storage", {}).get("size")
+        if merged_size != stored_size:
+            errors.append(make_error(
+                "spec.network.storage.size", "immutable",
+                "field 'spec.network.storage.size' is immutable after creation",
+            ))
+    stored_mgmt = (stored_spec.get("management") or {}).get("enabled", False)
+    merged_mgmt = (merged_spec.get("management") or {}).get("enabled", False)
+    if merged_mgmt != stored_mgmt:
         errors.append(make_error(
-            "spec.network.storage.size", "immutable",
-            "field 'spec.network.storage.size' is immutable after creation",
+            "spec.management.enabled", "immutable",
+            "field 'spec.management.enabled' is immutable after creation",
         ))
     return errors
 
@@ -1179,6 +1257,23 @@ def cmd_migrate(args):
     store[name] = resource
     save_store(store)
     print_json(format_resource_for_output(resource))
+
+
+def cmd_shell(args):
+    store = load_store()
+    name = args.name
+    if name not in store:
+        error_out([make_error("metadata.name", "not_found", f"mesh '{name}' not found")])
+        return
+    mesh = store[name]
+    exposure = mesh.get("spec", {}).get("exposure")
+    if not isinstance(exposure, dict) or not exposure.get("type"):
+        error_out([make_error(
+            "spec.exposure", "invalid",
+            f"mesh '{name}' has no exposure configured",
+        )])
+        return
+    print_json(compute_connection_details(name, exposure))
 
 
 # --- Vault command handlers ---
@@ -2043,6 +2138,9 @@ def main():
     migrate_p.add_argument("name")
     migrate_p.add_argument("--rollback", action="store_true", default=False)
 
+    shell_p = mesh_sub.add_parser("shell")
+    shell_p.add_argument("name")
+
     vault_p = top_sub.add_parser("vault")
     vault_sub = vault_p.add_subparsers(dest="operation")
 
@@ -2115,6 +2213,7 @@ def main():
             "delete": cmd_delete,
             "update": cmd_update,
             "migrate": cmd_migrate,
+            "shell": cmd_shell,
         }[args.operation](args)
     elif args.command == "vault":
         if not args.operation:
