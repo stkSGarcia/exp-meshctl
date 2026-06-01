@@ -1,0 +1,2037 @@
+{
+  "created": 1780341977.6812956,
+  "duration": 15.71806526184082,
+  "exitcode": 1,
+  "root": "/workspace",
+  "environment": {},
+  "summary": {
+    "passed": 14,
+    "failed": 28,
+    "total": 42,
+    "collected": 42
+  },
+  "collectors": [
+    {
+      "nodeid": "",
+      "outcome": "passed",
+      "result": [
+        {
+          "nodeid": ".evaluation_tests",
+          "type": "Dir"
+        }
+      ]
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py",
+      "outcome": "passed",
+      "result": [
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_gateway_with_hostname",
+          "type": "Function",
+          "lineno": 18
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_directport_exposure",
+          "type": "Function",
+          "lineno": 45
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_shell_command",
+          "type": "Function",
+          "lineno": 65
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_balancer_forbidden_fields",
+          "type": "Function",
+          "lineno": 94
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_management_immutable",
+          "type": "Function",
+          "lineno": 118
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_shell_no_exposure",
+          "type": "Function",
+          "lineno": 141
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_exposure_type_required",
+          "type": "Function",
+          "lineno": 155
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_forbidden_exposure_combos[gateway-directport]",
+          "type": "Function",
+          "lineno": 172
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_forbidden_exposure_combos[balancer-annotations]",
+          "type": "Function",
+          "lineno": 172
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_gateway_default_host",
+          "type": "Function",
+          "lineno": 212
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_balancer_conn_details",
+          "type": "Function",
+          "lineno": 230
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_balancer_default_port",
+          "type": "Function",
+          "lineno": 244
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_add_exposure_on_update_populates_connection_details",
+          "type": "Function",
+          "lineno": 261
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_directport_fallback_chain",
+          "type": "Function",
+          "lineno": 289
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_gateway_annotations_roundtrip",
+          "type": "Function",
+          "lineno": 307
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_no_exposure_no_conn",
+          "type": "Function",
+          "lineno": 327
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_mgmt_enabled_details",
+          "type": "Function",
+          "lineno": 334
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_describe_conn_details",
+          "type": "Function",
+          "lineno": 349
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_mgmt_disabled_no_details",
+          "type": "Function",
+          "lineno": 372
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_mgmt_immutable_from_false",
+          "type": "Function",
+          "lineno": 386
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_exposure_mode_change_on_update_revalidates_merged_state",
+          "type": "Function",
+          "lineno": 405
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_shell_mesh_not_found",
+          "type": "Function",
+          "lineno": 438
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_exposure_forbidden_field[gateway-port]",
+          "type": "Function",
+          "lineno": 449
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_exposure_forbidden_field[directport-hostname]",
+          "type": "Function",
+          "lineno": 449
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_exposure_forbidden_field[directport-annotations]",
+          "type": "Function",
+          "lineno": 449
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_invalid_exposure_type",
+          "type": "Function",
+          "lineno": 483
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_exposure_type_null_empty_required[null]",
+          "type": "Function",
+          "lineno": 498
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_exposure_type_null_empty_required[empty]",
+          "type": "Function",
+          "lineno": 498
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_forbidden_field_identifies",
+          "type": "Function",
+          "lineno": 520
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_mgmt_immutable_exact_message",
+          "type": "Function",
+          "lineno": 547
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_error_sort_order",
+          "type": "Function",
+          "lineno": 566
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_shell_output_no_status_key",
+          "type": "Function",
+          "lineno": 588
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_shell_no_exposure_message_includes_name",
+          "type": "Function",
+          "lineno": 601
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_shell_directport_equals_conn_details",
+          "type": "Function",
+          "lineno": 614
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_invalid_exposure_type_error_shape",
+          "type": "Function",
+          "lineno": 628
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_exposure_empty_object",
+          "type": "Function",
+          "lineno": 645
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_gateway_hostname_no_annotations_key",
+          "type": "Function",
+          "lineno": 662
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_regression_migration_lifecycle",
+          "type": "Function",
+          "lineno": 678
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_regression_vault_readiness_tracks_mesh_stability",
+          "type": "Function",
+          "lineno": 699
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_regression_create_defaults_and_conditions",
+          "type": "Function",
+          "lineno": 726
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_regression_error_accumulation_and_sort_order",
+          "type": "Function",
+          "lineno": 743
+        },
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_regression_snapshot_delete_protection",
+          "type": "Function",
+          "lineno": 765
+        }
+      ]
+    },
+    {
+      "nodeid": ".evaluation_tests",
+      "outcome": "passed",
+      "result": [
+        {
+          "nodeid": ".evaluation_tests/test_checkpoint_7.py",
+          "type": "Module"
+        }
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_gateway_with_hostname",
+      "lineno": 18,
+      "outcome": "passed",
+      "keywords": [
+        "test_gateway_with_hostname",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.004002572008175775,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.3570595589990262,
+        "outcome": "passed"
+      },
+      "teardown": {
+        "duration": 0.00017758501053322107,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_directport_exposure",
+      "lineno": 45,
+      "outcome": "passed",
+      "keywords": [
+        "test_directport_exposure",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0013860190083505586,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.17798083699017297,
+        "outcome": "passed"
+      },
+      "teardown": {
+        "duration": 0.00016565500118304044,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_shell_command",
+      "lineno": 65,
+      "outcome": "passed",
+      "keywords": [
+        "test_shell_command",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0015224670059978962,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.326598687999649,
+        "outcome": "passed"
+      },
+      "teardown": {
+        "duration": 0.00019271600467618555,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_balancer_forbidden_fields",
+      "lineno": 94,
+      "outcome": "failed",
+      "keywords": [
+        "test_balancer_forbidden_fields",
+        "error",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0016276670066872612,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.16602008300833404,
+        "outcome": "failed",
+        "crash": {
+          "path": "/workspace/.evaluation_tests/conftest.py",
+          "lineno": 287,
+          "message": "AssertionError: Expected exit code 1, got 0.\n  stdout:\n  {\"errors\": [{\"field\": \"spec.exposure.directPort\", \"type\": \"forbidden\", \"message\": \"field 'spec.exposure.directPort' is not allowed for exposure type 'Balancer'\"}, {\"field\": \"spec.exposure.hostname\", \"type\": \"forbidden\", \"message\": \"field 'spec.exposure.hostname' is not allowed for exposure type 'Balancer'\"}]}\n  \n  stderr:\n  \nassert 0 == 1\n +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.directPort\", \"type\": \"forbidden\", \"message\": \"field \\'spec.exposure.directPort\\' is not allowed for exposure type \\'Balancer\\'\"}, {\"field\": \"spec.exposure.hostname\", \"type\": \"forbidden\", \"message\": \"field \\'spec.exposure.hostname\\' is not allowed for exposure type \\'Balancer\\'\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.directPort', 'type': 'forbidden', 'message': \"field 'spec.exposure.directPort' is not allowed for exposure type 'Balancer'\"}, {'field': 'spec.exposure.hostname', 'type': 'forbidden', 'message': \"field 'spec.exposure.hostname' is not allowed for exposure type 'Balancer'\"}]}).returncode"
+        },
+        "traceback": [
+          {
+            "path": ".evaluation_tests/test_checkpoint_7.py",
+            "lineno": 112,
+            "message": ""
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 298,
+            "message": "in assert_error"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 287,
+            "message": "AssertionError"
+          }
+        ],
+        "longrepr": "run_cli = <function run_cli.<locals>._run at 0x774bd23c8360>\n\n    @pytest.mark.error\n    def test_balancer_forbidden_fields(run_cli) -> None:\n        \"\"\"Balancer exposure rejects `spec.exposure.directPort` and `spec.exposure.hostname` as forbidden.\"\"\"\n        result = run_cli(\n            [\"mesh\", \"create\"],\n            input_yaml={\n                \"metadata\": {\"name\": \"bad-mesh\"},\n                \"spec\": {\n                    \"instances\": 2,\n                    \"exposure\": {\n                        \"type\": \"Balancer\",\n                        \"directPort\": 8080,\n                        \"hostname\": \"bad-mesh.example.com\",\n                    },\n                },\n            },\n        )\n>       assert_error(result)\n\n.evaluation_tests/test_checkpoint_7.py:112: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.evaluation_tests/conftest.py:298: in assert_error\n    assert_exit_code(result, 1)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nresult = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.directPort\", \"type\": \"forbidden\", \"message\": \"field \\'spec.expo...name', 'type': 'forbidden', 'message': \"field 'spec.exposure.hostname' is not allowed for exposure type 'Balancer'\"}]})\nexpected = 1\n\n    def assert_exit_code(result: CLIResult, expected: int) -> None:\n>       assert result.returncode == expected, (\n            f\"Expected exit code {expected}, got {result.returncode}.\\n\"\n            f\"stdout:\\n{result.stdout}\\nstderr:\\n{result.stderr}\"\n        )\nE       AssertionError: Expected exit code 1, got 0.\nE         stdout:\nE         {\"errors\": [{\"field\": \"spec.exposure.directPort\", \"type\": \"forbidden\", \"message\": \"field 'spec.exposure.directPort' is not allowed for exposure type 'Balancer'\"}, {\"field\": \"spec.exposure.hostname\", \"type\": \"forbidden\", \"message\": \"field 'spec.exposure.hostname' is not allowed for exposure type 'Balancer'\"}]}\nE         \nE         stderr:\nE         \nE       assert 0 == 1\nE        +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.directPort\", \"type\": \"forbidden\", \"message\": \"field \\'spec.exposure.directPort\\' is not allowed for exposure type \\'Balancer\\'\"}, {\"field\": \"spec.exposure.hostname\", \"type\": \"forbidden\", \"message\": \"field \\'spec.exposure.hostname\\' is not allowed for exposure type \\'Balancer\\'\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.directPort', 'type': 'forbidden', 'message': \"field 'spec.exposure.directPort' is not allowed for exposure type 'Balancer'\"}, {'field': 'spec.exposure.hostname', 'type': 'forbidden', 'message': \"field 'spec.exposure.hostname' is not allowed for exposure type 'Balancer'\"}]}).returncode\n\n.evaluation_tests/conftest.py:287: AssertionError"
+      },
+      "teardown": {
+        "duration": 0.00018827299936674535,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_management_immutable",
+      "lineno": 118,
+      "outcome": "failed",
+      "keywords": [
+        "test_management_immutable",
+        "error",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0015470679936697707,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.335007975998451,
+        "outcome": "failed",
+        "crash": {
+          "path": "/workspace/.evaluation_tests/conftest.py",
+          "lineno": 287,
+          "message": "AssertionError: Expected exit code 1, got 0.\n  stdout:\n  {\"errors\": [{\"field\": \"spec.management.enabled\", \"type\": \"immutable\", \"message\": \"field 'spec.management.enabled' is immutable after creation\"}]}\n  \n  stderr:\n  \nassert 0 == 1\n +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.management.enabled\", \"type\": \"immutable\", \"message\": \"field \\'spec.management.enabled\\' is immutable after creation\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.management.enabled', 'type': 'immutable', 'message': \"field 'spec.management.enabled' is immutable after creation\"}]}).returncode"
+        },
+        "traceback": [
+          {
+            "path": ".evaluation_tests/test_checkpoint_7.py",
+            "lineno": 135,
+            "message": ""
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 323,
+            "message": "in assert_error_contains"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 298,
+            "message": "in assert_error"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 287,
+            "message": "AssertionError"
+          }
+        ],
+        "longrepr": "run_cli = <function run_cli.<locals>._run at 0x774bd23c8e00>\n\n    @pytest.mark.error\n    def test_management_immutable(run_cli) -> None:\n        \"\"\"Updating `spec.management.enabled` from true to false is immutable after create.\"\"\"\n        create_mesh(\n            run_cli,\n            \"my-mesh\",\n            spec={\"management\": {\"enabled\": True}},\n        )\n    \n        result = run_cli(\n            [\"mesh\", \"update\"],\n            input_yaml={\n                \"metadata\": {\"name\": \"my-mesh\"},\n                \"spec\": {\"management\": {\"enabled\": False}},\n            },\n        )\n>       assert_error_contains(\n            result,\n            field=\"spec.management.enabled\",\n            error_type=\"immutable\",\n        )\n\n.evaluation_tests/test_checkpoint_7.py:135: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.evaluation_tests/conftest.py:323: in assert_error_contains\n    assert_error(result)\n.evaluation_tests/conftest.py:298: in assert_error\n    assert_exit_code(result, 1)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nresult = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.management.enabled\", \"type\": \"immutable\", \"message\": \"field \\'spec.manag....management.enabled', 'type': 'immutable', 'message': \"field 'spec.management.enabled' is immutable after creation\"}]})\nexpected = 1\n\n    def assert_exit_code(result: CLIResult, expected: int) -> None:\n>       assert result.returncode == expected, (\n            f\"Expected exit code {expected}, got {result.returncode}.\\n\"\n            f\"stdout:\\n{result.stdout}\\nstderr:\\n{result.stderr}\"\n        )\nE       AssertionError: Expected exit code 1, got 0.\nE         stdout:\nE         {\"errors\": [{\"field\": \"spec.management.enabled\", \"type\": \"immutable\", \"message\": \"field 'spec.management.enabled' is immutable after creation\"}]}\nE         \nE         stderr:\nE         \nE       assert 0 == 1\nE        +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.management.enabled\", \"type\": \"immutable\", \"message\": \"field \\'spec.management.enabled\\' is immutable after creation\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.management.enabled', 'type': 'immutable', 'message': \"field 'spec.management.enabled' is immutable after creation\"}]}).returncode\n\n.evaluation_tests/conftest.py:287: AssertionError"
+      },
+      "teardown": {
+        "duration": 0.00029131500923540443,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_shell_no_exposure",
+      "lineno": 141,
+      "outcome": "failed",
+      "keywords": [
+        "test_shell_no_exposure",
+        "error",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.001787992994650267,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.4131289890065091,
+        "outcome": "failed",
+        "crash": {
+          "path": "/workspace/.evaluation_tests/conftest.py",
+          "lineno": 287,
+          "message": "AssertionError: Expected exit code 1, got 0.\n  stdout:\n  {\"errors\": [{\"field\": \"metadata.name\", \"type\": \"not_found\", \"message\": \"mesh 'no-exposure-mesh' not found\"}]}\n  \n  stderr:\n  \nassert 0 == 1\n +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"metadata.name\", \"type\": \"not_found\", \"message\": \"mesh \\'no-exposure-mesh\\' not found\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'metadata.name', 'type': 'not_found', 'message': \"mesh 'no-exposure-mesh' not found\"}]}).returncode"
+        },
+        "traceback": [
+          {
+            "path": ".evaluation_tests/test_checkpoint_7.py",
+            "lineno": 148,
+            "message": ""
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 323,
+            "message": "in assert_error_contains"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 298,
+            "message": "in assert_error"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 287,
+            "message": "AssertionError"
+          }
+        ],
+        "longrepr": "run_cli = <function run_cli.<locals>._run at 0x774bd23c9120>\n\n    @pytest.mark.error\n    def test_shell_no_exposure(run_cli) -> None:\n        \"\"\"`mesh shell` is invalid for meshes without `spec.exposure`.\"\"\"\n        create_mesh(run_cli, \"no-exposure-mesh\")\n    \n        result = run_cli([\"mesh\", \"shell\", \"no-exposure-mesh\"])\n>       assert_error_contains(\n            result,\n            field=\"spec.exposure\",\n            error_type=\"invalid\",\n            message_contains=\"no exposure configured\",\n        )\n\n.evaluation_tests/test_checkpoint_7.py:148: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.evaluation_tests/conftest.py:323: in assert_error_contains\n    assert_error(result)\n.evaluation_tests/conftest.py:298: in assert_error\n    assert_exit_code(result, 1)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nresult = CLIResult(stdout='{\"errors\": [{\"field\": \"metadata.name\", \"type\": \"not_found\", \"message\": \"mesh \\'no-exposure-mesh\\' no...=0, json={'errors': [{'field': 'metadata.name', 'type': 'not_found', 'message': \"mesh 'no-exposure-mesh' not found\"}]})\nexpected = 1\n\n    def assert_exit_code(result: CLIResult, expected: int) -> None:\n>       assert result.returncode == expected, (\n            f\"Expected exit code {expected}, got {result.returncode}.\\n\"\n            f\"stdout:\\n{result.stdout}\\nstderr:\\n{result.stderr}\"\n        )\nE       AssertionError: Expected exit code 1, got 0.\nE         stdout:\nE         {\"errors\": [{\"field\": \"metadata.name\", \"type\": \"not_found\", \"message\": \"mesh 'no-exposure-mesh' not found\"}]}\nE         \nE         stderr:\nE         \nE       assert 0 == 1\nE        +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"metadata.name\", \"type\": \"not_found\", \"message\": \"mesh \\'no-exposure-mesh\\' not found\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'metadata.name', 'type': 'not_found', 'message': \"mesh 'no-exposure-mesh' not found\"}]}).returncode\n\n.evaluation_tests/conftest.py:287: AssertionError"
+      },
+      "teardown": {
+        "duration": 0.0009824720036704093,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_exposure_type_required",
+      "lineno": 155,
+      "outcome": "failed",
+      "keywords": [
+        "test_exposure_type_required",
+        "error",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0026715339918155223,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.294160584002384,
+        "outcome": "failed",
+        "crash": {
+          "path": "/workspace/.evaluation_tests/conftest.py",
+          "lineno": 287,
+          "message": "AssertionError: Expected exit code 1, got 0.\n  stdout:\n  {\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"required\", \"message\": \"exposure.type is required\"}]}\n  \n  stderr:\n  \nassert 0 == 1\n +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"required\", \"message\": \"exposure.type is required\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.type', 'type': 'required', 'message': 'exposure.type is required'}]}).returncode"
+        },
+        "traceback": [
+          {
+            "path": ".evaluation_tests/test_checkpoint_7.py",
+            "lineno": 166,
+            "message": ""
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 323,
+            "message": "in assert_error_contains"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 298,
+            "message": "in assert_error"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 287,
+            "message": "AssertionError"
+          }
+        ],
+        "longrepr": "run_cli = <function run_cli.<locals>._run at 0x774bd23c9620>\n\n    @pytest.mark.error\n    def test_exposure_type_required(run_cli) -> None:\n        \"\"\"Creating with `spec.exposure` but no `spec.exposure.type` returns required error.\"\"\"\n        result = run_cli(\n            [\"mesh\", \"create\"],\n            input_yaml={\n                \"metadata\": {\"name\": \"my-mesh\"},\n                \"spec\": {\"exposure\": {\"port\": 8080}},\n            },\n        )\n>       assert_error_contains(\n            result,\n            field=\"spec.exposure.type\",\n            error_type=\"required\",\n        )\n\n.evaluation_tests/test_checkpoint_7.py:166: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.evaluation_tests/conftest.py:323: in assert_error_contains\n    assert_error(result)\n.evaluation_tests/conftest.py:298: in assert_error\n    assert_exit_code(result, 1)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nresult = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"required\", \"message\": \"exposure.type is require...code=0, json={'errors': [{'field': 'spec.exposure.type', 'type': 'required', 'message': 'exposure.type is required'}]})\nexpected = 1\n\n    def assert_exit_code(result: CLIResult, expected: int) -> None:\n>       assert result.returncode == expected, (\n            f\"Expected exit code {expected}, got {result.returncode}.\\n\"\n            f\"stdout:\\n{result.stdout}\\nstderr:\\n{result.stderr}\"\n        )\nE       AssertionError: Expected exit code 1, got 0.\nE         stdout:\nE         {\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"required\", \"message\": \"exposure.type is required\"}]}\nE         \nE         stderr:\nE         \nE       assert 0 == 1\nE        +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"required\", \"message\": \"exposure.type is required\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.type', 'type': 'required', 'message': 'exposure.type is required'}]}).returncode\n\n.evaluation_tests/conftest.py:287: AssertionError"
+      },
+      "teardown": {
+        "duration": 0.0002800740039674565,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_forbidden_exposure_combos[gateway-directport]",
+      "lineno": 172,
+      "outcome": "failed",
+      "keywords": [
+        "test_forbidden_exposure_combos[gateway-directport]",
+        "parametrize",
+        "error",
+        "pytestmark",
+        "gateway-directport",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0028971419960726053,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.3052969770069467,
+        "outcome": "failed",
+        "crash": {
+          "path": "/workspace/.evaluation_tests/conftest.py",
+          "lineno": 287,
+          "message": "AssertionError: Expected exit code 1, got 0.\n  stdout:\n  {\"errors\": [{\"field\": \"spec.exposure.directPort\", \"type\": \"forbidden\", \"message\": \"field 'spec.exposure.directPort' is not allowed for exposure type 'Gateway'\"}]}\n  \n  stderr:\n  \nassert 0 == 1\n +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.directPort\", \"type\": \"forbidden\", \"message\": \"field \\'spec.exposure.directPort\\' is not allowed for exposure type \\'Gateway\\'\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.directPort', 'type': 'forbidden', 'message': \"field 'spec.exposure.directPort' is not allowed for exposure type 'Gateway'\"}]}).returncode"
+        },
+        "traceback": [
+          {
+            "path": ".evaluation_tests/test_checkpoint_7.py",
+            "lineno": 201,
+            "message": ""
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 323,
+            "message": "in assert_error_contains"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 298,
+            "message": "in assert_error"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 287,
+            "message": "AssertionError"
+          }
+        ],
+        "longrepr": "run_cli = <function run_cli.<locals>._run at 0x774bd23c99e0>, name = 'gw-mesh'\nexposure = {'directPort': 30100, 'type': 'Gateway'}\nfield = 'spec.exposure.directPort'\n\n    @pytest.mark.error\n    @pytest.mark.parametrize(\n        \"name,exposure,field\",\n        [\n            (\n                \"gw-mesh\",\n                {\"type\": \"Gateway\", \"directPort\": 30100},\n                \"spec.exposure.directPort\",\n            ),\n            (\n                \"bal-mesh\",\n                {\"type\": \"Balancer\", \"annotations\": {\"k\": \"v\"}},\n                \"spec.exposure.annotations\",\n            ),\n        ],\n        ids=[\"gateway-directport\", \"balancer-annotations\"],\n    )\n    def test_forbidden_exposure_combos(\n        run_cli, name: str, exposure: dict[str, object], field: str\n    ) -> None:\n        \"\"\"Each exposure mode rejects fields that do not belong to its allowed schema.\"\"\"\n        result = run_cli(\n            [\"mesh\", \"create\"],\n            input_yaml={\n                \"metadata\": {\"name\": name},\n                \"spec\": {\"exposure\": exposure},\n            },\n        )\n>       assert_error_contains(\n            result,\n            field=field,\n            error_type=\"forbidden\",\n        )\n\n.evaluation_tests/test_checkpoint_7.py:201: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.evaluation_tests/conftest.py:323: in assert_error_contains\n    assert_error(result)\n.evaluation_tests/conftest.py:298: in assert_error\n    assert_exit_code(result, 1)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nresult = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.directPort\", \"type\": \"forbidden\", \"message\": \"field \\'spec.expo...ort', 'type': 'forbidden', 'message': \"field 'spec.exposure.directPort' is not allowed for exposure type 'Gateway'\"}]})\nexpected = 1\n\n    def assert_exit_code(result: CLIResult, expected: int) -> None:\n>       assert result.returncode == expected, (\n            f\"Expected exit code {expected}, got {result.returncode}.\\n\"\n            f\"stdout:\\n{result.stdout}\\nstderr:\\n{result.stderr}\"\n        )\nE       AssertionError: Expected exit code 1, got 0.\nE         stdout:\nE         {\"errors\": [{\"field\": \"spec.exposure.directPort\", \"type\": \"forbidden\", \"message\": \"field 'spec.exposure.directPort' is not allowed for exposure type 'Gateway'\"}]}\nE         \nE         stderr:\nE         \nE       assert 0 == 1\nE        +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.directPort\", \"type\": \"forbidden\", \"message\": \"field \\'spec.exposure.directPort\\' is not allowed for exposure type \\'Gateway\\'\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.directPort', 'type': 'forbidden', 'message': \"field 'spec.exposure.directPort' is not allowed for exposure type 'Gateway'\"}]}).returncode\n\n.evaluation_tests/conftest.py:287: AssertionError"
+      },
+      "teardown": {
+        "duration": 0.0006421319994842634,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_forbidden_exposure_combos[balancer-annotations]",
+      "lineno": 172,
+      "outcome": "failed",
+      "keywords": [
+        "test_forbidden_exposure_combos[balancer-annotations]",
+        "parametrize",
+        "error",
+        "pytestmark",
+        "balancer-annotations",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.004829544996027835,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.2837182760122232,
+        "outcome": "failed",
+        "crash": {
+          "path": "/workspace/.evaluation_tests/conftest.py",
+          "lineno": 287,
+          "message": "AssertionError: Expected exit code 1, got 0.\n  stdout:\n  {\"errors\": [{\"field\": \"spec.exposure.annotations\", \"type\": \"forbidden\", \"message\": \"field 'spec.exposure.annotations' is not allowed for exposure type 'Balancer'\"}]}\n  \n  stderr:\n  \nassert 0 == 1\n +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.annotations\", \"type\": \"forbidden\", \"message\": \"field \\'spec.exposure.annotations\\' is not allowed for exposure type \\'Balancer\\'\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.annotations', 'type': 'forbidden', 'message': \"field 'spec.exposure.annotations' is not allowed for exposure type 'Balancer'\"}]}).returncode"
+        },
+        "traceback": [
+          {
+            "path": ".evaluation_tests/test_checkpoint_7.py",
+            "lineno": 201,
+            "message": ""
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 323,
+            "message": "in assert_error_contains"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 298,
+            "message": "in assert_error"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 287,
+            "message": "AssertionError"
+          }
+        ],
+        "longrepr": "run_cli = <function run_cli.<locals>._run at 0x774bd23c96c0>, name = 'bal-mesh'\nexposure = {'annotations': {'k': 'v'}, 'type': 'Balancer'}\nfield = 'spec.exposure.annotations'\n\n    @pytest.mark.error\n    @pytest.mark.parametrize(\n        \"name,exposure,field\",\n        [\n            (\n                \"gw-mesh\",\n                {\"type\": \"Gateway\", \"directPort\": 30100},\n                \"spec.exposure.directPort\",\n            ),\n            (\n                \"bal-mesh\",\n                {\"type\": \"Balancer\", \"annotations\": {\"k\": \"v\"}},\n                \"spec.exposure.annotations\",\n            ),\n        ],\n        ids=[\"gateway-directport\", \"balancer-annotations\"],\n    )\n    def test_forbidden_exposure_combos(\n        run_cli, name: str, exposure: dict[str, object], field: str\n    ) -> None:\n        \"\"\"Each exposure mode rejects fields that do not belong to its allowed schema.\"\"\"\n        result = run_cli(\n            [\"mesh\", \"create\"],\n            input_yaml={\n                \"metadata\": {\"name\": name},\n                \"spec\": {\"exposure\": exposure},\n            },\n        )\n>       assert_error_contains(\n            result,\n            field=field,\n            error_type=\"forbidden\",\n        )\n\n.evaluation_tests/test_checkpoint_7.py:201: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.evaluation_tests/conftest.py:323: in assert_error_contains\n    assert_error(result)\n.evaluation_tests/conftest.py:298: in assert_error\n    assert_exit_code(result, 1)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nresult = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.annotations\", \"type\": \"forbidden\", \"message\": \"field \\'spec.exp...s', 'type': 'forbidden', 'message': \"field 'spec.exposure.annotations' is not allowed for exposure type 'Balancer'\"}]})\nexpected = 1\n\n    def assert_exit_code(result: CLIResult, expected: int) -> None:\n>       assert result.returncode == expected, (\n            f\"Expected exit code {expected}, got {result.returncode}.\\n\"\n            f\"stdout:\\n{result.stdout}\\nstderr:\\n{result.stderr}\"\n        )\nE       AssertionError: Expected exit code 1, got 0.\nE         stdout:\nE         {\"errors\": [{\"field\": \"spec.exposure.annotations\", \"type\": \"forbidden\", \"message\": \"field 'spec.exposure.annotations' is not allowed for exposure type 'Balancer'\"}]}\nE         \nE         stderr:\nE         \nE       assert 0 == 1\nE        +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.annotations\", \"type\": \"forbidden\", \"message\": \"field \\'spec.exposure.annotations\\' is not allowed for exposure type \\'Balancer\\'\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.annotations', 'type': 'forbidden', 'message': \"field 'spec.exposure.annotations' is not allowed for exposure type 'Balancer'\"}]}).returncode\n\n.evaluation_tests/conftest.py:287: AssertionError"
+      },
+      "teardown": {
+        "duration": 0.00028683600248768926,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_gateway_default_host",
+      "lineno": 212,
+      "outcome": "passed",
+      "keywords": [
+        "test_gateway_default_host",
+        "functionality",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0027445239975349978,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.5123559100029524,
+        "outcome": "passed"
+      },
+      "teardown": {
+        "duration": 0.0002860609965864569,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_balancer_conn_details",
+      "lineno": 230,
+      "outcome": "passed",
+      "keywords": [
+        "test_balancer_conn_details",
+        "functionality",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0019146920094499364,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.23311635901336558,
+        "outcome": "passed"
+      },
+      "teardown": {
+        "duration": 0.00017728700186125934,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_balancer_default_port",
+      "lineno": 244,
+      "outcome": "passed",
+      "keywords": [
+        "test_balancer_default_port",
+        "functionality",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0019889789982698858,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.481088907996309,
+        "outcome": "passed"
+      },
+      "teardown": {
+        "duration": 0.0002091979986289516,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_add_exposure_on_update_populates_connection_details",
+      "lineno": 261,
+      "outcome": "failed",
+      "keywords": [
+        "test_add_exposure_on_update_populates_connection_details",
+        "functionality",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0020571859931806102,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.4609522660030052,
+        "outcome": "failed",
+        "crash": {
+          "path": "/workspace/.evaluation_tests/test_checkpoint_7.py",
+          "lineno": 275,
+          "message": "KeyError: 'status'"
+        },
+        "traceback": [
+          {
+            "path": ".evaluation_tests/test_checkpoint_7.py",
+            "lineno": 275,
+            "message": "KeyError"
+          }
+        ],
+        "longrepr": "run_cli = <function run_cli.<locals>._run at 0x774bd23c9080>\n\n    @pytest.mark.functionality\n    def test_add_exposure_on_update_populates_connection_details(run_cli) -> None:\n        \"\"\"Adding exposure on update persists it and enables mesh shell.\"\"\"\n        create_mesh(run_cli, \"api-mesh\")\n    \n        result = run_cli(\n            [\"mesh\", \"update\"],\n            input_yaml={\n                \"metadata\": {\"name\": \"api-mesh\"},\n                \"spec\": {\"exposure\": {\"type\": \"Balancer\", \"port\": 9000}},\n            },\n        )\n        assert_success(result)\n>       cd = result.json[\"status\"][\"connectionDetails\"]\n             ^^^^^^^^^^^^^^^^^^^^^\nE       KeyError: 'status'\n\n.evaluation_tests/test_checkpoint_7.py:275: KeyError"
+      },
+      "teardown": {
+        "duration": 0.00021525600459426641,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_directport_fallback_chain",
+      "lineno": 289,
+      "outcome": "passed",
+      "keywords": [
+        "test_directport_fallback_chain",
+        "functionality",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.001991470009670593,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.4157536440034164,
+        "outcome": "passed"
+      },
+      "teardown": {
+        "duration": 0.0001712929952191189,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_gateway_annotations_roundtrip",
+      "lineno": 307,
+      "outcome": "passed",
+      "keywords": [
+        "test_gateway_annotations_roundtrip",
+        "functionality",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.001936390995979309,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.18978116200014483,
+        "outcome": "passed"
+      },
+      "teardown": {
+        "duration": 0.00019011500990018249,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_no_exposure_no_conn",
+      "lineno": 327,
+      "outcome": "failed",
+      "keywords": [
+        "test_no_exposure_no_conn",
+        "functionality",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0018673459999263287,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.2350003250030568,
+        "outcome": "failed",
+        "crash": {
+          "path": "/workspace/.evaluation_tests/test_checkpoint_7.py",
+          "lineno": 332,
+          "message": "KeyError: 'status'"
+        },
+        "traceback": [
+          {
+            "path": ".evaluation_tests/test_checkpoint_7.py",
+            "lineno": 332,
+            "message": "KeyError"
+          }
+        ],
+        "longrepr": "run_cli = <function run_cli.<locals>._run at 0x774bd23ca340>\n\n    @pytest.mark.functionality\n    def test_no_exposure_no_conn(run_cli) -> None:\n        \"\"\"Absent `spec.exposure` omits `status.connectionDetails`.\"\"\"\n        data = create_mesh(run_cli, \"plain-mesh\")\n>       assert \"connectionDetails\" not in data[\"status\"]\n                                          ^^^^^^^^^^^^^^\nE       KeyError: 'status'\n\n.evaluation_tests/test_checkpoint_7.py:332: KeyError"
+      },
+      "teardown": {
+        "duration": 0.0002514119987608865,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_mgmt_enabled_details",
+      "lineno": 334,
+      "outcome": "passed",
+      "keywords": [
+        "test_mgmt_enabled_details",
+        "functionality",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.002249311000923626,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.239722095997422,
+        "outcome": "passed"
+      },
+      "teardown": {
+        "duration": 0.00019143399549648166,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_describe_conn_details",
+      "lineno": 349,
+      "outcome": "passed",
+      "keywords": [
+        "test_describe_conn_details",
+        "functionality",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0020273959962651134,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.691547445996548,
+        "outcome": "passed"
+      },
+      "teardown": {
+        "duration": 0.00021032699442002922,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_mgmt_disabled_no_details",
+      "lineno": 372,
+      "outcome": "failed",
+      "keywords": [
+        "test_mgmt_disabled_no_details",
+        "functionality",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0021525820047827438,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.3019213470106479,
+        "outcome": "failed",
+        "crash": {
+          "path": "/workspace/.evaluation_tests/test_checkpoint_7.py",
+          "lineno": 377,
+          "message": "KeyError: 'status'"
+        },
+        "traceback": [
+          {
+            "path": ".evaluation_tests/test_checkpoint_7.py",
+            "lineno": 377,
+            "message": "KeyError"
+          }
+        ],
+        "longrepr": "run_cli = <function run_cli.<locals>._run at 0x774bd23ca980>\n\n    @pytest.mark.functionality\n    def test_mgmt_disabled_no_details(run_cli) -> None:\n        \"\"\"Default or explicit `spec.management.enabled: false` omits managementConnectionDetails.\"\"\"\n        data = create_mesh(run_cli, \"plain-mesh\")\n>       assert \"managementConnectionDetails\" not in data[\"status\"]\n                                                    ^^^^^^^^^^^^^^\nE       KeyError: 'status'\n\n.evaluation_tests/test_checkpoint_7.py:377: KeyError"
+      },
+      "teardown": {
+        "duration": 0.00026441899535711855,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_mgmt_immutable_from_false",
+      "lineno": 386,
+      "outcome": "failed",
+      "keywords": [
+        "test_mgmt_immutable_from_false",
+        "error",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.002165897996746935,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.5096499430073891,
+        "outcome": "failed",
+        "crash": {
+          "path": "/workspace/.evaluation_tests/conftest.py",
+          "lineno": 287,
+          "message": "AssertionError: Expected exit code 1, got 0.\n  stdout:\n  {\"errors\": [{\"field\": \"metadata.name\", \"type\": \"not_found\", \"message\": \"mesh 'plain-mesh' not found\"}]}\n  \n  stderr:\n  \nassert 0 == 1\n +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"metadata.name\", \"type\": \"not_found\", \"message\": \"mesh \\'plain-mesh\\' not found\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'metadata.name', 'type': 'not_found', 'message': \"mesh 'plain-mesh' not found\"}]}).returncode"
+        },
+        "traceback": [
+          {
+            "path": ".evaluation_tests/test_checkpoint_7.py",
+            "lineno": 399,
+            "message": ""
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 323,
+            "message": "in assert_error_contains"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 298,
+            "message": "in assert_error"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 287,
+            "message": "AssertionError"
+          }
+        ],
+        "longrepr": "run_cli = <function run_cli.<locals>._run at 0x774bd23ca480>\n\n    @pytest.mark.error\n    def test_mgmt_immutable_from_false(run_cli) -> None:\n        \"\"\"Updating `spec.management.enabled` from default false is rejected as immutable.\"\"\"\n        create_mesh(run_cli, \"plain-mesh\")\n    \n        result = run_cli(\n            [\"mesh\", \"update\"],\n            input_yaml={\n                \"metadata\": {\"name\": \"plain-mesh\"},\n                \"spec\": {\"management\": {\"enabled\": True}},\n            },\n        )\n>       assert_error_contains(\n            result,\n            field=\"spec.management.enabled\",\n            error_type=\"immutable\",\n        )\n\n.evaluation_tests/test_checkpoint_7.py:399: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.evaluation_tests/conftest.py:323: in assert_error_contains\n    assert_error(result)\n.evaluation_tests/conftest.py:298: in assert_error\n    assert_exit_code(result, 1)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nresult = CLIResult(stdout='{\"errors\": [{\"field\": \"metadata.name\", \"type\": \"not_found\", \"message\": \"mesh \\'plain-mesh\\' not foun...rncode=0, json={'errors': [{'field': 'metadata.name', 'type': 'not_found', 'message': \"mesh 'plain-mesh' not found\"}]})\nexpected = 1\n\n    def assert_exit_code(result: CLIResult, expected: int) -> None:\n>       assert result.returncode == expected, (\n            f\"Expected exit code {expected}, got {result.returncode}.\\n\"\n            f\"stdout:\\n{result.stdout}\\nstderr:\\n{result.stderr}\"\n        )\nE       AssertionError: Expected exit code 1, got 0.\nE         stdout:\nE         {\"errors\": [{\"field\": \"metadata.name\", \"type\": \"not_found\", \"message\": \"mesh 'plain-mesh' not found\"}]}\nE         \nE         stderr:\nE         \nE       assert 0 == 1\nE        +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"metadata.name\", \"type\": \"not_found\", \"message\": \"mesh \\'plain-mesh\\' not found\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'metadata.name', 'type': 'not_found', 'message': \"mesh 'plain-mesh' not found\"}]}).returncode\n\n.evaluation_tests/conftest.py:287: AssertionError"
+      },
+      "teardown": {
+        "duration": 0.0002488370082573965,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_exposure_mode_change_on_update_revalidates_merged_state",
+      "lineno": 405,
+      "outcome": "failed",
+      "keywords": [
+        "test_exposure_mode_change_on_update_revalidates_merged_state",
+        "error",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.002425308004603721,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.44635692199517507,
+        "outcome": "failed",
+        "crash": {
+          "path": "/workspace/.evaluation_tests/conftest.py",
+          "lineno": 287,
+          "message": "AssertionError: Expected exit code 1, got 0.\n  stdout:\n  {\"errors\": [{\"field\": \"spec.exposure.directPort\", \"type\": \"forbidden\", \"message\": \"field 'spec.exposure.directPort' is not allowed for exposure type 'Gateway'\"}, {\"field\": \"spec.exposure.port\", \"type\": \"forbidden\", \"message\": \"field 'spec.exposure.port' is not allowed for exposure type 'Gateway'\"}]}\n  \n  stderr:\n  \nassert 0 == 1\n +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.directPort\", \"type\": \"forbidden\", \"message\": \"field \\'spec.exposure.directPort\\' is not allowed for exposure type \\'Gateway\\'\"}, {\"field\": \"spec.exposure.port\", \"type\": \"forbidden\", \"message\": \"field \\'spec.exposure.port\\' is not allowed for exposure type \\'Gateway\\'\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.directPort', 'type': 'forbidden', 'message': \"field 'spec.exposure.directPort' is not allowed for exposure type 'Gateway'\"}, {'field': 'spec.exposure.port', 'type': 'forbidden', 'message': \"field 'spec.exposure.port' is not allowed for exposure type 'Gateway'\"}]}).returncode"
+        },
+        "traceback": [
+          {
+            "path": ".evaluation_tests/test_checkpoint_7.py",
+            "lineno": 428,
+            "message": ""
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 298,
+            "message": "in assert_error"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 287,
+            "message": "AssertionError"
+          }
+        ],
+        "longrepr": "run_cli = <function run_cli.<locals>._run at 0x774bd23caf20>\n\n    @pytest.mark.error\n    def test_exposure_mode_change_on_update_revalidates_merged_state(run_cli) -> None:\n        \"\"\"Changing exposure type on update rejects carried-over fields from the old mode.\"\"\"\n        create_mesh(\n            run_cli,\n            \"my-mesh\",\n            spec={\n                \"exposure\": {\n                    \"type\": \"DirectPort\",\n                    \"directPort\": 30100,\n                    \"port\": 8080,\n                }\n            },\n        )\n    \n        result = run_cli(\n            [\"mesh\", \"update\"],\n            input_yaml={\n                \"metadata\": {\"name\": \"my-mesh\"},\n                \"spec\": {\"exposure\": {\"type\": \"Gateway\"}},\n            },\n        )\n>       assert_error(result)\n\n.evaluation_tests/test_checkpoint_7.py:428: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.evaluation_tests/conftest.py:298: in assert_error\n    assert_exit_code(result, 1)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nresult = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.directPort\", \"type\": \"forbidden\", \"message\": \"field \\'spec.expo...sure.port', 'type': 'forbidden', 'message': \"field 'spec.exposure.port' is not allowed for exposure type 'Gateway'\"}]})\nexpected = 1\n\n    def assert_exit_code(result: CLIResult, expected: int) -> None:\n>       assert result.returncode == expected, (\n            f\"Expected exit code {expected}, got {result.returncode}.\\n\"\n            f\"stdout:\\n{result.stdout}\\nstderr:\\n{result.stderr}\"\n        )\nE       AssertionError: Expected exit code 1, got 0.\nE         stdout:\nE         {\"errors\": [{\"field\": \"spec.exposure.directPort\", \"type\": \"forbidden\", \"message\": \"field 'spec.exposure.directPort' is not allowed for exposure type 'Gateway'\"}, {\"field\": \"spec.exposure.port\", \"type\": \"forbidden\", \"message\": \"field 'spec.exposure.port' is not allowed for exposure type 'Gateway'\"}]}\nE         \nE         stderr:\nE         \nE       assert 0 == 1\nE        +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.directPort\", \"type\": \"forbidden\", \"message\": \"field \\'spec.exposure.directPort\\' is not allowed for exposure type \\'Gateway\\'\"}, {\"field\": \"spec.exposure.port\", \"type\": \"forbidden\", \"message\": \"field \\'spec.exposure.port\\' is not allowed for exposure type \\'Gateway\\'\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.directPort', 'type': 'forbidden', 'message': \"field 'spec.exposure.directPort' is not allowed for exposure type 'Gateway'\"}, {'field': 'spec.exposure.port', 'type': 'forbidden', 'message': \"field 'spec.exposure.port' is not allowed for exposure type 'Gateway'\"}]}).returncode\n\n.evaluation_tests/conftest.py:287: AssertionError"
+      },
+      "teardown": {
+        "duration": 0.00023167299514170736,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_shell_mesh_not_found",
+      "lineno": 438,
+      "outcome": "failed",
+      "keywords": [
+        "test_shell_mesh_not_found",
+        "error",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.00179352899431251,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.2169737049989635,
+        "outcome": "failed",
+        "crash": {
+          "path": "/workspace/.evaluation_tests/conftest.py",
+          "lineno": 287,
+          "message": "AssertionError: Expected exit code 1, got 0.\n  stdout:\n  {\"errors\": [{\"field\": \"metadata.name\", \"type\": \"not_found\", \"message\": \"mesh 'nonexistent' not found\"}]}\n  \n  stderr:\n  \nassert 0 == 1\n +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"metadata.name\", \"type\": \"not_found\", \"message\": \"mesh \\'nonexistent\\' not found\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'metadata.name', 'type': 'not_found', 'message': \"mesh 'nonexistent' not found\"}]}).returncode"
+        },
+        "traceback": [
+          {
+            "path": ".evaluation_tests/test_checkpoint_7.py",
+            "lineno": 443,
+            "message": ""
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 323,
+            "message": "in assert_error_contains"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 298,
+            "message": "in assert_error"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 287,
+            "message": "AssertionError"
+          }
+        ],
+        "longrepr": "run_cli = <function run_cli.<locals>._run at 0x774bd23cac00>\n\n    @pytest.mark.error\n    def test_shell_mesh_not_found(run_cli) -> None:\n        \"\"\"`mesh shell` on missing mesh returns standard not_found error.\"\"\"\n        result = run_cli([\"mesh\", \"shell\", \"nonexistent\"])\n>       assert_error_contains(\n            result,\n            field=\"metadata.name\",\n            error_type=\"not_found\",\n        )\n\n.evaluation_tests/test_checkpoint_7.py:443: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.evaluation_tests/conftest.py:323: in assert_error_contains\n    assert_error(result)\n.evaluation_tests/conftest.py:298: in assert_error\n    assert_exit_code(result, 1)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nresult = CLIResult(stdout='{\"errors\": [{\"field\": \"metadata.name\", \"type\": \"not_found\", \"message\": \"mesh \\'nonexistent\\' not fou...ncode=0, json={'errors': [{'field': 'metadata.name', 'type': 'not_found', 'message': \"mesh 'nonexistent' not found\"}]})\nexpected = 1\n\n    def assert_exit_code(result: CLIResult, expected: int) -> None:\n>       assert result.returncode == expected, (\n            f\"Expected exit code {expected}, got {result.returncode}.\\n\"\n            f\"stdout:\\n{result.stdout}\\nstderr:\\n{result.stderr}\"\n        )\nE       AssertionError: Expected exit code 1, got 0.\nE         stdout:\nE         {\"errors\": [{\"field\": \"metadata.name\", \"type\": \"not_found\", \"message\": \"mesh 'nonexistent' not found\"}]}\nE         \nE         stderr:\nE         \nE       assert 0 == 1\nE        +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"metadata.name\", \"type\": \"not_found\", \"message\": \"mesh \\'nonexistent\\' not found\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'metadata.name', 'type': 'not_found', 'message': \"mesh 'nonexistent' not found\"}]}).returncode\n\n.evaluation_tests/conftest.py:287: AssertionError"
+      },
+      "teardown": {
+        "duration": 0.00019523300579749048,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_exposure_forbidden_field[gateway-port]",
+      "lineno": 449,
+      "outcome": "failed",
+      "keywords": [
+        "test_exposure_forbidden_field[gateway-port]",
+        "parametrize",
+        "error",
+        "pytestmark",
+        "gateway-port",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0017850639997050166,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.184681783997803,
+        "outcome": "failed",
+        "crash": {
+          "path": "/workspace/.evaluation_tests/conftest.py",
+          "lineno": 287,
+          "message": "AssertionError: Expected exit code 1, got 0.\n  stdout:\n  {\"errors\": [{\"field\": \"spec.exposure.port\", \"type\": \"forbidden\", \"message\": \"field 'spec.exposure.port' is not allowed for exposure type 'Gateway'\"}]}\n  \n  stderr:\n  \nassert 0 == 1\n +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.port\", \"type\": \"forbidden\", \"message\": \"field \\'spec.exposure.port\\' is not allowed for exposure type \\'Gateway\\'\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.port', 'type': 'forbidden', 'message': \"field 'spec.exposure.port' is not allowed for exposure type 'Gateway'\"}]}).returncode"
+        },
+        "traceback": [
+          {
+            "path": ".evaluation_tests/test_checkpoint_7.py",
+            "lineno": 477,
+            "message": ""
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 323,
+            "message": "in assert_error_contains"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 298,
+            "message": "in assert_error"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 287,
+            "message": "AssertionError"
+          }
+        ],
+        "longrepr": "run_cli = <function run_cli.<locals>._run at 0x774bd23cb560>\nexposure = {'port': 8080, 'type': 'Gateway'}, field = 'spec.exposure.port'\n\n    @pytest.mark.error\n    @pytest.mark.parametrize(\n        \"exposure, field\",\n        [\n            ({\"type\": \"Gateway\", \"port\": 8080}, \"spec.exposure.port\"),\n            (\n                {\"type\": \"DirectPort\", \"hostname\": \"my-mesh.example.com\"},\n                \"spec.exposure.hostname\",\n            ),\n            (\n                {\"type\": \"DirectPort\", \"annotations\": {\"key\": \"val\"}},\n                \"spec.exposure.annotations\",\n            ),\n        ],\n        ids=[\"gateway-port\", \"directport-hostname\", \"directport-annotations\"],\n    )\n    def test_exposure_forbidden_field(\n        run_cli, exposure: dict[str, object], field: str\n    ) -> None:\n        \"\"\"Disallowed field for a given exposure type returns forbidden on that field.\"\"\"\n        result = run_cli(\n            [\"mesh\", \"create\"],\n            input_yaml={\n                \"metadata\": {\"name\": \"my-mesh\"},\n                \"spec\": {\"exposure\": exposure},\n            },\n        )\n>       assert_error_contains(\n            result,\n            field=field,\n            error_type=\"forbidden\",\n        )\n\n.evaluation_tests/test_checkpoint_7.py:477: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.evaluation_tests/conftest.py:323: in assert_error_contains\n    assert_error(result)\n.evaluation_tests/conftest.py:298: in assert_error\n    assert_exit_code(result, 1)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nresult = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.port\", \"type\": \"forbidden\", \"message\": \"field \\'spec.exposure.p...sure.port', 'type': 'forbidden', 'message': \"field 'spec.exposure.port' is not allowed for exposure type 'Gateway'\"}]})\nexpected = 1\n\n    def assert_exit_code(result: CLIResult, expected: int) -> None:\n>       assert result.returncode == expected, (\n            f\"Expected exit code {expected}, got {result.returncode}.\\n\"\n            f\"stdout:\\n{result.stdout}\\nstderr:\\n{result.stderr}\"\n        )\nE       AssertionError: Expected exit code 1, got 0.\nE         stdout:\nE         {\"errors\": [{\"field\": \"spec.exposure.port\", \"type\": \"forbidden\", \"message\": \"field 'spec.exposure.port' is not allowed for exposure type 'Gateway'\"}]}\nE         \nE         stderr:\nE         \nE       assert 0 == 1\nE        +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.port\", \"type\": \"forbidden\", \"message\": \"field \\'spec.exposure.port\\' is not allowed for exposure type \\'Gateway\\'\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.port', 'type': 'forbidden', 'message': \"field 'spec.exposure.port' is not allowed for exposure type 'Gateway'\"}]}).returncode\n\n.evaluation_tests/conftest.py:287: AssertionError"
+      },
+      "teardown": {
+        "duration": 0.00018666299001779407,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_exposure_forbidden_field[directport-hostname]",
+      "lineno": 449,
+      "outcome": "failed",
+      "keywords": [
+        "test_exposure_forbidden_field[directport-hostname]",
+        "parametrize",
+        "error",
+        "pytestmark",
+        "directport-hostname",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0019061830098507926,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.17860158100666013,
+        "outcome": "failed",
+        "crash": {
+          "path": "/workspace/.evaluation_tests/conftest.py",
+          "lineno": 287,
+          "message": "AssertionError: Expected exit code 1, got 0.\n  stdout:\n  {\"errors\": [{\"field\": \"spec.exposure.hostname\", \"type\": \"forbidden\", \"message\": \"field 'spec.exposure.hostname' is not allowed for exposure type 'DirectPort'\"}]}\n  \n  stderr:\n  \nassert 0 == 1\n +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.hostname\", \"type\": \"forbidden\", \"message\": \"field \\'spec.exposure.hostname\\' is not allowed for exposure type \\'DirectPort\\'\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.hostname', 'type': 'forbidden', 'message': \"field 'spec.exposure.hostname' is not allowed for exposure type 'DirectPort'\"}]}).returncode"
+        },
+        "traceback": [
+          {
+            "path": ".evaluation_tests/test_checkpoint_7.py",
+            "lineno": 477,
+            "message": ""
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 323,
+            "message": "in assert_error_contains"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 298,
+            "message": "in assert_error"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 287,
+            "message": "AssertionError"
+          }
+        ],
+        "longrepr": "run_cli = <function run_cli.<locals>._run at 0x774bd23cb9c0>\nexposure = {'hostname': 'my-mesh.example.com', 'type': 'DirectPort'}\nfield = 'spec.exposure.hostname'\n\n    @pytest.mark.error\n    @pytest.mark.parametrize(\n        \"exposure, field\",\n        [\n            ({\"type\": \"Gateway\", \"port\": 8080}, \"spec.exposure.port\"),\n            (\n                {\"type\": \"DirectPort\", \"hostname\": \"my-mesh.example.com\"},\n                \"spec.exposure.hostname\",\n            ),\n            (\n                {\"type\": \"DirectPort\", \"annotations\": {\"key\": \"val\"}},\n                \"spec.exposure.annotations\",\n            ),\n        ],\n        ids=[\"gateway-port\", \"directport-hostname\", \"directport-annotations\"],\n    )\n    def test_exposure_forbidden_field(\n        run_cli, exposure: dict[str, object], field: str\n    ) -> None:\n        \"\"\"Disallowed field for a given exposure type returns forbidden on that field.\"\"\"\n        result = run_cli(\n            [\"mesh\", \"create\"],\n            input_yaml={\n                \"metadata\": {\"name\": \"my-mesh\"},\n                \"spec\": {\"exposure\": exposure},\n            },\n        )\n>       assert_error_contains(\n            result,\n            field=field,\n            error_type=\"forbidden\",\n        )\n\n.evaluation_tests/test_checkpoint_7.py:477: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.evaluation_tests/conftest.py:323: in assert_error_contains\n    assert_error(result)\n.evaluation_tests/conftest.py:298: in assert_error\n    assert_exit_code(result, 1)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nresult = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.hostname\", \"type\": \"forbidden\", \"message\": \"field \\'spec.exposu...me', 'type': 'forbidden', 'message': \"field 'spec.exposure.hostname' is not allowed for exposure type 'DirectPort'\"}]})\nexpected = 1\n\n    def assert_exit_code(result: CLIResult, expected: int) -> None:\n>       assert result.returncode == expected, (\n            f\"Expected exit code {expected}, got {result.returncode}.\\n\"\n            f\"stdout:\\n{result.stdout}\\nstderr:\\n{result.stderr}\"\n        )\nE       AssertionError: Expected exit code 1, got 0.\nE         stdout:\nE         {\"errors\": [{\"field\": \"spec.exposure.hostname\", \"type\": \"forbidden\", \"message\": \"field 'spec.exposure.hostname' is not allowed for exposure type 'DirectPort'\"}]}\nE         \nE         stderr:\nE         \nE       assert 0 == 1\nE        +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.hostname\", \"type\": \"forbidden\", \"message\": \"field \\'spec.exposure.hostname\\' is not allowed for exposure type \\'DirectPort\\'\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.hostname', 'type': 'forbidden', 'message': \"field 'spec.exposure.hostname' is not allowed for exposure type 'DirectPort'\"}]}).returncode\n\n.evaluation_tests/conftest.py:287: AssertionError"
+      },
+      "teardown": {
+        "duration": 0.00022560000070370734,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_exposure_forbidden_field[directport-annotations]",
+      "lineno": 449,
+      "outcome": "failed",
+      "keywords": [
+        "test_exposure_forbidden_field[directport-annotations]",
+        "parametrize",
+        "error",
+        "pytestmark",
+        "directport-annotations",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0020794390002265573,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.21696627799246926,
+        "outcome": "failed",
+        "crash": {
+          "path": "/workspace/.evaluation_tests/conftest.py",
+          "lineno": 287,
+          "message": "AssertionError: Expected exit code 1, got 0.\n  stdout:\n  {\"errors\": [{\"field\": \"spec.exposure.annotations\", \"type\": \"forbidden\", \"message\": \"field 'spec.exposure.annotations' is not allowed for exposure type 'DirectPort'\"}]}\n  \n  stderr:\n  \nassert 0 == 1\n +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.annotations\", \"type\": \"forbidden\", \"message\": \"field \\'spec.exposure.annotations\\' is not allowed for exposure type \\'DirectPort\\'\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.annotations', 'type': 'forbidden', 'message': \"field 'spec.exposure.annotations' is not allowed for exposure type 'DirectPort'\"}]}).returncode"
+        },
+        "traceback": [
+          {
+            "path": ".evaluation_tests/test_checkpoint_7.py",
+            "lineno": 477,
+            "message": ""
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 323,
+            "message": "in assert_error_contains"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 298,
+            "message": "in assert_error"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 287,
+            "message": "AssertionError"
+          }
+        ],
+        "longrepr": "run_cli = <function run_cli.<locals>._run at 0x774bd23cb420>\nexposure = {'annotations': {'key': 'val'}, 'type': 'DirectPort'}\nfield = 'spec.exposure.annotations'\n\n    @pytest.mark.error\n    @pytest.mark.parametrize(\n        \"exposure, field\",\n        [\n            ({\"type\": \"Gateway\", \"port\": 8080}, \"spec.exposure.port\"),\n            (\n                {\"type\": \"DirectPort\", \"hostname\": \"my-mesh.example.com\"},\n                \"spec.exposure.hostname\",\n            ),\n            (\n                {\"type\": \"DirectPort\", \"annotations\": {\"key\": \"val\"}},\n                \"spec.exposure.annotations\",\n            ),\n        ],\n        ids=[\"gateway-port\", \"directport-hostname\", \"directport-annotations\"],\n    )\n    def test_exposure_forbidden_field(\n        run_cli, exposure: dict[str, object], field: str\n    ) -> None:\n        \"\"\"Disallowed field for a given exposure type returns forbidden on that field.\"\"\"\n        result = run_cli(\n            [\"mesh\", \"create\"],\n            input_yaml={\n                \"metadata\": {\"name\": \"my-mesh\"},\n                \"spec\": {\"exposure\": exposure},\n            },\n        )\n>       assert_error_contains(\n            result,\n            field=field,\n            error_type=\"forbidden\",\n        )\n\n.evaluation_tests/test_checkpoint_7.py:477: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.evaluation_tests/conftest.py:323: in assert_error_contains\n    assert_error(result)\n.evaluation_tests/conftest.py:298: in assert_error\n    assert_exit_code(result, 1)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nresult = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.annotations\", \"type\": \"forbidden\", \"message\": \"field \\'spec.exp..., 'type': 'forbidden', 'message': \"field 'spec.exposure.annotations' is not allowed for exposure type 'DirectPort'\"}]})\nexpected = 1\n\n    def assert_exit_code(result: CLIResult, expected: int) -> None:\n>       assert result.returncode == expected, (\n            f\"Expected exit code {expected}, got {result.returncode}.\\n\"\n            f\"stdout:\\n{result.stdout}\\nstderr:\\n{result.stderr}\"\n        )\nE       AssertionError: Expected exit code 1, got 0.\nE         stdout:\nE         {\"errors\": [{\"field\": \"spec.exposure.annotations\", \"type\": \"forbidden\", \"message\": \"field 'spec.exposure.annotations' is not allowed for exposure type 'DirectPort'\"}]}\nE         \nE         stderr:\nE         \nE       assert 0 == 1\nE        +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.annotations\", \"type\": \"forbidden\", \"message\": \"field \\'spec.exposure.annotations\\' is not allowed for exposure type \\'DirectPort\\'\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.annotations', 'type': 'forbidden', 'message': \"field 'spec.exposure.annotations' is not allowed for exposure type 'DirectPort'\"}]}).returncode\n\n.evaluation_tests/conftest.py:287: AssertionError"
+      },
+      "teardown": {
+        "duration": 0.00024592800764366984,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_invalid_exposure_type",
+      "lineno": 483,
+      "outcome": "failed",
+      "keywords": [
+        "test_invalid_exposure_type",
+        "error",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.00207629099895712,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.22938601599889807,
+        "outcome": "failed",
+        "crash": {
+          "path": "/workspace/.evaluation_tests/conftest.py",
+          "lineno": 287,
+          "message": "AssertionError: Expected exit code 1, got 0.\n  stdout:\n  {\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"invalid\", \"message\": \"exposure.type must be one of Gateway, DirectPort, Balancer, got 'InvalidMode'\"}]}\n  \n  stderr:\n  \nassert 0 == 1\n +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"invalid\", \"message\": \"exposure.type must be one of Gateway, DirectPort, Balancer, got \\'InvalidMode\\'\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.type', 'type': 'invalid', 'message': \"exposure.type must be one of Gateway, DirectPort, Balancer, got 'InvalidMode'\"}]}).returncode"
+        },
+        "traceback": [
+          {
+            "path": ".evaluation_tests/test_checkpoint_7.py",
+            "lineno": 496,
+            "message": ""
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 298,
+            "message": "in assert_error"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 287,
+            "message": "AssertionError"
+          }
+        ],
+        "longrepr": "run_cli = <function run_cli.<locals>._run at 0x774bd23cbce0>\n\n    @pytest.mark.error\n    def test_invalid_exposure_type(run_cli) -> None:\n        \"\"\"Invalid `spec.exposure.type` value returns an invalid exposure type error.\"\"\"\n        result = run_cli(\n            [\"mesh\", \"create\"],\n            input_yaml={\n                \"metadata\": {\"name\": \"my-mesh\"},\n                \"spec\": {\n                    \"exposure\": {\"type\": \"InvalidMode\"},\n                },\n            },\n        )\n>       assert_error(result)\n\n.evaluation_tests/test_checkpoint_7.py:496: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.evaluation_tests/conftest.py:298: in assert_error\n    assert_exit_code(result, 1)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nresult = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"invalid\", \"message\": \"exposure.type must be one...ype', 'type': 'invalid', 'message': \"exposure.type must be one of Gateway, DirectPort, Balancer, got 'InvalidMode'\"}]})\nexpected = 1\n\n    def assert_exit_code(result: CLIResult, expected: int) -> None:\n>       assert result.returncode == expected, (\n            f\"Expected exit code {expected}, got {result.returncode}.\\n\"\n            f\"stdout:\\n{result.stdout}\\nstderr:\\n{result.stderr}\"\n        )\nE       AssertionError: Expected exit code 1, got 0.\nE         stdout:\nE         {\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"invalid\", \"message\": \"exposure.type must be one of Gateway, DirectPort, Balancer, got 'InvalidMode'\"}]}\nE         \nE         stderr:\nE         \nE       assert 0 == 1\nE        +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"invalid\", \"message\": \"exposure.type must be one of Gateway, DirectPort, Balancer, got \\'InvalidMode\\'\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.type', 'type': 'invalid', 'message': \"exposure.type must be one of Gateway, DirectPort, Balancer, got 'InvalidMode'\"}]}).returncode\n\n.evaluation_tests/conftest.py:287: AssertionError"
+      },
+      "teardown": {
+        "duration": 0.00027506200422067195,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_exposure_type_null_empty_required[null]",
+      "lineno": 498,
+      "outcome": "failed",
+      "keywords": [
+        "test_exposure_type_null_empty_required[null]",
+        "parametrize",
+        "error",
+        "pytestmark",
+        "null",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.002239071996882558,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.20316357399860863,
+        "outcome": "failed",
+        "crash": {
+          "path": "/workspace/.evaluation_tests/conftest.py",
+          "lineno": 287,
+          "message": "AssertionError: Expected exit code 1, got 0.\n  stdout:\n  {\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"required\", \"message\": \"exposure.type is required\"}]}\n  \n  stderr:\n  \nassert 0 == 1\n +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"required\", \"message\": \"exposure.type is required\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.type', 'type': 'required', 'message': 'exposure.type is required'}]}).returncode"
+        },
+        "traceback": [
+          {
+            "path": ".evaluation_tests/test_checkpoint_7.py",
+            "lineno": 514,
+            "message": ""
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 323,
+            "message": "in assert_error_contains"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 298,
+            "message": "in assert_error"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 287,
+            "message": "AssertionError"
+          }
+        ],
+        "longrepr": "run_cli = <function run_cli.<locals>._run at 0x774bd23cb740>\nexposure_type = None\n\n    @pytest.mark.error\n    @pytest.mark.parametrize(\"exposure_type\", [None, \"\"], ids=[\"null\", \"empty\"])\n    def test_exposure_type_null_empty_required(\n        run_cli, exposure_type: str | None\n    ) -> None:\n        \"\"\"`spec.exposure.type` set to null or empty string returns required validation.\"\"\"\n        result = run_cli(\n            [\"mesh\", \"create\"],\n            input_yaml={\n                \"metadata\": {\"name\": \"my-mesh\"},\n                \"spec\": {\n                    \"exposure\": {\"type\": exposure_type},\n                },\n            },\n        )\n>       assert_error_contains(\n            result,\n            field=\"spec.exposure.type\",\n            error_type=\"required\",\n        )\n\n.evaluation_tests/test_checkpoint_7.py:514: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.evaluation_tests/conftest.py:323: in assert_error_contains\n    assert_error(result)\n.evaluation_tests/conftest.py:298: in assert_error\n    assert_exit_code(result, 1)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nresult = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"required\", \"message\": \"exposure.type is require...code=0, json={'errors': [{'field': 'spec.exposure.type', 'type': 'required', 'message': 'exposure.type is required'}]})\nexpected = 1\n\n    def assert_exit_code(result: CLIResult, expected: int) -> None:\n>       assert result.returncode == expected, (\n            f\"Expected exit code {expected}, got {result.returncode}.\\n\"\n            f\"stdout:\\n{result.stdout}\\nstderr:\\n{result.stderr}\"\n        )\nE       AssertionError: Expected exit code 1, got 0.\nE         stdout:\nE         {\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"required\", \"message\": \"exposure.type is required\"}]}\nE         \nE         stderr:\nE         \nE       assert 0 == 1\nE        +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"required\", \"message\": \"exposure.type is required\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.type', 'type': 'required', 'message': 'exposure.type is required'}]}).returncode\n\n.evaluation_tests/conftest.py:287: AssertionError"
+      },
+      "teardown": {
+        "duration": 0.00023473601322621107,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_exposure_type_null_empty_required[empty]",
+      "lineno": 498,
+      "outcome": "failed",
+      "keywords": [
+        "test_exposure_type_null_empty_required[empty]",
+        "parametrize",
+        "error",
+        "pytestmark",
+        "empty",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.002003839996177703,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.19348978799826,
+        "outcome": "failed",
+        "crash": {
+          "path": "/workspace/.evaluation_tests/conftest.py",
+          "lineno": 287,
+          "message": "AssertionError: Expected exit code 1, got 0.\n  stdout:\n  {\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"required\", \"message\": \"exposure.type is required\"}]}\n  \n  stderr:\n  \nassert 0 == 1\n +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"required\", \"message\": \"exposure.type is required\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.type', 'type': 'required', 'message': 'exposure.type is required'}]}).returncode"
+        },
+        "traceback": [
+          {
+            "path": ".evaluation_tests/test_checkpoint_7.py",
+            "lineno": 514,
+            "message": ""
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 323,
+            "message": "in assert_error_contains"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 298,
+            "message": "in assert_error"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 287,
+            "message": "AssertionError"
+          }
+        ],
+        "longrepr": "run_cli = <function run_cli.<locals>._run at 0x774bd23c80e0>, exposure_type = ''\n\n    @pytest.mark.error\n    @pytest.mark.parametrize(\"exposure_type\", [None, \"\"], ids=[\"null\", \"empty\"])\n    def test_exposure_type_null_empty_required(\n        run_cli, exposure_type: str | None\n    ) -> None:\n        \"\"\"`spec.exposure.type` set to null or empty string returns required validation.\"\"\"\n        result = run_cli(\n            [\"mesh\", \"create\"],\n            input_yaml={\n                \"metadata\": {\"name\": \"my-mesh\"},\n                \"spec\": {\n                    \"exposure\": {\"type\": exposure_type},\n                },\n            },\n        )\n>       assert_error_contains(\n            result,\n            field=\"spec.exposure.type\",\n            error_type=\"required\",\n        )\n\n.evaluation_tests/test_checkpoint_7.py:514: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.evaluation_tests/conftest.py:323: in assert_error_contains\n    assert_error(result)\n.evaluation_tests/conftest.py:298: in assert_error\n    assert_exit_code(result, 1)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nresult = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"required\", \"message\": \"exposure.type is require...code=0, json={'errors': [{'field': 'spec.exposure.type', 'type': 'required', 'message': 'exposure.type is required'}]})\nexpected = 1\n\n    def assert_exit_code(result: CLIResult, expected: int) -> None:\n>       assert result.returncode == expected, (\n            f\"Expected exit code {expected}, got {result.returncode}.\\n\"\n            f\"stdout:\\n{result.stdout}\\nstderr:\\n{result.stderr}\"\n        )\nE       AssertionError: Expected exit code 1, got 0.\nE         stdout:\nE         {\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"required\", \"message\": \"exposure.type is required\"}]}\nE         \nE         stderr:\nE         \nE       assert 0 == 1\nE        +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"required\", \"message\": \"exposure.type is required\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.type', 'type': 'required', 'message': 'exposure.type is required'}]}).returncode\n\n.evaluation_tests/conftest.py:287: AssertionError"
+      },
+      "teardown": {
+        "duration": 0.0003984279901487753,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_forbidden_field_identifies",
+      "lineno": 520,
+      "outcome": "failed",
+      "keywords": [
+        "test_forbidden_field_identifies",
+        "error",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0025897209998220205,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.21778009900299367,
+        "outcome": "failed",
+        "crash": {
+          "path": "/workspace/.evaluation_tests/conftest.py",
+          "lineno": 287,
+          "message": "AssertionError: Expected exit code 1, got 0.\n  stdout:\n  {\"errors\": [{\"field\": \"spec.exposure.port\", \"type\": \"forbidden\", \"message\": \"field 'spec.exposure.port' is not allowed for exposure type 'Gateway'\"}]}\n  \n  stderr:\n  \nassert 0 == 1\n +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.port\", \"type\": \"forbidden\", \"message\": \"field \\'spec.exposure.port\\' is not allowed for exposure type \\'Gateway\\'\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.port', 'type': 'forbidden', 'message': \"field 'spec.exposure.port' is not allowed for exposure type 'Gateway'\"}]}).returncode"
+        },
+        "traceback": [
+          {
+            "path": ".evaluation_tests/test_checkpoint_7.py",
+            "lineno": 536,
+            "message": ""
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 323,
+            "message": "in assert_error_contains"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 298,
+            "message": "in assert_error"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 287,
+            "message": "AssertionError"
+          }
+        ],
+        "longrepr": "run_cli = <function run_cli.<locals>._run at 0x774bd235c180>\n\n    @pytest.mark.error\n    def test_forbidden_field_identifies(run_cli) -> None:\n        \"\"\"Gateway exposure with `port` reports `spec.exposure.port` as forbidden.\"\"\"\n        result = run_cli(\n            [\"mesh\", \"create\"],\n            input_yaml={\n                \"metadata\": {\"name\": \"my-mesh\"},\n                \"spec\": {\n                    \"exposure\": {\n                        \"type\": \"Gateway\",\n                        \"port\": 8080,\n                    },\n                },\n            },\n        )\n>       assert_error_contains(\n            result,\n            field=\"spec.exposure.port\",\n            error_type=\"forbidden\",\n        )\n\n.evaluation_tests/test_checkpoint_7.py:536: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.evaluation_tests/conftest.py:323: in assert_error_contains\n    assert_error(result)\n.evaluation_tests/conftest.py:298: in assert_error\n    assert_exit_code(result, 1)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nresult = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.port\", \"type\": \"forbidden\", \"message\": \"field \\'spec.exposure.p...sure.port', 'type': 'forbidden', 'message': \"field 'spec.exposure.port' is not allowed for exposure type 'Gateway'\"}]})\nexpected = 1\n\n    def assert_exit_code(result: CLIResult, expected: int) -> None:\n>       assert result.returncode == expected, (\n            f\"Expected exit code {expected}, got {result.returncode}.\\n\"\n            f\"stdout:\\n{result.stdout}\\nstderr:\\n{result.stderr}\"\n        )\nE       AssertionError: Expected exit code 1, got 0.\nE         stdout:\nE         {\"errors\": [{\"field\": \"spec.exposure.port\", \"type\": \"forbidden\", \"message\": \"field 'spec.exposure.port' is not allowed for exposure type 'Gateway'\"}]}\nE         \nE         stderr:\nE         \nE       assert 0 == 1\nE        +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.port\", \"type\": \"forbidden\", \"message\": \"field \\'spec.exposure.port\\' is not allowed for exposure type \\'Gateway\\'\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.port', 'type': 'forbidden', 'message': \"field 'spec.exposure.port' is not allowed for exposure type 'Gateway'\"}]}).returncode\n\n.evaluation_tests/conftest.py:287: AssertionError"
+      },
+      "teardown": {
+        "duration": 0.0002310639974894002,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_mgmt_immutable_exact_message",
+      "lineno": 547,
+      "outcome": "failed",
+      "keywords": [
+        "test_mgmt_immutable_exact_message",
+        "functionality",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0018479059945093468,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.42188782000448555,
+        "outcome": "failed",
+        "crash": {
+          "path": "/workspace/.evaluation_tests/conftest.py",
+          "lineno": 287,
+          "message": "AssertionError: Expected exit code 1, got 0.\n  stdout:\n  {\"errors\": [{\"field\": \"spec.management.enabled\", \"type\": \"immutable\", \"message\": \"field 'spec.management.enabled' is immutable after creation\"}]}\n  \n  stderr:\n  \nassert 0 == 1\n +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.management.enabled\", \"type\": \"immutable\", \"message\": \"field \\'spec.management.enabled\\' is immutable after creation\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.management.enabled', 'type': 'immutable', 'message': \"field 'spec.management.enabled' is immutable after creation\"}]}).returncode"
+        },
+        "traceback": [
+          {
+            "path": ".evaluation_tests/test_checkpoint_7.py",
+            "lineno": 559,
+            "message": ""
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 323,
+            "message": "in assert_error_contains"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 298,
+            "message": "in assert_error"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 287,
+            "message": "AssertionError"
+          }
+        ],
+        "longrepr": "run_cli = <function run_cli.<locals>._run at 0x774bd235c400>\n\n    @pytest.mark.functionality\n    def test_mgmt_immutable_exact_message(run_cli) -> None:\n        \"\"\"Management immutable error includes the exact message text from the spec.\"\"\"\n        create_mesh(run_cli, \"imm-mesh\", spec={\"management\": {\"enabled\": True}})\n        result = run_cli(\n            [\"mesh\", \"update\"],\n            input_yaml={\n                \"metadata\": {\"name\": \"imm-mesh\"},\n                \"spec\": {\"management\": {\"enabled\": False}},\n            },\n        )\n>       assert_error_contains(\n            result,\n            field=\"spec.management.enabled\",\n            error_type=\"immutable\",\n            message_contains=\"field 'spec.management.enabled' is immutable after creation\",\n        )\n\n.evaluation_tests/test_checkpoint_7.py:559: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.evaluation_tests/conftest.py:323: in assert_error_contains\n    assert_error(result)\n.evaluation_tests/conftest.py:298: in assert_error\n    assert_exit_code(result, 1)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nresult = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.management.enabled\", \"type\": \"immutable\", \"message\": \"field \\'spec.manag....management.enabled', 'type': 'immutable', 'message': \"field 'spec.management.enabled' is immutable after creation\"}]})\nexpected = 1\n\n    def assert_exit_code(result: CLIResult, expected: int) -> None:\n>       assert result.returncode == expected, (\n            f\"Expected exit code {expected}, got {result.returncode}.\\n\"\n            f\"stdout:\\n{result.stdout}\\nstderr:\\n{result.stderr}\"\n        )\nE       AssertionError: Expected exit code 1, got 0.\nE         stdout:\nE         {\"errors\": [{\"field\": \"spec.management.enabled\", \"type\": \"immutable\", \"message\": \"field 'spec.management.enabled' is immutable after creation\"}]}\nE         \nE         stderr:\nE         \nE       assert 0 == 1\nE        +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.management.enabled\", \"type\": \"immutable\", \"message\": \"field \\'spec.management.enabled\\' is immutable after creation\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.management.enabled', 'type': 'immutable', 'message': \"field 'spec.management.enabled' is immutable after creation\"}]}).returncode\n\n.evaluation_tests/conftest.py:287: AssertionError"
+      },
+      "teardown": {
+        "duration": 0.00019929101108573377,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_error_sort_order",
+      "lineno": 566,
+      "outcome": "failed",
+      "keywords": [
+        "test_error_sort_order",
+        "functionality",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0015173569991020486,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.22168061300180852,
+        "outcome": "failed",
+        "crash": {
+          "path": "/workspace/.evaluation_tests/conftest.py",
+          "lineno": 287,
+          "message": "AssertionError: Expected exit code 1, got 0.\n  stdout:\n  {\"errors\": [{\"field\": \"spec.exposure.directPort\", \"type\": \"forbidden\", \"message\": \"field 'spec.exposure.directPort' is not allowed for exposure type 'Balancer'\"}, {\"field\": \"spec.exposure.hostname\", \"type\": \"forbidden\", \"message\": \"field 'spec.exposure.hostname' is not allowed for exposure type 'Balancer'\"}]}\n  \n  stderr:\n  \nassert 0 == 1\n +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.directPort\", \"type\": \"forbidden\", \"message\": \"field \\'spec.exposure.directPort\\' is not allowed for exposure type \\'Balancer\\'\"}, {\"field\": \"spec.exposure.hostname\", \"type\": \"forbidden\", \"message\": \"field \\'spec.exposure.hostname\\' is not allowed for exposure type \\'Balancer\\'\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.directPort', 'type': 'forbidden', 'message': \"field 'spec.exposure.directPort' is not allowed for exposure type 'Balancer'\"}, {'field': 'spec.exposure.hostname', 'type': 'forbidden', 'message': \"field 'spec.exposure.hostname' is not allowed for exposure type 'Balancer'\"}]}).returncode"
+        },
+        "traceback": [
+          {
+            "path": ".evaluation_tests/test_checkpoint_7.py",
+            "lineno": 583,
+            "message": ""
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 298,
+            "message": "in assert_error"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 287,
+            "message": "AssertionError"
+          }
+        ],
+        "longrepr": "run_cli = <function run_cli.<locals>._run at 0x774bd23e1a80>\n\n    @pytest.mark.functionality\n    def test_error_sort_order(run_cli) -> None:\n        \"\"\"Multiple validation errors are sorted by field then type.\"\"\"\n        result = run_cli(\n            [\"mesh\", \"create\"],\n            input_yaml={\n                \"metadata\": {\"name\": \"sort-mesh\"},\n                \"spec\": {\n                    \"exposure\": {\n                        \"type\": \"Balancer\",\n                        \"directPort\": 8080,\n                        \"hostname\": \"sort.example.com\",\n                    },\n                },\n            },\n        )\n>       assert_error(result)\n\n.evaluation_tests/test_checkpoint_7.py:583: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.evaluation_tests/conftest.py:298: in assert_error\n    assert_exit_code(result, 1)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nresult = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.directPort\", \"type\": \"forbidden\", \"message\": \"field \\'spec.expo...name', 'type': 'forbidden', 'message': \"field 'spec.exposure.hostname' is not allowed for exposure type 'Balancer'\"}]})\nexpected = 1\n\n    def assert_exit_code(result: CLIResult, expected: int) -> None:\n>       assert result.returncode == expected, (\n            f\"Expected exit code {expected}, got {result.returncode}.\\n\"\n            f\"stdout:\\n{result.stdout}\\nstderr:\\n{result.stderr}\"\n        )\nE       AssertionError: Expected exit code 1, got 0.\nE         stdout:\nE         {\"errors\": [{\"field\": \"spec.exposure.directPort\", \"type\": \"forbidden\", \"message\": \"field 'spec.exposure.directPort' is not allowed for exposure type 'Balancer'\"}, {\"field\": \"spec.exposure.hostname\", \"type\": \"forbidden\", \"message\": \"field 'spec.exposure.hostname' is not allowed for exposure type 'Balancer'\"}]}\nE         \nE         stderr:\nE         \nE       assert 0 == 1\nE        +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.directPort\", \"type\": \"forbidden\", \"message\": \"field \\'spec.exposure.directPort\\' is not allowed for exposure type \\'Balancer\\'\"}, {\"field\": \"spec.exposure.hostname\", \"type\": \"forbidden\", \"message\": \"field \\'spec.exposure.hostname\\' is not allowed for exposure type \\'Balancer\\'\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.directPort', 'type': 'forbidden', 'message': \"field 'spec.exposure.directPort' is not allowed for exposure type 'Balancer'\"}, {'field': 'spec.exposure.hostname', 'type': 'forbidden', 'message': \"field 'spec.exposure.hostname' is not allowed for exposure type 'Balancer'\"}]}).returncode\n\n.evaluation_tests/conftest.py:287: AssertionError"
+      },
+      "teardown": {
+        "duration": 0.00020715799473691732,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_shell_output_no_status_key",
+      "lineno": 588,
+      "outcome": "passed",
+      "keywords": [
+        "test_shell_output_no_status_key",
+        "functionality",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0018979640008183196,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.47118978899379726,
+        "outcome": "passed"
+      },
+      "teardown": {
+        "duration": 0.0003935569984605536,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_shell_no_exposure_message_includes_name",
+      "lineno": 601,
+      "outcome": "failed",
+      "keywords": [
+        "test_shell_no_exposure_message_includes_name",
+        "functionality",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0030375460046343505,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.5688687310030218,
+        "outcome": "failed",
+        "crash": {
+          "path": "/workspace/.evaluation_tests/conftest.py",
+          "lineno": 287,
+          "message": "AssertionError: Expected exit code 1, got 0.\n  stdout:\n  {\"errors\": [{\"field\": \"metadata.name\", \"type\": \"not_found\", \"message\": \"mesh 'named-mesh' not found\"}]}\n  \n  stderr:\n  \nassert 0 == 1\n +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"metadata.name\", \"type\": \"not_found\", \"message\": \"mesh \\'named-mesh\\' not found\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'metadata.name', 'type': 'not_found', 'message': \"mesh 'named-mesh' not found\"}]}).returncode"
+        },
+        "traceback": [
+          {
+            "path": ".evaluation_tests/test_checkpoint_7.py",
+            "lineno": 607,
+            "message": ""
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 323,
+            "message": "in assert_error_contains"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 298,
+            "message": "in assert_error"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 287,
+            "message": "AssertionError"
+          }
+        ],
+        "longrepr": "run_cli = <function run_cli.<locals>._run at 0x774bd23cbba0>\n\n    @pytest.mark.functionality\n    def test_shell_no_exposure_message_includes_name(run_cli) -> None:\n        \"\"\"mesh shell no-exposure error message interpolates the mesh name.\"\"\"\n        create_mesh(run_cli, \"named-mesh\")\n        result = run_cli([\"mesh\", \"shell\", \"named-mesh\"])\n>       assert_error_contains(\n            result,\n            field=\"spec.exposure\",\n            error_type=\"invalid\",\n            message_contains=\"mesh 'named-mesh'\",\n        )\n\n.evaluation_tests/test_checkpoint_7.py:607: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.evaluation_tests/conftest.py:323: in assert_error_contains\n    assert_error(result)\n.evaluation_tests/conftest.py:298: in assert_error\n    assert_exit_code(result, 1)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nresult = CLIResult(stdout='{\"errors\": [{\"field\": \"metadata.name\", \"type\": \"not_found\", \"message\": \"mesh \\'named-mesh\\' not foun...rncode=0, json={'errors': [{'field': 'metadata.name', 'type': 'not_found', 'message': \"mesh 'named-mesh' not found\"}]})\nexpected = 1\n\n    def assert_exit_code(result: CLIResult, expected: int) -> None:\n>       assert result.returncode == expected, (\n            f\"Expected exit code {expected}, got {result.returncode}.\\n\"\n            f\"stdout:\\n{result.stdout}\\nstderr:\\n{result.stderr}\"\n        )\nE       AssertionError: Expected exit code 1, got 0.\nE         stdout:\nE         {\"errors\": [{\"field\": \"metadata.name\", \"type\": \"not_found\", \"message\": \"mesh 'named-mesh' not found\"}]}\nE         \nE         stderr:\nE         \nE       assert 0 == 1\nE        +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"metadata.name\", \"type\": \"not_found\", \"message\": \"mesh \\'named-mesh\\' not found\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'metadata.name', 'type': 'not_found', 'message': \"mesh 'named-mesh' not found\"}]}).returncode\n\n.evaluation_tests/conftest.py:287: AssertionError"
+      },
+      "teardown": {
+        "duration": 0.00033462200372014195,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_shell_directport_equals_conn_details",
+      "lineno": 614,
+      "outcome": "passed",
+      "keywords": [
+        "test_shell_directport_equals_conn_details",
+        "functionality",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.002302312001120299,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.48357032099738717,
+        "outcome": "passed"
+      },
+      "teardown": {
+        "duration": 0.00029946700669825077,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_invalid_exposure_type_error_shape",
+      "lineno": 628,
+      "outcome": "failed",
+      "keywords": [
+        "test_invalid_exposure_type_error_shape",
+        "functionality",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0023551620106445625,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.2330598669941537,
+        "outcome": "failed",
+        "crash": {
+          "path": "/workspace/.evaluation_tests/conftest.py",
+          "lineno": 287,
+          "message": "AssertionError: Expected exit code 1, got 0.\n  stdout:\n  {\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"invalid\", \"message\": \"exposure.type must be one of Gateway, DirectPort, Balancer, got 'InvalidMode'\"}]}\n  \n  stderr:\n  \nassert 0 == 1\n +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"invalid\", \"message\": \"exposure.type must be one of Gateway, DirectPort, Balancer, got \\'InvalidMode\\'\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.type', 'type': 'invalid', 'message': \"exposure.type must be one of Gateway, DirectPort, Balancer, got 'InvalidMode'\"}]}).returncode"
+        },
+        "traceback": [
+          {
+            "path": ".evaluation_tests/test_checkpoint_7.py",
+            "lineno": 639,
+            "message": ""
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 323,
+            "message": "in assert_error_contains"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 298,
+            "message": "in assert_error"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 287,
+            "message": "AssertionError"
+          }
+        ],
+        "longrepr": "run_cli = <function run_cli.<locals>._run at 0x774bd23cba60>\n\n    @pytest.mark.functionality\n    def test_invalid_exposure_type_error_shape(run_cli) -> None:\n        \"\"\"Invalid spec.exposure.type produces field=spec.exposure.type, type=invalid.\"\"\"\n        result = run_cli(\n            [\"mesh\", \"create\"],\n            input_yaml={\n                \"metadata\": {\"name\": \"my-mesh\"},\n                \"spec\": {\"exposure\": {\"type\": \"InvalidMode\"}},\n            },\n        )\n>       assert_error_contains(\n            result,\n            field=\"spec.exposure.type\",\n            error_type=\"invalid\",\n        )\n\n.evaluation_tests/test_checkpoint_7.py:639: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.evaluation_tests/conftest.py:323: in assert_error_contains\n    assert_error(result)\n.evaluation_tests/conftest.py:298: in assert_error\n    assert_exit_code(result, 1)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nresult = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"invalid\", \"message\": \"exposure.type must be one...ype', 'type': 'invalid', 'message': \"exposure.type must be one of Gateway, DirectPort, Balancer, got 'InvalidMode'\"}]})\nexpected = 1\n\n    def assert_exit_code(result: CLIResult, expected: int) -> None:\n>       assert result.returncode == expected, (\n            f\"Expected exit code {expected}, got {result.returncode}.\\n\"\n            f\"stdout:\\n{result.stdout}\\nstderr:\\n{result.stderr}\"\n        )\nE       AssertionError: Expected exit code 1, got 0.\nE         stdout:\nE         {\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"invalid\", \"message\": \"exposure.type must be one of Gateway, DirectPort, Balancer, got 'InvalidMode'\"}]}\nE         \nE         stderr:\nE         \nE       assert 0 == 1\nE        +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"invalid\", \"message\": \"exposure.type must be one of Gateway, DirectPort, Balancer, got \\'InvalidMode\\'\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.type', 'type': 'invalid', 'message': \"exposure.type must be one of Gateway, DirectPort, Balancer, got 'InvalidMode'\"}]}).returncode\n\n.evaluation_tests/conftest.py:287: AssertionError"
+      },
+      "teardown": {
+        "duration": 0.00020517699886113405,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_exposure_empty_object",
+      "lineno": 645,
+      "outcome": "failed",
+      "keywords": [
+        "test_exposure_empty_object",
+        "functionality",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.002096886993967928,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.19616028800373897,
+        "outcome": "failed",
+        "crash": {
+          "path": "/workspace/.evaluation_tests/conftest.py",
+          "lineno": 287,
+          "message": "AssertionError: Expected exit code 1, got 0.\n  stdout:\n  {\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"required\", \"message\": \"exposure.type is required\"}]}\n  \n  stderr:\n  \nassert 0 == 1\n +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"required\", \"message\": \"exposure.type is required\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.type', 'type': 'required', 'message': 'exposure.type is required'}]}).returncode"
+        },
+        "traceback": [
+          {
+            "path": ".evaluation_tests/test_checkpoint_7.py",
+            "lineno": 656,
+            "message": ""
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 323,
+            "message": "in assert_error_contains"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 298,
+            "message": "in assert_error"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 287,
+            "message": "AssertionError"
+          }
+        ],
+        "longrepr": "run_cli = <function run_cli.<locals>._run at 0x774bd235c5e0>\n\n    @pytest.mark.functionality\n    def test_exposure_empty_object(run_cli) -> None:\n        \"\"\"spec.exposure as empty object triggers required error on spec.exposure.type.\"\"\"\n        result = run_cli(\n            [\"mesh\", \"create\"],\n            input_yaml={\n                \"metadata\": {\"name\": \"my-mesh\"},\n                \"spec\": {\"exposure\": {}},\n            },\n        )\n>       assert_error_contains(\n            result,\n            field=\"spec.exposure.type\",\n            error_type=\"required\",\n        )\n\n.evaluation_tests/test_checkpoint_7.py:656: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.evaluation_tests/conftest.py:323: in assert_error_contains\n    assert_error(result)\n.evaluation_tests/conftest.py:298: in assert_error\n    assert_exit_code(result, 1)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nresult = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"required\", \"message\": \"exposure.type is require...code=0, json={'errors': [{'field': 'spec.exposure.type', 'type': 'required', 'message': 'exposure.type is required'}]})\nexpected = 1\n\n    def assert_exit_code(result: CLIResult, expected: int) -> None:\n>       assert result.returncode == expected, (\n            f\"Expected exit code {expected}, got {result.returncode}.\\n\"\n            f\"stdout:\\n{result.stdout}\\nstderr:\\n{result.stderr}\"\n        )\nE       AssertionError: Expected exit code 1, got 0.\nE         stdout:\nE         {\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"required\", \"message\": \"exposure.type is required\"}]}\nE         \nE         stderr:\nE         \nE       assert 0 == 1\nE        +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"spec.exposure.type\", \"type\": \"required\", \"message\": \"exposure.type is required\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.exposure.type', 'type': 'required', 'message': 'exposure.type is required'}]}).returncode\n\n.evaluation_tests/conftest.py:287: AssertionError"
+      },
+      "teardown": {
+        "duration": 0.00018987400108017027,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_gateway_hostname_no_annotations_key",
+      "lineno": 662,
+      "outcome": "passed",
+      "keywords": [
+        "test_gateway_hostname_no_annotations_key",
+        "functionality",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0018593129934743047,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.18377979900105856,
+        "outcome": "passed"
+      },
+      "teardown": {
+        "duration": 0.00015782000264152884,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_regression_migration_lifecycle",
+      "lineno": 678,
+      "outcome": "passed",
+      "keywords": [
+        "test_regression_migration_lifecycle",
+        "functionality",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.001596261005033739,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.5716405339917401,
+        "outcome": "passed"
+      },
+      "teardown": {
+        "duration": 0.0002018750092247501,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_regression_vault_readiness_tracks_mesh_stability",
+      "lineno": 699,
+      "outcome": "failed",
+      "keywords": [
+        "test_regression_vault_readiness_tracks_mesh_stability",
+        "functionality",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0018372610065853223,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 1.248128502003965,
+        "outcome": "failed",
+        "crash": {
+          "path": "/workspace/.evaluation_tests/test_checkpoint_7.py",
+          "lineno": 723,
+          "message": "AssertionError: assert 'False' == 'True'\n  \n  - True\n  + False"
+        },
+        "traceback": [
+          {
+            "path": ".evaluation_tests/test_checkpoint_7.py",
+            "lineno": 723,
+            "message": "AssertionError"
+          }
+        ],
+        "longrepr": "run_cli = <function run_cli.<locals>._run at 0x774bd235c9a0>\n\n    @pytest.mark.functionality\n    def test_regression_vault_readiness_tracks_mesh_stability(run_cli) -> None:\n        \"\"\"Regression(CP3): Vault Ready=False when mesh is stopped, Ready=True after resume.\"\"\"\n        create_mesh(run_cli, \"reg-mesh\", spec={\"instances\": 2})\n        stop_mesh(run_cli, \"reg-mesh\")\n    \n        data = create_vault(run_cli, \"reg-vault\", \"reg-mesh\")\n        ready = find_condition(data, \"Ready\")\n        assert ready is not None\n        assert ready[\"status\"] == \"False\"\n        assert data[\"status\"][\"state\"] == \"Pending\"\n    \n        # Resume mesh\n        run_cli(\n            [\"mesh\", \"update\"],\n            input_yaml={\"metadata\": {\"name\": \"reg-mesh\"}, \"spec\": {\"instances\": 2}},\n        )\n        # Resolve transient state\n        run_cli([\"mesh\", \"describe\", \"reg-mesh\"])\n    \n        desc = run_cli([\"vault\", \"describe\", \"reg-vault\"])\n        assert_success(desc)\n        ready = find_condition(desc.json, \"Ready\")\n>       assert ready[\"status\"] == \"True\"\nE       AssertionError: assert 'False' == 'True'\nE         \nE         - True\nE         + False\n\n.evaluation_tests/test_checkpoint_7.py:723: AssertionError"
+      },
+      "teardown": {
+        "duration": 0.0002517550019547343,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_regression_create_defaults_and_conditions",
+      "lineno": 726,
+      "outcome": "failed",
+      "keywords": [
+        "test_regression_create_defaults_and_conditions",
+        "functionality",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0018633360014064237,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.17565800200100057,
+        "outcome": "failed",
+        "crash": {
+          "path": "/workspace/.evaluation_tests/test_checkpoint_7.py",
+          "lineno": 732,
+          "message": "KeyError: 'spec'"
+        },
+        "traceback": [
+          {
+            "path": ".evaluation_tests/test_checkpoint_7.py",
+            "lineno": 732,
+            "message": "KeyError"
+          }
+        ],
+        "longrepr": "run_cli = <function run_cli.<locals>._run at 0x774bd235c720>\n\n    @pytest.mark.functionality\n    def test_regression_create_defaults_and_conditions(run_cli) -> None:\n        \"\"\"Regression(CP1+CP2+CP4): Minimal mesh create has correct defaults, conditions, and no connectivity.\"\"\"\n        data = create_mesh(run_cli, \"reg-mesh\")\n    \n>       assert data[\"spec\"][\"instances\"] == 1\n               ^^^^^^^^^^^^\nE       KeyError: 'spec'\n\n.evaluation_tests/test_checkpoint_7.py:732: KeyError"
+      },
+      "teardown": {
+        "duration": 0.00018411500786896795,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_regression_error_accumulation_and_sort_order",
+      "lineno": 743,
+      "outcome": "failed",
+      "keywords": [
+        "test_regression_error_accumulation_and_sort_order",
+        "functionality",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0017801469948608428,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.18201176800357644,
+        "outcome": "failed",
+        "crash": {
+          "path": "/workspace/.evaluation_tests/conftest.py",
+          "lineno": 287,
+          "message": "AssertionError: Expected exit code 1, got 0.\n  stdout:\n  {\"errors\": [{\"field\": \"metadata.name\", \"type\": \"invalid\", \"message\": \"name must be lowercase alphanumeric with interior hyphens only, minimum 2 characters\"}, {\"field\": \"spec.access.authentication.digestAlgorithm\", \"type\": \"invalid\", \"message\": \"digestAlgorithm must be one of SHA-256, SHA-384, SHA-512\"}, {\"field\": \"spec.instances\", \"type\": \"invalid\", \"message\": \"instances must be a positive integer\"}]}\n  \n  stderr:\n  \nassert 0 == 1\n +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"metadata.name\", \"type\": \"invalid\", \"message\": \"name must be lowercase alphanumeric with interior hyphens only, minimum 2 characters\"}, {\"field\": \"spec.access.authentication.digestAlgorithm\", \"type\": \"invalid\", \"message\": \"digestAlgorithm must be one of SHA-256, SHA-384, SHA-512\"}, {\"field\": \"spec.instances\", \"type\": \"invalid\", \"message\": \"instances must be a positive integer\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'metadata.name', 'type': 'invalid', 'message': 'name must be lowercase alphanumeric with interior hyphens only, minimum 2 characters'}, {'field': 'spec.access.authentication.digestAlgorithm', 'type': 'invalid', 'message': 'digestAlgorithm must be one of SHA-256, SHA-384, SHA-512'}, {'field': 'spec.instances', 'type': 'invalid', 'message': 'instances must be a positive integer'}]}).returncode"
+        },
+        "traceback": [
+          {
+            "path": ".evaluation_tests/test_checkpoint_7.py",
+            "lineno": 757,
+            "message": ""
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 298,
+            "message": "in assert_error"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 287,
+            "message": "AssertionError"
+          }
+        ],
+        "longrepr": "run_cli = <function run_cli.<locals>._run at 0x774bd235cf40>\n\n    @pytest.mark.functionality\n    def test_regression_error_accumulation_and_sort_order(run_cli) -> None:\n        \"\"\"Regression(CP1+CP4): Multiple errors are accumulated and sorted by (field, type).\"\"\"\n        result = run_cli(\n            [\"mesh\", \"create\"],\n            input_yaml={\n                \"metadata\": {\"name\": \"BAD\"},\n                \"spec\": {\n                    \"instances\": -1,\n                    \"access\": {\"authentication\": {\"digestAlgorithm\": \"MD5\"}},\n                },\n            },\n        )\n>       assert_error(result)\n\n.evaluation_tests/test_checkpoint_7.py:757: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.evaluation_tests/conftest.py:298: in assert_error\n    assert_exit_code(result, 1)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nresult = CLIResult(stdout='{\"errors\": [{\"field\": \"metadata.name\", \"type\": \"invalid\", \"message\": \"name must be lowercase alphanu...HA-384, SHA-512'}, {'field': 'spec.instances', 'type': 'invalid', 'message': 'instances must be a positive integer'}]})\nexpected = 1\n\n    def assert_exit_code(result: CLIResult, expected: int) -> None:\n>       assert result.returncode == expected, (\n            f\"Expected exit code {expected}, got {result.returncode}.\\n\"\n            f\"stdout:\\n{result.stdout}\\nstderr:\\n{result.stderr}\"\n        )\nE       AssertionError: Expected exit code 1, got 0.\nE         stdout:\nE         {\"errors\": [{\"field\": \"metadata.name\", \"type\": \"invalid\", \"message\": \"name must be lowercase alphanumeric with interior hyphens only, minimum 2 characters\"}, {\"field\": \"spec.access.authentication.digestAlgorithm\", \"type\": \"invalid\", \"message\": \"digestAlgorithm must be one of SHA-256, SHA-384, SHA-512\"}, {\"field\": \"spec.instances\", \"type\": \"invalid\", \"message\": \"instances must be a positive integer\"}]}\nE         \nE         stderr:\nE         \nE       assert 0 == 1\nE        +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"metadata.name\", \"type\": \"invalid\", \"message\": \"name must be lowercase alphanumeric with interior hyphens only, minimum 2 characters\"}, {\"field\": \"spec.access.authentication.digestAlgorithm\", \"type\": \"invalid\", \"message\": \"digestAlgorithm must be one of SHA-256, SHA-384, SHA-512\"}, {\"field\": \"spec.instances\", \"type\": \"invalid\", \"message\": \"instances must be a positive integer\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'metadata.name', 'type': 'invalid', 'message': 'name must be lowercase alphanumeric with interior hyphens only, minimum 2 characters'}, {'field': 'spec.access.authentication.digestAlgorithm', 'type': 'invalid', 'message': 'digestAlgorithm must be one of SHA-256, SHA-384, SHA-512'}, {'field': 'spec.instances', 'type': 'invalid', 'message': 'instances must be a positive integer'}]}).returncode\n\n.evaluation_tests/conftest.py:287: AssertionError"
+      },
+      "teardown": {
+        "duration": 0.00022223299311008304,
+        "outcome": "passed"
+      }
+    },
+    {
+      "nodeid": ".evaluation_tests/test_checkpoint_7.py::test_regression_snapshot_delete_protection",
+      "lineno": 765,
+      "outcome": "failed",
+      "keywords": [
+        "test_regression_snapshot_delete_protection",
+        "functionality",
+        "pytestmark",
+        "test_checkpoint_7.py",
+        ".evaluation_tests",
+        "workspace",
+        ""
+      ],
+      "setup": {
+        "duration": 0.0020627890044124797,
+        "outcome": "passed"
+      },
+      "call": {
+        "duration": 0.9972798670060001,
+        "outcome": "failed",
+        "crash": {
+          "path": "/workspace/.evaluation_tests/conftest.py",
+          "lineno": 287,
+          "message": "AssertionError: Expected exit code 1, got 0.\n  stdout:\n  {\"errors\": [{\"field\": \"metadata.name\", \"type\": \"not_found\", \"message\": \"snapshot 'reg-snap' not found\"}]}\n  \n  stderr:\n  \nassert 0 == 1\n +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"metadata.name\", \"type\": \"not_found\", \"message\": \"snapshot \\'reg-snap\\' not found\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'metadata.name', 'type': 'not_found', 'message': \"snapshot 'reg-snap' not found\"}]}).returncode"
+        },
+        "traceback": [
+          {
+            "path": ".evaluation_tests/test_checkpoint_7.py",
+            "lineno": 775,
+            "message": ""
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 323,
+            "message": "in assert_error_contains"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 298,
+            "message": "in assert_error"
+          },
+          {
+            "path": ".evaluation_tests/conftest.py",
+            "lineno": 287,
+            "message": "AssertionError"
+          }
+        ],
+        "longrepr": "run_cli = <function run_cli.<locals>._run at 0x774bd23cbba0>\n\n    @pytest.mark.functionality\n    def test_regression_snapshot_delete_protection(run_cli) -> None:\n        \"\"\"Regression(CP5): Snapshot delete blocked by referencing recovery; succeeds after recovery deleted.\"\"\"\n        create_mesh(run_cli, \"reg-mesh\")\n        create_snapshot(run_cli, \"reg-snap\", \"reg-mesh\")\n        run_cli([\"snapshot\", \"run\", \"reg-snap\"])\n        create_recovery(run_cli, \"reg-rec\", \"reg-mesh\", \"reg-snap\")\n    \n        result = run_cli([\"snapshot\", \"delete\", \"reg-snap\"])\n>       assert_error_contains(\n            result, field=\"metadata.name\", error_type=\"conflict\", message_contains=\"reg-rec\"\n        )\n\n.evaluation_tests/test_checkpoint_7.py:775: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n.evaluation_tests/conftest.py:323: in assert_error_contains\n    assert_error(result)\n.evaluation_tests/conftest.py:298: in assert_error\n    assert_exit_code(result, 1)\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nresult = CLIResult(stdout='{\"errors\": [{\"field\": \"metadata.name\", \"type\": \"not_found\", \"message\": \"snapshot \\'reg-snap\\' not fo...code=0, json={'errors': [{'field': 'metadata.name', 'type': 'not_found', 'message': \"snapshot 'reg-snap' not found\"}]})\nexpected = 1\n\n    def assert_exit_code(result: CLIResult, expected: int) -> None:\n>       assert result.returncode == expected, (\n            f\"Expected exit code {expected}, got {result.returncode}.\\n\"\n            f\"stdout:\\n{result.stdout}\\nstderr:\\n{result.stderr}\"\n        )\nE       AssertionError: Expected exit code 1, got 0.\nE         stdout:\nE         {\"errors\": [{\"field\": \"metadata.name\", \"type\": \"not_found\", \"message\": \"snapshot 'reg-snap' not found\"}]}\nE         \nE         stderr:\nE         \nE       assert 0 == 1\nE        +  where 0 = CLIResult(stdout='{\"errors\": [{\"field\": \"metadata.name\", \"type\": \"not_found\", \"message\": \"snapshot \\'reg-snap\\' not found\"}]}\\n', stderr='', returncode=0, json={'errors': [{'field': 'metadata.name', 'type': 'not_found', 'message': \"snapshot 'reg-snap' not found\"}]}).returncode\n\n.evaluation_tests/conftest.py:287: AssertionError"
+      },
+      "teardown": {
+        "duration": 0.0006744119891664013,
+        "outcome": "passed"
+      }
+    }
+  ]
+}

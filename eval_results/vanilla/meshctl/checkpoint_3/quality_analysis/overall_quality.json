@@ -1,0 +1,126 @@
+{
+  "ast_grep": {
+    "category_counts": {},
+    "category_weighted": {},
+    "counts": {},
+    "rules_checked": 355,
+    "violation_lines": 0,
+    "violations": 0,
+    "weighted": 0
+  },
+  "classes": {
+    "attribute_counts_mean": 0.0,
+    "attribute_counts_sum": 0,
+    "count": 0,
+    "method_counts_mean": 0.0,
+    "method_counts_sum": 0
+  },
+  "complexity": {
+    "cc_max": 71,
+    "cc_ratings": {
+      "A": 32,
+      "B": 4,
+      "C": 1,
+      "D": 2,
+      "E": 0,
+      "F": 1
+    },
+    "cc_sum": 241,
+    "mi_min": 0.0,
+    "mi_ratings": {
+      "A": 0,
+      "B": 0,
+      "C": 1
+    },
+    "mi_sum": 0.0,
+    "num_complex": 4
+  },
+  "file_count": 1,
+  "functions": {
+    "cc_concentration": 0.5629729070051257,
+    "cc_extreme_count": 1,
+    "cc_high_count": 4,
+    "cc_max": 71,
+    "cc_mean": 7.088235294117647,
+    "cc_normalized": 0.09009205013061695,
+    "cc_std": 12.405686982941194,
+    "cc_sum": 241,
+    "cc_top20": 0.6348547717842323,
+    "count": 34,
+    "depth_max": 6,
+    "extreme_cc_mean": 71.0,
+    "high_cc_mean": 33.0,
+    "lines_mean": 25.352941176470587,
+    "lines_sum": 862
+  },
+  "graph": {
+    "cyclic_dependency_mass": 0.0,
+    "dependency_entropy": 0.31800293536112584,
+    "edge_count": 77,
+    "node_count": 34,
+    "propagation_cost": 0.0766488413547237
+  },
+  "lines": {
+    "comments": 45,
+    "loc": 752,
+    "multi_comment": 0,
+    "single_comment": 47,
+    "total_lines": 986
+  },
+  "lint": {
+    "counts": {
+      "C901": 4,
+      "DOC201": 4,
+      "FBT002": 1,
+      "FURB118": 5,
+      "PERF401": 1,
+      "PLC1901": 3,
+      "PLR0912": 2,
+      "PLR0914": 2,
+      "PLR0915": 1,
+      "PLR1702": 4,
+      "PLR5501": 1,
+      "PLR6201": 1,
+      "PLW1514": 3,
+      "PTH100": 2,
+      "PTH105": 2,
+      "PTH108": 2,
+      "PTH110": 2,
+      "PTH118": 2,
+      "PTH120": 4,
+      "PTH123": 3,
+      "SIM102": 1,
+      "SIM105": 2,
+      "SIM114": 3
+    },
+    "errors": 55,
+    "fixable": 13
+  },
+  "redundancy": {
+    "clone_lines": 243,
+    "clone_ratio_sum": 0.31648936170212766,
+    "cloned_sloc_lines": 238,
+    "files_with_clones": 1
+  },
+  "source_files": [],
+  "symbols": {
+    "classes": 0,
+    "expressions": 856,
+    "expressions_top_level": 29,
+    "functions": 34,
+    "globals": 6,
+    "imports": 8,
+    "max_imports": 8,
+    "methods": 0,
+    "statements": 203,
+    "total": 40,
+    "type_aliases": 0,
+    "variables": 6
+  },
+  "verbosity_flagged_sloc_lines": 238,
+  "waste": {
+    "single_use_functions": 18,
+    "trivial_wrappers": 1,
+    "unused_variables": 6
+  }
+}
