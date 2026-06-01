@@ -1,0 +1,858 @@
+{
+  "version": "1.0",
+  "updatedAt": "2026-06-01T20:21:05.541Z",
+  "nodes": [
+    {
+      "id": "mesh-management",
+      "type": "spec",
+      "text": "TBD - created by archiving change implement-meshctl. Update Purpose after archive.",
+      "label": "mesh-management",
+      "status": "ACTIVE",
+      "embedding": null,
+      "hasTag": true
+    },
+    {
+      "id": "mesh-management/cli-entry-point",
+      "type": "requirement",
+      "text": "The tool SHALL be invokable as `uv run --project /app meshctl.py mesh <operation> [arguments]` and SHALL route to the correct operation handler.",
+      "label": "mesh-management/cli-entry-point",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/cli-entry-point/valid-subcommand-dispatched",
+      "type": "scenario",
+      "text": "- **WHEN** the user runs `meshctl.py mesh create -f <path>`\n- **THEN** the create handler is invoked with the given file path",
+      "label": "mesh-management/cli-entry-point/valid-subcommand-dispatched",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/cli-entry-point/unknown-subcommand",
+      "type": "scenario",
+      "text": "- **WHEN** the user runs `meshctl.py mesh <unknown>`\n- **THEN** the tool exits with a non-success indicator (implementation detail)\n\n---",
+      "label": "mesh-management/cli-entry-point/unknown-subcommand",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/mesh-create",
+      "type": "requirement",
+      "text": "The system SHALL read a YAML document from the file path given by `-f`, apply all defaults, validate all fields, and — if valid and the name is not already taken — persist the resource and print the full resource as JSON to stdout.",
+      "label": "mesh-management/mesh-create",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/mesh-create/valid-create",
+      "type": "scenario",
+      "text": "- **WHEN** a valid YAML file is provided with a unique mesh name\n- **THEN** the resource is persisted with defaults applied and the full resource JSON is printed",
+      "label": "mesh-management/mesh-create/valid-create",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/mesh-create/duplicate-name-rejected",
+      "type": "scenario",
+      "text": "- **WHEN** `create` is called with a name that already exists\n- **THEN** output `{\"errors\":[{\"field\":\"metadata.name\",\"type\":\"duplicate\",\"message\":\"<msg>\"}]}` and do not persist",
+      "label": "mesh-management/mesh-create/duplicate-name-rejected",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/mesh-create/invalid-yaml-file",
+      "type": "scenario",
+      "text": "- **WHEN** the file cannot be read or is not valid YAML\n- **THEN** output `{\"errors\":[{\"field\":\"\",\"type\":\"parse\",\"message\":\"<msg>\"}]}`\n\n---",
+      "label": "mesh-management/mesh-create/invalid-yaml-file",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/mesh-list",
+      "type": "requirement",
+      "text": "The system SHALL print a JSON array of all stored mesh summaries, sorted by `name` ascending lexicographically (case-sensitive).",
+      "label": "mesh-management/mesh-list",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/mesh-list/non-empty-store",
+      "type": "scenario",
+      "text": "- **WHEN** one or more meshes exist\n- **THEN** output a JSON array of `{\"name\":\"<string>\",\"status\":{\"state\":\"<string>\"}}` objects sorted by name",
+      "label": "mesh-management/mesh-list/non-empty-store",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/mesh-list/empty-store",
+      "type": "scenario",
+      "text": "- **WHEN** no meshes exist\n- **THEN** output `[]`\n\n---",
+      "label": "mesh-management/mesh-list/empty-store",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/mesh-describe",
+      "type": "requirement",
+      "text": "The system SHALL print the full resource JSON for the mesh identified by `<name>`.",
+      "label": "mesh-management/mesh-describe",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/mesh-describe/existing-mesh",
+      "type": "scenario",
+      "text": "- **WHEN** the named mesh exists\n- **THEN** output the full resource JSON including all defaulted spec fields and `status`",
+      "label": "mesh-management/mesh-describe/existing-mesh",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/mesh-describe/unknown-mesh",
+      "type": "scenario",
+      "text": "- **WHEN** the named mesh does not exist\n- **THEN** output `{\"errors\":[{\"field\":\"metadata.name\",\"type\":\"not_found\",\"message\":\"<msg>\"}]}`\n\n---",
+      "label": "mesh-management/mesh-describe/unknown-mesh",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/mesh-delete",
+      "type": "requirement",
+      "text": "The system SHALL remove the named mesh from the store and print a confirmation JSON object.",
+      "label": "mesh-management/mesh-delete",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/mesh-delete/existing-mesh-deleted",
+      "type": "scenario",
+      "text": "- **WHEN** the named mesh exists\n- **THEN** remove it from the store and output `{\"message\":\"<non-empty>\",\"metadata\":{\"name\":\"<string>\"}}`",
+      "label": "mesh-management/mesh-delete/existing-mesh-deleted",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/mesh-delete/unknown-mesh",
+      "type": "scenario",
+      "text": "- **WHEN** the named mesh does not exist\n- **THEN** output `{\"errors\":[{\"field\":\"metadata.name\",\"type\":\"not_found\",\"message\":\"<msg>\"}]}`\n\n---",
+      "label": "mesh-management/mesh-delete/unknown-mesh",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/yaml-input-schema",
+      "type": "requirement",
+      "text": "The system SHALL accept a YAML document that is a mapping with top-level keys `metadata` and `spec`. Any other top-level structure SHALL produce a parse error.",
+      "label": "mesh-management/yaml-input-schema",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/yaml-input-schema/valid-mapping-with-metadata-and-spec",
+      "type": "scenario",
+      "text": "- **WHEN** the YAML document has `metadata.name` and a `spec` block\n- **THEN** the document is accepted for further validation",
+      "label": "mesh-management/yaml-input-schema/valid-mapping-with-metadata-and-spec",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/yaml-input-schema/non-mapping-document",
+      "type": "scenario",
+      "text": "- **WHEN** the YAML document is a list or scalar\n- **THEN** output `{\"errors\":[{\"field\":\"\",\"type\":\"parse\",\"message\":\"<msg>\"}]}`\n\n---",
+      "label": "mesh-management/yaml-input-schema/non-mapping-document",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/name-validation",
+      "type": "requirement",
+      "text": "`metadata.name` SHALL be required, non-null, non-empty, and SHALL match `^[a-z0-9][a-z0-9-]*[a-z0-9]$` (minimum length 2).",
+      "label": "mesh-management/name-validation",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/name-validation/valid-name",
+      "type": "scenario",
+      "text": "- **WHEN** `metadata.name` is `\"my-mesh\"`\n- **THEN** name validation passes",
+      "label": "mesh-management/name-validation/valid-name",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/name-validation/missing-name",
+      "type": "scenario",
+      "text": "- **WHEN** `metadata.name` is absent or null\n- **THEN** output error `{\"field\":\"metadata.name\",\"type\":\"required\",\"message\":\"<msg>\"}`",
+      "label": "mesh-management/name-validation/missing-name",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/name-validation/invalid-name-format",
+      "type": "scenario",
+      "text": "- **WHEN** `metadata.name` is `\"My_Mesh\"` or `\"a\"` (too short) or `\"-bad\"` (starts with hyphen)\n- **THEN** output error `{\"field\":\"metadata.name\",\"type\":\"invalid\",\"message\":\"<msg>\"}`\n\n---",
+      "label": "mesh-management/name-validation/invalid-name-format",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/instance-count-validation-and-default",
+      "type": "requirement",
+      "text": "`spec.instances` SHALL be a positive integer. If absent, it SHALL default to `1`.",
+      "label": "mesh-management/instance-count-validation-and-default",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/instance-count-validation-and-default/absent-instances-defaults-to-1",
+      "type": "scenario",
+      "text": "- **WHEN** `spec.instances` is not specified\n- **THEN** the persisted resource has `spec.instances = 1`",
+      "label": "mesh-management/instance-count-validation-and-default/absent-instances-defaults-to-1",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/instance-count-validation-and-default/invalid-instances",
+      "type": "scenario",
+      "text": "- **WHEN** `spec.instances` is `0`, negative, or non-integer\n- **THEN** output error `{\"field\":\"spec.instances\",\"type\":\"invalid\",\"message\":\"<msg>\"}`\n\n---",
+      "label": "mesh-management/instance-count-validation-and-default/invalid-instances",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/runtime-version-validation",
+      "type": "requirement",
+      "text": "`spec.runtime`, when present, SHALL parse as `major.minor.patch` where each part is a non-negative integer. If absent, it SHALL be omitted from output.",
+      "label": "mesh-management/runtime-version-validation",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/runtime-version-validation/valid-runtime",
+      "type": "scenario",
+      "text": "- **WHEN** `spec.runtime` is `\"1.2.3\"`\n- **THEN** runtime validation passes and value is preserved",
+      "label": "mesh-management/runtime-version-validation/valid-runtime",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/runtime-version-validation/invalid-runtime-format",
+      "type": "scenario",
+      "text": "- **WHEN** `spec.runtime` is `\"1.2\"` or `\"v1.2.3\"` or `\"1.2.x\"`\n- **THEN** output error `{\"field\":\"spec.runtime\",\"type\":\"invalid\",\"message\":\"<msg>\"}`",
+      "label": "mesh-management/runtime-version-validation/invalid-runtime-format",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/runtime-version-validation/absent-runtime-omitted",
+      "type": "scenario",
+      "text": "- **WHEN** `spec.runtime` is not in the input\n- **THEN** `spec.runtime` is absent from the output JSON\n\n---",
+      "label": "mesh-management/runtime-version-validation/absent-runtime-omitted",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/memory-resource-validation-and-defaults",
+      "type": "requirement",
+      "text": "When `spec.resources.memory` is absent, the system SHALL default it to `{\"limit\":\"1Gi\",\"request\":\"1Gi\"}`. When present, `limit` SHALL be required and `request` SHALL default to `limit`. Memory quantities SHALL be a non-negative integer optionally suffixed with `Ki`, `Mi`, `Gi`, or `Ti`. `request` SHALL NOT exceed `limit`.",
+      "label": "mesh-management/memory-resource-validation-and-defaults",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/memory-resource-validation-and-defaults/absent-memory-defaults-applied",
+      "type": "scenario",
+      "text": "- **WHEN** `spec.resources.memory` is not specified\n- **THEN** output has `spec.resources.memory = {\"limit\":\"1Gi\",\"request\":\"1Gi\"}`",
+      "label": "mesh-management/memory-resource-validation-and-defaults/absent-memory-defaults-applied",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/memory-resource-validation-and-defaults/memory-limit-required-when-memory-object-present",
+      "type": "scenario",
+      "text": "- **WHEN** `spec.resources.memory` is present but `limit` is absent\n- **THEN** output error `{\"field\":\"spec.resources.memory.limit\",\"type\":\"required\",\"message\":\"<msg>\"}`",
+      "label": "mesh-management/memory-resource-validation-and-defaults/memory-limit-required-when-memory-object-present",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/memory-resource-validation-and-defaults/memory-request-defaults-to-limit",
+      "type": "scenario",
+      "text": "- **WHEN** `spec.resources.memory.limit` is `\"2Gi\"` and `request` is absent\n- **THEN** output has `spec.resources.memory.request = \"2Gi\"`",
+      "label": "mesh-management/memory-resource-validation-and-defaults/memory-request-defaults-to-limit",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/memory-resource-validation-and-defaults/memory-request-exceeds-limit-rejected",
+      "type": "scenario",
+      "text": "- **WHEN** `spec.resources.memory.request` parses to a value greater than `limit`\n- **THEN** output error `{\"field\":\"spec.resources.memory.request\",\"type\":\"invalid\",\"message\":\"<msg>\"}`",
+      "label": "mesh-management/memory-resource-validation-and-defaults/memory-request-exceeds-limit-rejected",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/memory-resource-validation-and-defaults/invalid-memory-quantity",
+      "type": "scenario",
+      "text": "- **WHEN** `spec.resources.memory.limit` is `\"abc\"` or `\"-1Gi\"`\n- **THEN** output error `{\"field\":\"spec.resources.memory.limit\",\"type\":\"invalid\",\"message\":\"<msg>\"}`\n\n---",
+      "label": "mesh-management/memory-resource-validation-and-defaults/invalid-memory-quantity",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/cpu-resource-validation-and-defaults",
+      "type": "requirement",
+      "text": "When `spec.resources.cpu` is absent, it SHALL be omitted from output. When present, `limit` SHALL be required and `request` SHALL default to `limit`. CPU quantities SHALL be a non-negative integer optionally suffixed with `m`. `request` SHALL NOT exceed `limit`.",
+      "label": "mesh-management/cpu-resource-validation-and-defaults",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/cpu-resource-validation-and-defaults/absent-cpu-omitted-from-output",
+      "type": "scenario",
+      "text": "- **WHEN** `spec.resources.cpu` is not specified\n- **THEN** `spec.resources.cpu` is absent from the output JSON",
+      "label": "mesh-management/cpu-resource-validation-and-defaults/absent-cpu-omitted-from-output",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/cpu-resource-validation-and-defaults/cpu-limit-required-when-cpu-object-present",
+      "type": "scenario",
+      "text": "- **WHEN** `spec.resources.cpu` is present but `limit` is absent\n- **THEN** output error `{\"field\":\"spec.resources.cpu.limit\",\"type\":\"required\",\"message\":\"<msg>\"}`",
+      "label": "mesh-management/cpu-resource-validation-and-defaults/cpu-limit-required-when-cpu-object-present",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/cpu-resource-validation-and-defaults/cpu-request-defaults-to-limit",
+      "type": "scenario",
+      "text": "- **WHEN** `spec.resources.cpu.limit` is `\"500m\"` and `request` is absent\n- **THEN** output has `spec.resources.cpu.request = \"500m\"`",
+      "label": "mesh-management/cpu-resource-validation-and-defaults/cpu-request-defaults-to-limit",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/cpu-resource-validation-and-defaults/cpu-request-exceeds-limit-rejected",
+      "type": "scenario",
+      "text": "- **WHEN** `spec.resources.cpu.request` parses to a value greater than `limit`\n- **THEN** output error `{\"field\":\"spec.resources.cpu.request\",\"type\":\"invalid\",\"message\":\"<msg>\"}`",
+      "label": "mesh-management/cpu-resource-validation-and-defaults/cpu-request-exceeds-limit-rejected",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/cpu-resource-validation-and-defaults/invalid-cpu-quantity",
+      "type": "scenario",
+      "text": "- **WHEN** `spec.resources.cpu.limit` is `\"1.5\"` or `\"abc\"`\n- **THEN** output error `{\"field\":\"spec.resources.cpu.limit\",\"type\":\"invalid\",\"message\":\"<msg>\"}`\n\n---",
+      "label": "mesh-management/cpu-resource-validation-and-defaults/invalid-cpu-quantity",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/authentication-default",
+      "type": "requirement",
+      "text": "`spec.access.authentication.enabled` SHALL default to `true` when absent.",
+      "label": "mesh-management/authentication-default",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/authentication-default/authentication-defaults-to-true",
+      "type": "scenario",
+      "text": "- **WHEN** `spec.access.authentication.enabled` is not specified\n- **THEN** output has `spec.access.authentication.enabled = true`",
+      "label": "mesh-management/authentication-default/authentication-defaults-to-true",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/authentication-default/explicit-false-accepted",
+      "type": "scenario",
+      "text": "- **WHEN** `spec.access.authentication.enabled` is `false`\n- **THEN** output has `spec.access.authentication.enabled = false`\n\n---",
+      "label": "mesh-management/authentication-default/explicit-false-accepted",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/migration-strategy-validation-and-default",
+      "type": "requirement",
+      "text": "`spec.migration.strategy` SHALL default to `\"FullStop\"`. It SHALL only accept the value `\"FullStop\"`; any other value SHALL produce an invalid error.",
+      "label": "mesh-management/migration-strategy-validation-and-default",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/migration-strategy-validation-and-default/migration-strategy-defaults-to-fullstop",
+      "type": "scenario",
+      "text": "- **WHEN** `spec.migration.strategy` is not specified\n- **THEN** output has `spec.migration.strategy = \"FullStop\"`",
+      "label": "mesh-management/migration-strategy-validation-and-default/migration-strategy-defaults-to-fullstop",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/migration-strategy-validation-and-default/invalid-migration-strategy-rejected",
+      "type": "scenario",
+      "text": "- **WHEN** `spec.migration.strategy` is `\"RollingUpdate\"`\n- **THEN** output error `{\"field\":\"spec.migration.strategy\",\"type\":\"invalid\",\"message\":\"<msg>\"}`\n\n---",
+      "label": "mesh-management/migration-strategy-validation-and-default/invalid-migration-strategy-rejected",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/forbidden-autoscaling-field",
+      "type": "requirement",
+      "text": "Any field named `autoScaling` anywhere under `spec` SHALL be rejected.",
+      "label": "mesh-management/forbidden-autoscaling-field",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/forbidden-autoscaling-field/autoscaling-at-spec-root",
+      "type": "scenario",
+      "text": "- **WHEN** the input has `spec.autoScaling: ...`\n- **THEN** output error `{\"field\":\"spec.autoScaling\",\"type\":\"forbidden\",\"message\":\"<msg>\"}`",
+      "label": "mesh-management/forbidden-autoscaling-field/autoscaling-at-spec-root",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/forbidden-autoscaling-field/autoscaling-nested-under-spec",
+      "type": "scenario",
+      "text": "- **WHEN** the input has `spec.resources.autoScaling: ...`\n- **THEN** output error `{\"field\":\"spec.resources.autoScaling\",\"type\":\"forbidden\",\"message\":\"<msg>\"}`\n\n---",
+      "label": "mesh-management/forbidden-autoscaling-field/autoscaling-nested-under-spec",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/error-output-format",
+      "type": "requirement",
+      "text": "All validation and operational errors SHALL be printed as `{\"errors\":[...]}` to stdout with nothing to stderr. Each error object SHALL have `field` (dot-path string), `message` (human-readable string), and `type` (one of: `required`, `invalid`, `forbidden`, `duplicate`, `not_found`, `parse`).",
+      "label": "mesh-management/error-output-format",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/error-output-format/single-error",
+      "type": "scenario",
+      "text": "- **WHEN** one validation rule fails\n- **THEN** output `{\"errors\":[{\"field\":\"<path>\",\"type\":\"<type>\",\"message\":\"<msg>\"}]}`",
+      "label": "mesh-management/error-output-format/single-error",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/error-output-format/multiple-errors",
+      "type": "scenario",
+      "text": "- **WHEN** multiple validation rules fail simultaneously\n- **THEN** output `{\"errors\":[...]}` containing all violations; order is not significant\n\n---",
+      "label": "mesh-management/error-output-format/multiple-errors",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/success-output-create-and-describe",
+      "type": "requirement",
+      "text": "Successful `create` and `describe` SHALL print the full resource JSON with `metadata`, `spec` (all defaulted fields), and `status.state = \"Running\"`.",
+      "label": "mesh-management/success-output-create-and-describe",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/success-output-create-and-describe/create-success-output",
+      "type": "scenario",
+      "text": "- **WHEN** create succeeds\n- **THEN** output `{\"metadata\":{\"name\":\"<n>\"},\"spec\":{...all fields...},\"status\":{\"state\":\"Running\"}}`",
+      "label": "mesh-management/success-output-create-and-describe/create-success-output",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/success-output-create-and-describe/new-mesh-starts-as-running",
+      "type": "scenario",
+      "text": "- **WHEN** a mesh is first created\n- **THEN** `status.state` is `\"Running\"`\n\n---",
+      "label": "mesh-management/success-output-create-and-describe/new-mesh-starts-as-running",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/success-output-delete",
+      "type": "requirement",
+      "text": "Successful `delete` SHALL print `{\"message\":\"<non-empty>\",\"metadata\":{\"name\":\"<string>\"}}`. The exact message wording is not part of the contract.",
+      "label": "mesh-management/success-output-delete",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "mesh-management/success-output-delete/delete-confirmation-printed",
+      "type": "scenario",
+      "text": "- **WHEN** delete succeeds\n- **THEN** output contains a non-empty `message` and `metadata.name` matching the deleted resource",
+      "label": "mesh-management/success-output-delete/delete-confirmation-printed",
+      "status": "ACTIVE",
+      "embedding": null
+    },
+    {
+      "id": "implement-meshctl",
+      "type": "intent",
+      "text": "A CLI tool (`meshctl.py`) is needed to manage mesh resources from YAML spec files, providing create/list/describe/delete operations with strict validation and structured JSON output. This is a greenfield implementation with no existing code.",
+      "label": "implement-meshctl",
+      "status": "ACTIVE",
+      "embedding": null,
+      "hasTag": true
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge:mesh-management:mesh-management/cli-entry-point",
+      "from": "mesh-management",
+      "to": "mesh-management/cli-entry-point",
+      "type": "HAS_REQUIREMENT"
+    },
+    {
+      "id": "edge:mesh-management/cli-entry-point:mesh-management/cli-entry-point/valid-subcommand-dispatched",
+      "from": "mesh-management/cli-entry-point",
+      "to": "mesh-management/cli-entry-point/valid-subcommand-dispatched",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management/cli-entry-point:mesh-management/cli-entry-point/unknown-subcommand",
+      "from": "mesh-management/cli-entry-point",
+      "to": "mesh-management/cli-entry-point/unknown-subcommand",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management:mesh-management/mesh-create",
+      "from": "mesh-management",
+      "to": "mesh-management/mesh-create",
+      "type": "HAS_REQUIREMENT"
+    },
+    {
+      "id": "edge:mesh-management/mesh-create:mesh-management/mesh-create/valid-create",
+      "from": "mesh-management/mesh-create",
+      "to": "mesh-management/mesh-create/valid-create",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management/mesh-create:mesh-management/mesh-create/duplicate-name-rejected",
+      "from": "mesh-management/mesh-create",
+      "to": "mesh-management/mesh-create/duplicate-name-rejected",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management/mesh-create:mesh-management/mesh-create/invalid-yaml-file",
+      "from": "mesh-management/mesh-create",
+      "to": "mesh-management/mesh-create/invalid-yaml-file",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management:mesh-management/mesh-list",
+      "from": "mesh-management",
+      "to": "mesh-management/mesh-list",
+      "type": "HAS_REQUIREMENT"
+    },
+    {
+      "id": "edge:mesh-management/mesh-list:mesh-management/mesh-list/non-empty-store",
+      "from": "mesh-management/mesh-list",
+      "to": "mesh-management/mesh-list/non-empty-store",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management/mesh-list:mesh-management/mesh-list/empty-store",
+      "from": "mesh-management/mesh-list",
+      "to": "mesh-management/mesh-list/empty-store",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management:mesh-management/mesh-describe",
+      "from": "mesh-management",
+      "to": "mesh-management/mesh-describe",
+      "type": "HAS_REQUIREMENT"
+    },
+    {
+      "id": "edge:mesh-management/mesh-describe:mesh-management/mesh-describe/existing-mesh",
+      "from": "mesh-management/mesh-describe",
+      "to": "mesh-management/mesh-describe/existing-mesh",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management/mesh-describe:mesh-management/mesh-describe/unknown-mesh",
+      "from": "mesh-management/mesh-describe",
+      "to": "mesh-management/mesh-describe/unknown-mesh",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management:mesh-management/mesh-delete",
+      "from": "mesh-management",
+      "to": "mesh-management/mesh-delete",
+      "type": "HAS_REQUIREMENT"
+    },
+    {
+      "id": "edge:mesh-management/mesh-delete:mesh-management/mesh-delete/existing-mesh-deleted",
+      "from": "mesh-management/mesh-delete",
+      "to": "mesh-management/mesh-delete/existing-mesh-deleted",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management/mesh-delete:mesh-management/mesh-delete/unknown-mesh",
+      "from": "mesh-management/mesh-delete",
+      "to": "mesh-management/mesh-delete/unknown-mesh",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management:mesh-management/yaml-input-schema",
+      "from": "mesh-management",
+      "to": "mesh-management/yaml-input-schema",
+      "type": "HAS_REQUIREMENT"
+    },
+    {
+      "id": "edge:mesh-management/yaml-input-schema:mesh-management/yaml-input-schema/valid-mapping-with-metadata-and-spec",
+      "from": "mesh-management/yaml-input-schema",
+      "to": "mesh-management/yaml-input-schema/valid-mapping-with-metadata-and-spec",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management/yaml-input-schema:mesh-management/yaml-input-schema/non-mapping-document",
+      "from": "mesh-management/yaml-input-schema",
+      "to": "mesh-management/yaml-input-schema/non-mapping-document",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management:mesh-management/name-validation",
+      "from": "mesh-management",
+      "to": "mesh-management/name-validation",
+      "type": "HAS_REQUIREMENT"
+    },
+    {
+      "id": "edge:mesh-management/name-validation:mesh-management/name-validation/valid-name",
+      "from": "mesh-management/name-validation",
+      "to": "mesh-management/name-validation/valid-name",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management/name-validation:mesh-management/name-validation/missing-name",
+      "from": "mesh-management/name-validation",
+      "to": "mesh-management/name-validation/missing-name",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management/name-validation:mesh-management/name-validation/invalid-name-format",
+      "from": "mesh-management/name-validation",
+      "to": "mesh-management/name-validation/invalid-name-format",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management:mesh-management/instance-count-validation-and-default",
+      "from": "mesh-management",
+      "to": "mesh-management/instance-count-validation-and-default",
+      "type": "HAS_REQUIREMENT"
+    },
+    {
+      "id": "edge:mesh-management/instance-count-validation-and-default:mesh-management/instance-count-validation-and-default/absent-instances-defaults-to-1",
+      "from": "mesh-management/instance-count-validation-and-default",
+      "to": "mesh-management/instance-count-validation-and-default/absent-instances-defaults-to-1",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management/instance-count-validation-and-default:mesh-management/instance-count-validation-and-default/invalid-instances",
+      "from": "mesh-management/instance-count-validation-and-default",
+      "to": "mesh-management/instance-count-validation-and-default/invalid-instances",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management:mesh-management/runtime-version-validation",
+      "from": "mesh-management",
+      "to": "mesh-management/runtime-version-validation",
+      "type": "HAS_REQUIREMENT"
+    },
+    {
+      "id": "edge:mesh-management/runtime-version-validation:mesh-management/runtime-version-validation/valid-runtime",
+      "from": "mesh-management/runtime-version-validation",
+      "to": "mesh-management/runtime-version-validation/valid-runtime",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management/runtime-version-validation:mesh-management/runtime-version-validation/invalid-runtime-format",
+      "from": "mesh-management/runtime-version-validation",
+      "to": "mesh-management/runtime-version-validation/invalid-runtime-format",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management/runtime-version-validation:mesh-management/runtime-version-validation/absent-runtime-omitted",
+      "from": "mesh-management/runtime-version-validation",
+      "to": "mesh-management/runtime-version-validation/absent-runtime-omitted",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management:mesh-management/memory-resource-validation-and-defaults",
+      "from": "mesh-management",
+      "to": "mesh-management/memory-resource-validation-and-defaults",
+      "type": "HAS_REQUIREMENT"
+    },
+    {
+      "id": "edge:mesh-management/memory-resource-validation-and-defaults:mesh-management/memory-resource-validation-and-defaults/absent-memory-defaults-applied",
+      "from": "mesh-management/memory-resource-validation-and-defaults",
+      "to": "mesh-management/memory-resource-validation-and-defaults/absent-memory-defaults-applied",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management/memory-resource-validation-and-defaults:mesh-management/memory-resource-validation-and-defaults/memory-limit-required-when-memory-object-present",
+      "from": "mesh-management/memory-resource-validation-and-defaults",
+      "to": "mesh-management/memory-resource-validation-and-defaults/memory-limit-required-when-memory-object-present",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management/memory-resource-validation-and-defaults:mesh-management/memory-resource-validation-and-defaults/memory-request-defaults-to-limit",
+      "from": "mesh-management/memory-resource-validation-and-defaults",
+      "to": "mesh-management/memory-resource-validation-and-defaults/memory-request-defaults-to-limit",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management/memory-resource-validation-and-defaults:mesh-management/memory-resource-validation-and-defaults/memory-request-exceeds-limit-rejected",
+      "from": "mesh-management/memory-resource-validation-and-defaults",
+      "to": "mesh-management/memory-resource-validation-and-defaults/memory-request-exceeds-limit-rejected",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management/memory-resource-validation-and-defaults:mesh-management/memory-resource-validation-and-defaults/invalid-memory-quantity",
+      "from": "mesh-management/memory-resource-validation-and-defaults",
+      "to": "mesh-management/memory-resource-validation-and-defaults/invalid-memory-quantity",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management:mesh-management/cpu-resource-validation-and-defaults",
+      "from": "mesh-management",
+      "to": "mesh-management/cpu-resource-validation-and-defaults",
+      "type": "HAS_REQUIREMENT"
+    },
+    {
+      "id": "edge:mesh-management/cpu-resource-validation-and-defaults:mesh-management/cpu-resource-validation-and-defaults/absent-cpu-omitted-from-output",
+      "from": "mesh-management/cpu-resource-validation-and-defaults",
+      "to": "mesh-management/cpu-resource-validation-and-defaults/absent-cpu-omitted-from-output",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management/cpu-resource-validation-and-defaults:mesh-management/cpu-resource-validation-and-defaults/cpu-limit-required-when-cpu-object-present",
+      "from": "mesh-management/cpu-resource-validation-and-defaults",
+      "to": "mesh-management/cpu-resource-validation-and-defaults/cpu-limit-required-when-cpu-object-present",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management/cpu-resource-validation-and-defaults:mesh-management/cpu-resource-validation-and-defaults/cpu-request-defaults-to-limit",
+      "from": "mesh-management/cpu-resource-validation-and-defaults",
+      "to": "mesh-management/cpu-resource-validation-and-defaults/cpu-request-defaults-to-limit",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management/cpu-resource-validation-and-defaults:mesh-management/cpu-resource-validation-and-defaults/cpu-request-exceeds-limit-rejected",
+      "from": "mesh-management/cpu-resource-validation-and-defaults",
+      "to": "mesh-management/cpu-resource-validation-and-defaults/cpu-request-exceeds-limit-rejected",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management/cpu-resource-validation-and-defaults:mesh-management/cpu-resource-validation-and-defaults/invalid-cpu-quantity",
+      "from": "mesh-management/cpu-resource-validation-and-defaults",
+      "to": "mesh-management/cpu-resource-validation-and-defaults/invalid-cpu-quantity",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management:mesh-management/authentication-default",
+      "from": "mesh-management",
+      "to": "mesh-management/authentication-default",
+      "type": "HAS_REQUIREMENT"
+    },
+    {
+      "id": "edge:mesh-management/authentication-default:mesh-management/authentication-default/authentication-defaults-to-true",
+      "from": "mesh-management/authentication-default",
+      "to": "mesh-management/authentication-default/authentication-defaults-to-true",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management/authentication-default:mesh-management/authentication-default/explicit-false-accepted",
+      "from": "mesh-management/authentication-default",
+      "to": "mesh-management/authentication-default/explicit-false-accepted",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management:mesh-management/migration-strategy-validation-and-default",
+      "from": "mesh-management",
+      "to": "mesh-management/migration-strategy-validation-and-default",
+      "type": "HAS_REQUIREMENT"
+    },
+    {
+      "id": "edge:mesh-management/migration-strategy-validation-and-default:mesh-management/migration-strategy-validation-and-default/migration-strategy-defaults-to-fullstop",
+      "from": "mesh-management/migration-strategy-validation-and-default",
+      "to": "mesh-management/migration-strategy-validation-and-default/migration-strategy-defaults-to-fullstop",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management/migration-strategy-validation-and-default:mesh-management/migration-strategy-validation-and-default/invalid-migration-strategy-rejected",
+      "from": "mesh-management/migration-strategy-validation-and-default",
+      "to": "mesh-management/migration-strategy-validation-and-default/invalid-migration-strategy-rejected",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management:mesh-management/forbidden-autoscaling-field",
+      "from": "mesh-management",
+      "to": "mesh-management/forbidden-autoscaling-field",
+      "type": "HAS_REQUIREMENT"
+    },
+    {
+      "id": "edge:mesh-management/forbidden-autoscaling-field:mesh-management/forbidden-autoscaling-field/autoscaling-at-spec-root",
+      "from": "mesh-management/forbidden-autoscaling-field",
+      "to": "mesh-management/forbidden-autoscaling-field/autoscaling-at-spec-root",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management/forbidden-autoscaling-field:mesh-management/forbidden-autoscaling-field/autoscaling-nested-under-spec",
+      "from": "mesh-management/forbidden-autoscaling-field",
+      "to": "mesh-management/forbidden-autoscaling-field/autoscaling-nested-under-spec",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management:mesh-management/error-output-format",
+      "from": "mesh-management",
+      "to": "mesh-management/error-output-format",
+      "type": "HAS_REQUIREMENT"
+    },
+    {
+      "id": "edge:mesh-management/error-output-format:mesh-management/error-output-format/single-error",
+      "from": "mesh-management/error-output-format",
+      "to": "mesh-management/error-output-format/single-error",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management/error-output-format:mesh-management/error-output-format/multiple-errors",
+      "from": "mesh-management/error-output-format",
+      "to": "mesh-management/error-output-format/multiple-errors",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management:mesh-management/success-output-create-and-describe",
+      "from": "mesh-management",
+      "to": "mesh-management/success-output-create-and-describe",
+      "type": "HAS_REQUIREMENT"
+    },
+    {
+      "id": "edge:mesh-management/success-output-create-and-describe:mesh-management/success-output-create-and-describe/create-success-output",
+      "from": "mesh-management/success-output-create-and-describe",
+      "to": "mesh-management/success-output-create-and-describe/create-success-output",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management/success-output-create-and-describe:mesh-management/success-output-create-and-describe/new-mesh-starts-as-running",
+      "from": "mesh-management/success-output-create-and-describe",
+      "to": "mesh-management/success-output-create-and-describe/new-mesh-starts-as-running",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:mesh-management:mesh-management/success-output-delete",
+      "from": "mesh-management",
+      "to": "mesh-management/success-output-delete",
+      "type": "HAS_REQUIREMENT"
+    },
+    {
+      "id": "edge:mesh-management/success-output-delete:mesh-management/success-output-delete/delete-confirmation-printed",
+      "from": "mesh-management/success-output-delete",
+      "to": "mesh-management/success-output-delete/delete-confirmation-printed",
+      "type": "HAS_SCENARIO"
+    },
+    {
+      "id": "edge:implement-meshctl:has_spec:mesh-management",
+      "from": "implement-meshctl",
+      "to": "mesh-management",
+      "type": "HAS_SPEC"
+    }
+  ]
+}
