@@ -210,14 +210,26 @@ When `spec.resources.cpu` is absent, it SHALL be omitted from output. When prese
 ---
 
 ### Requirement: Migration strategy validation and default
-`spec.migration.strategy` SHALL default to `"FullStop"`. It SHALL only accept the value `"FullStop"`; any other value SHALL produce an invalid error.
+`spec.migration.strategy` SHALL default to `"FullStop"`. It SHALL accept `"FullStop"`, `"LiveMigration"`, and `"RollingPatch"`. Any other value SHALL produce an invalid error.
 
 #### Scenario: Migration strategy defaults to FullStop
 - **WHEN** `spec.migration.strategy` is not specified
 - **THEN** output has `spec.migration.strategy = "FullStop"`
 
+#### Scenario: FullStop strategy accepted
+- **WHEN** `spec.migration.strategy` is `"FullStop"`
+- **THEN** the strategy is accepted without errors
+
+#### Scenario: LiveMigration strategy accepted
+- **WHEN** `spec.migration.strategy` is `"LiveMigration"` and `spec.regions` is not configured
+- **THEN** the strategy is accepted without errors
+
+#### Scenario: RollingPatch strategy accepted
+- **WHEN** `spec.migration.strategy` is `"RollingPatch"`
+- **THEN** the strategy is accepted (subject to version-change rules)
+
 #### Scenario: Invalid migration strategy rejected
-- **WHEN** `spec.migration.strategy` is `"RollingUpdate"`
+- **WHEN** `spec.migration.strategy` is `"RollingUpdate"` or any other unrecognized value
 - **THEN** output error `{"field":"spec.migration.strategy","type":"invalid","message":"<msg>"}`
 
 ---
@@ -451,14 +463,22 @@ The system SHALL conditionally include `spec.network.storage` fields in output b
 ---
 
 ### Requirement: Enriched status model
-The system SHALL include additional status fields on create, update, and describe responses.
+`status.stable` SHALL be `true` only when ALL of the following hold:
+
+- `Healthy` condition has `status = "True"`
+- `PrechecksPassed` condition has `status = "True"`
+- `GracefulShutdown` condition is absent or has `status = "False"`
+- `Scaling` condition is absent or has `status = "False"`
+- `Migration` condition is absent or has `status = "False"`
+
+Otherwise `status.stable` SHALL be `false`.
 
 #### Scenario: status.stable on steady state
-- **WHEN** no transient conditions (e.g., `Scaling`) are active
+- **WHEN** `Healthy` and `PrechecksPassed` are `"True"` and `GracefulShutdown`, `Scaling`, and `Migration` are absent
 - **THEN** `status.stable = true`
 
 #### Scenario: status.stable during transition
-- **WHEN** a transient condition is active
+- **WHEN** a transient condition (`Scaling`, `Migration`) is active
 - **THEN** `status.stable = false`
 
 #### Scenario: status.instances on create
@@ -469,7 +489,9 @@ The system SHALL include additional status fields on create, update, and describ
 - **WHEN** the mesh is in `Running` state
 - **THEN** `status.desiredInstancesOnResume` is absent from the output
 
----
+#### Scenario: Stable false when Migration is active
+- **WHEN** `Migration` condition is present with `status = "True"`
+- **THEN** `status.stable = false`
 
 ### Requirement: Immutable field error type
 The system SHALL reject any update that attempts to change a field marked immutable after creation, using the `immutable` error type.
@@ -597,4 +619,40 @@ When `spec.access` is entirely absent from the input, the system SHALL output th
 #### Scenario: roles absent when permissions disabled by default
 - **WHEN** `spec.access.permissions.enabled` is `false` (or defaulted to false)
 - **THEN** `spec.access.permissions.roles` is absent from output
+
+### Requirement: Version downgrade forbidden for all strategies
+All migration strategies SHALL forbid downgrading `spec.runtime` to a lower version.
+
+#### Scenario: Downgrade rejected
+- **WHEN** a version change reduces the runtime version (e.g., from `"4.0.0"` to `"3.1.1"`)
+- **THEN** output error `{"field":"spec.runtime","type":"invalid","message":"version downgrade from '<current>' to '<target>' is not allowed"}`
+
+---
+
+### Requirement: RollingPatch version constraints
+When `spec.migration.strategy` is `"RollingPatch"` and a version change is in progress, the system SHALL check both constraints independently and report both errors when both fail:
+
+1. Source and target share the same major and minor version.
+2. Target major version is at least `4`.
+
+#### Scenario: RollingPatch same major.minor required
+- **WHEN** `spec.migration.strategy` is `"RollingPatch"` and source/target differ in major or minor
+- **THEN** output error `{"field":"spec.runtime","type":"invalid","message":"<msg>"}`
+
+#### Scenario: RollingPatch target major at least 4 required
+- **WHEN** `spec.migration.strategy` is `"RollingPatch"` and target major is less than `4`
+- **THEN** output error `{"field":"spec.runtime","type":"invalid","message":"<msg>"}`
+
+#### Scenario: Both RollingPatch errors reported simultaneously
+- **WHEN** `spec.migration.strategy` is `"RollingPatch"` and both constraints fail
+- **THEN** both errors are included in the response
+
+---
+
+### Requirement: LiveMigration multi-region restriction
+`LiveMigration` SHALL be rejected when `spec.regions` is configured.
+
+#### Scenario: LiveMigration rejected with multi-region topology
+- **WHEN** `spec.migration.strategy` is `"LiveMigration"` and `spec.regions` is present
+- **THEN** output error `{"field":"spec.migration.strategy","type":"invalid","message":"LiveMigration strategy is not supported with multi-region topology"}`
 

@@ -7,13 +7,13 @@
     "database": "neo4j"
   },
   "llm": {
-    "base_url": "https://api.forge.tensorblock.co/v1",
-    "model": "tensorblock/gpt-5.4-nano",
-    "api_key_env": "TENSORBLOCK_API_KEY"
+    "base_url": "https://api.openai.com/v1",
+    "model": "gpt-5.4-nano",
+    "api_key_env": "OpenAI_API_KEY"
   },
   "embedding": {
-    "base_url": "https://api.forge.tensorblock.co/v1",
-    "model": "tensorblock/text-embedding-3-small",
-    "api_key_env": "TENSORBLOCK_API_KEY"
+    "base_url": "https://api.openai.com/v1",
+    "model": "text-embedding-3-small",
+    "api_key_env": "OpenAI_API_KEY"
   }
 }
