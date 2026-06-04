@@ -24,6 +24,11 @@ VALID_ENCRYPTION_SOURCES = {"None", "Secret", "Service"}
 VALID_CLIENT_MODES = {"None", "Authenticate", "Validate"}
 VALID_MIGRATION_STRATEGIES = {"FullStop", "LiveMigration", "RollingPatch"}
 VALID_EXPOSURE_TYPES = {"Gateway", "DirectPort", "Balancer"}
+VALID_REGION_EXPOSE_TYPES = {"Internal", "DirectPort", "Balancer", "Gateway"}
+DEFAULT_DISCOVERY = {
+    "type": "relay",
+    "heartbeat": {"enabled": True, "interval": 10000, "timeout": 30000},
+}
 EXPOSURE_ALLOWED_FIELDS = {
     "Gateway": {"hostname", "annotations"},
     "DirectPort": {"port", "directPort"},
@@ -263,6 +268,31 @@ def find_autoscaling_paths(obj, path):
     return results
 
 
+# --- Telemetry probe computation ---
+
+def compute_telemetry_probe(tags):
+    """Compute status.telemetryProbe from metadata.tags."""
+    if tags is None:
+        return {"enabled": True}
+    telemetry_val = (tags.get("mesh.io/telemetry") or "true").lower()
+    if telemetry_val == "false":
+        return {"enabled": False}
+    probe = {"enabled": True}
+    label_map = [
+        ("mesh.io/targetLabels", "targetLabels"),
+        ("mesh.io/probeTargetLabels", "probeTargetLabels"),
+        ("mesh.io/instanceLabels", "instanceLabels"),
+    ]
+    labels = {}
+    for tag_key, label_key in label_map:
+        val = tags.get(tag_key)
+        if val:
+            labels[label_key] = [s.strip() for s in val.split(",") if s.strip()]
+    if labels:
+        probe["labels"] = labels
+    return probe
+
+
 # --- Connection details computation ---
 
 def compute_connection_details(name, exposure):
@@ -346,6 +376,8 @@ def format_resource_for_output(resource):
         }
     else:
         status.pop("managementConnectionDetails", None)
+    tags = (out.get("metadata") or {}).get("tags")
+    status["telemetryProbe"] = compute_telemetry_probe(tags)
     return out
 
 
@@ -380,6 +412,13 @@ def validate_and_build(doc, is_update=False):  # returns (result, errors, warnin
         ))
     else:
         name = raw_name
+
+    # metadata.tags
+    tags = None
+    raw_tags = metadata.get("tags")
+    if raw_tags is not None:
+        if isinstance(raw_tags, dict):
+            tags = raw_tags
 
     # forbidden autoScaling under spec
     for fp in find_autoscaling_paths(spec, "spec"):
@@ -798,6 +837,218 @@ def validate_and_build(doc, is_update=False):  # returns (result, errors, warnin
             management_enabled = bool(raw_enabled)
     management = {"enabled": management_enabled}
 
+    # spec.placement
+    raw_placement = spec.get("placement")
+    placement_affinity_type = "preferred"
+    placement_affinity_scope = "node"
+    if raw_placement is not None:
+        if not isinstance(raw_placement, dict):
+            errors.append(make_error("spec.placement", "invalid", "placement must be an object"))
+        else:
+            raw_affinity = raw_placement.get("affinity")
+            if raw_affinity is not None:
+                if not isinstance(raw_affinity, dict):
+                    errors.append(make_error("spec.placement.affinity", "invalid", "affinity must be an object"))
+                else:
+                    raw_type = raw_affinity.get("type", "preferred")
+                    if raw_type not in ("preferred", "required"):
+                        errors.append(make_error("spec.placement.affinity.type", "invalid",
+                                                  "affinity.type must be one of 'preferred', 'required'"))
+                    else:
+                        placement_affinity_type = raw_type
+                    raw_scope = raw_affinity.get("scope", "node")
+                    if raw_scope not in ("node", "zone"):
+                        errors.append(make_error("spec.placement.affinity.scope", "invalid",
+                                                  "affinity.scope must be one of 'node', 'zone'"))
+                    else:
+                        placement_affinity_scope = raw_scope
+
+    # spec.configBundleRef
+    config_bundle_ref = None
+    has_config_bundle_ref = "configBundleRef" in spec
+    if has_config_bundle_ref:
+        raw_cbr = spec["configBundleRef"]
+        if not is_update and not isinstance(raw_cbr, str):
+            errors.append(make_error("spec.configBundleRef", "invalid", "configBundleRef must be a string"))
+        else:
+            config_bundle_ref = raw_cbr
+
+    # spec.extensions
+    raw_extensions = spec.get("extensions")
+    extensions = None
+    if raw_extensions is not None and isinstance(raw_extensions, list):
+        extensions = []
+        for _i, _ext in enumerate(raw_extensions):
+            if not isinstance(_ext, dict):
+                errors.append(make_error(f"spec.extensions[{_i}]", "invalid",
+                                          "exactly one of 'url' or 'artifact' must be set"))
+                continue
+            _has_url = "url" in _ext
+            _has_artifact = "artifact" in _ext
+            if _has_url == _has_artifact:
+                errors.append(make_error(f"spec.extensions[{_i}]", "invalid",
+                                          "exactly one of 'url' or 'artifact' must be set"))
+                continue
+            _ext_out = {}
+            if _has_url:
+                _ext_out["url"] = _ext["url"]
+            else:
+                _ext_out["artifact"] = _ext["artifact"]
+            if _ext.get("integrity") is not None:
+                _ext_out["integrity"] = _ext["integrity"]
+            extensions.append(_ext_out)
+
+    # spec.regions
+    raw_regions = spec.get("regions")
+    regions = None
+    if raw_regions is not None:
+        if not isinstance(raw_regions, dict):
+            errors.append(make_error("spec.regions", "invalid", "regions must be an object"))
+        else:
+            _raw_local = raw_regions.get("local")
+            if _raw_local is None:
+                errors.append(make_error("spec.regions.local", "required", "spec.regions.local is required"))
+            elif not isinstance(_raw_local, dict):
+                errors.append(make_error("spec.regions.local", "invalid", "spec.regions.local must be an object"))
+            else:
+                _local_out = {}
+                _local_expose_type = None
+
+                # name
+                _ln = _raw_local.get("name")
+                if not _ln or not isinstance(_ln, str):
+                    errors.append(make_error("spec.regions.local.name", "required",
+                                              "spec.regions.local.name is required"))
+                else:
+                    _local_out["name"] = _ln
+
+                # expose.type
+                _raw_expose = _raw_local.get("expose")
+                if _raw_expose is None or not isinstance(_raw_expose, dict) or not _raw_expose.get("type"):
+                    errors.append(make_error("spec.regions.local.expose.type", "required",
+                                              "spec.regions.local.expose.type is required"))
+                else:
+                    _et = _raw_expose["type"]
+                    if _et not in VALID_REGION_EXPOSE_TYPES:
+                        errors.append(make_error("spec.regions.local.expose.type", "invalid",
+                                                  "expose.type must be one of Internal, DirectPort, Balancer, Gateway"))
+                    else:
+                        _local_expose_type = _et
+                        _local_out["expose"] = {"type": _et}
+
+                # maxRelayNodes
+                if "maxRelayNodes" in _raw_local:
+                    _mrn = _raw_local["maxRelayNodes"]
+                    if _mrn is None or isinstance(_mrn, bool) or not isinstance(_mrn, int) or _mrn <= 0:
+                        errors.append(make_error("spec.regions.local.maxRelayNodes", "invalid",
+                                                  "maxRelayNodes must be a positive integer"))
+                    else:
+                        _local_out["maxRelayNodes"] = _mrn
+
+                # encryption
+                _raw_enc = _raw_local.get("encryption")
+                if _raw_enc is not None:
+                    if not isinstance(_raw_enc, dict):
+                        errors.append(make_error("spec.regions.local.encryption", "invalid",
+                                                  "encryption must be an object"))
+                    else:
+                        _enc_out = {}
+                        _proto = _raw_enc.get("protocol", "TLSv1.3")
+                        if _proto not in ("TLSv1.2", "TLSv1.3"):
+                            errors.append(make_error("spec.regions.local.encryption.protocol", "invalid",
+                                                      "protocol must be one of 'TLSv1.2', 'TLSv1.3'"))
+                        else:
+                            _enc_out["protocol"] = _proto
+                        for _ks_name in ("transportKeyStore", "relayKeyStore", "trustStore"):
+                            _raw_ks = _raw_enc.get(_ks_name)
+                            if _raw_ks is not None:
+                                if not isinstance(_raw_ks, dict):
+                                    errors.append(make_error(
+                                        f"spec.regions.local.encryption.{_ks_name}", "invalid",
+                                        f"{_ks_name} must be an object"))
+                                else:
+                                    _ks_out = {}
+                                    for _sf in ("secretRef", "alias", "filename"):
+                                        _sfv = _raw_ks.get(_sf)
+                                        if not _sfv or not isinstance(_sfv, str):
+                                            errors.append(make_error(
+                                                f"spec.regions.local.encryption.{_ks_name}.{_sf}",
+                                                "required", f"{_sf} is required"))
+                                        else:
+                                            _ks_out[_sf] = _sfv
+                                    _enc_out[_ks_name] = _ks_out
+                            elif _ks_name == "transportKeyStore" and _local_expose_type == "Gateway":
+                                errors.append(make_error(
+                                    "spec.regions.local.encryption.transportKeyStore", "required",
+                                    "transportKeyStore is required when expose type is 'Gateway'"))
+                        _local_out["encryption"] = _enc_out
+                        if "trustStore" not in _raw_enc:
+                            warnings.append({
+                                "field": "spec.regions.local.encryption.trustStore",
+                                "message": "trustStore is absent; inter-region traffic may not be verified",
+                            })
+
+                # discovery
+                _raw_disc = _raw_local.get("discovery")
+                if _raw_disc is not None:
+                    if not isinstance(_raw_disc, dict):
+                        errors.append(make_error("spec.regions.local.discovery", "invalid",
+                                                  "discovery must be an object"))
+                        _local_out["discovery"] = copy.deepcopy(DEFAULT_DISCOVERY)
+                    else:
+                        _disc_type = _raw_disc.get("type")
+                        if _disc_type != "relay":
+                            errors.append(make_error("spec.regions.local.discovery.type", "invalid",
+                                                      "discovery.type must be 'relay'"))
+                        _raw_hb = _raw_disc.get("heartbeat") or {}
+                        _hb_interval = _raw_hb.get("interval")
+                        _hb_timeout = _raw_hb.get("timeout")
+                        if (_hb_interval is not None and _hb_timeout is not None
+                                and isinstance(_hb_interval, (int, float))
+                                and isinstance(_hb_timeout, (int, float))
+                                and _hb_interval >= _hb_timeout):
+                            errors.append(make_error("spec.regions.local.discovery.heartbeat", "invalid",
+                                                      "heartbeat.interval must be less than heartbeat.timeout"))
+                        _local_out["discovery"] = _raw_disc
+                else:
+                    _local_out["discovery"] = copy.deepcopy(DEFAULT_DISCOVERY)
+
+                # remotes
+                _raw_remotes = raw_regions.get("remotes")
+                regions = {"local": _local_out}
+                if _raw_remotes is not None and isinstance(_raw_remotes, list):
+                    _remotes_out = []
+                    _seen_rnames = {}
+                    for _ri, _rem in enumerate(_raw_remotes):
+                        if not isinstance(_rem, dict):
+                            continue
+                        _rem_out = {}
+                        _rn = _rem.get("name")
+                        _ru = _rem.get("url")
+                        if not _rn or not isinstance(_rn, str):
+                            errors.append(make_error(f"spec.regions.remotes[{_ri}].name", "required",
+                                                      "remote name is required"))
+                        else:
+                            _rem_out["name"] = _rn
+                            _seen_rnames.setdefault(_rn, []).append(_ri)
+                        if not _ru or not isinstance(_ru, str):
+                            errors.append(make_error(f"spec.regions.remotes[{_ri}].url", "required",
+                                                      "remote url is required"))
+                        else:
+                            _rem_out["url"] = _ru
+                        for _opt in ("credentialRef", "namespace", "clusterRef"):
+                            if _rem.get(_opt) is not None:
+                                _rem_out[_opt] = _rem[_opt]
+                        _remotes_out.append(_rem_out)
+                    for _rn, _idxs in _seen_rnames.items():
+                        if len(_idxs) > 1:
+                            for _dup_idx in _idxs[1:]:
+                                errors.append(make_error(f"spec.regions.remotes[{_dup_idx}].name", "duplicate",
+                                                          f"duplicate remote name: {_rn!r}"))
+                    regions["remotes"] = _remotes_out
+                elif _raw_remotes is not None:
+                    regions["remotes"] = []
+
     if errors:
         return None, errors, []
 
@@ -830,6 +1081,7 @@ def validate_and_build(doc, is_update=False):  # returns (result, errors, warnin
             "replicationFactor": rf,
         },
         "management": management,
+        "placement": {"affinity": {"type": placement_affinity_type, "scope": placement_affinity_scope}},
     }
     if has_runtime:
         out_spec["runtime"] = runtime
@@ -837,8 +1089,18 @@ def validate_and_build(doc, is_update=False):  # returns (result, errors, warnin
         out_spec["resources"]["cpu"] = cpu
     if exposure is not None:
         out_spec["exposure"] = exposure
+    if regions is not None:
+        out_spec["regions"] = regions
+    if has_config_bundle_ref and config_bundle_ref is not None:
+        out_spec["configBundleRef"] = config_bundle_ref
+    if extensions is not None:
+        out_spec["extensions"] = extensions
 
-    return {"metadata": {"name": name}, "spec": out_spec}, [], warnings
+    out_metadata = {"name": name}
+    if tags is not None:
+        out_metadata["tags"] = tags
+
+    return {"metadata": out_metadata, "spec": out_spec}, [], warnings
 
 
 # --- Merge helpers ---
@@ -1295,6 +1557,11 @@ def cmd_create(args):
 
     result["status"] = build_initial_status(result["spec"]["instances"])
 
+    if result["spec"].get("regions"):
+        _st = result["status"]
+        _st["conditions"] = set_condition(_st["conditions"], "DiscoveryRelayReady", "False", "")
+        _st["conditions"] = set_condition(_st["conditions"], "RegionViewFormed", "False", "")
+
     store[name] = result
     save_store(store)
     success_out(result, warns)
@@ -1401,6 +1668,13 @@ def cmd_update(args):
     # Deep merge spec
     merged_spec = deep_merge(stored["spec"], update_spec)
 
+    # configBundleRef: explicit null in update means clear (deep_merge keeps stored value for None)
+    if "configBundleRef" in update_spec and update_spec["configBundleRef"] is None:
+        merged_spec.pop("configBundleRef", None)
+
+    # Also merge metadata.tags from update doc into merged_doc (not part of spec)
+    update_metadata_tags = (doc.get("metadata") or {}).get("tags")
+
     # Resume with omitted/null instances: use desiredInstancesOnResume as target
     if has_graceful and raw_instances_in_update is None:
         desired = stored["status"].get("desiredInstancesOnResume")
@@ -1413,7 +1687,17 @@ def cmd_update(args):
         error_out(imm_errors)
         return
 
-    merged_doc = {"metadata": {"name": raw_name}, "spec": merged_spec}
+    # Build merged metadata (merge tags from update when provided)
+    stored_tags = (stored.get("metadata") or {}).get("tags")
+    if update_metadata_tags is not None:
+        merged_tags = update_metadata_tags
+    else:
+        merged_tags = stored_tags
+    merged_metadata = {"name": raw_name}
+    if merged_tags is not None:
+        merged_metadata["tags"] = merged_tags
+
+    merged_doc = {"metadata": merged_metadata, "spec": merged_spec}
 
     result, val_errs, warns = validate_and_build(merged_doc, is_update=True)
 
@@ -1454,8 +1738,35 @@ def cmd_update(args):
         strategy = result["spec"].get("migration", {}).get("strategy", "FullStop")
         start_migration(result, stored_runtime, new_runtime, strategy)
 
+    # Manage region conditions
+    if result["spec"].get("regions"):
+        _conds = result["status"].get("conditions", [])
+        _existing_types = {c["type"] for c in _conds}
+        if "DiscoveryRelayReady" not in _existing_types:
+            _conds = set_condition(_conds, "DiscoveryRelayReady", "False", "")
+        if "RegionViewFormed" not in _existing_types:
+            _conds = set_condition(_conds, "RegionViewFormed", "False", "")
+        result["status"]["conditions"] = _conds
+    else:
+        _conds = sorted(
+            [c for c in result["status"].get("conditions", [])
+             if c["type"] not in ("DiscoveryRelayReady", "RegionViewFormed")],
+            key=lambda c: c["type"],
+        )
+        result["status"]["conditions"] = _conds
+
+    # configBundleRef change → transient configRefresh (not persisted)
+    _stored_cbr = stored["spec"].get("configBundleRef")
+    _new_cbr = result["spec"].get("configBundleRef")
+    _config_refresh = None
+    if _stored_cbr != _new_cbr:
+        _config_refresh = {"currentRef": _new_cbr, "pending": True, "previousRef": _stored_cbr}
+
     store[raw_name] = result
     save_store(store)
+
+    if _config_refresh is not None:
+        result["status"]["configRefresh"] = _config_refresh
     success_out(result, warns)
 
 

@@ -75,11 +75,21 @@ The system SHALL remove the named mesh from the store and print a confirmation J
 - **THEN** output `{"errors":[{"field":"metadata.name","type":"conflict","message":"<msg>"}]}` naming the dependent vaults, and do not delete the mesh
 
 ### Requirement: YAML input schema
-**Updated:** The system SHALL accept `spec.exposure` (optional) and `spec.management` (optional) as recognized top-level keys under `spec`. All existing fields remain unchanged.
 
-#### Scenario: Exposure and management fields accepted
-- **WHEN** the input YAML includes `spec.exposure` and `spec.management`
-- **THEN** they are parsed and validated without a parse error
+**Updated:** The system SHALL accept the following additional top-level keys under `spec` as recognized input fields (adapts mesh-management/yaml-input-schema):
+
+- `spec.regions` (optional) — multi-region topology configuration
+- `spec.placement` (optional) — affinity/placement policy
+- `spec.configBundleRef` (optional) — config bundle reference string
+- `spec.extensions` (optional) — array of extension objects
+
+`metadata.tags` (optional string→string map) SHALL also be accepted at the top level.
+
+#### Scenario: new spec fields accepted without error
+
+- **GIVEN** a create input that includes `spec.regions`, `spec.placement`, `spec.configBundleRef`, and `spec.extensions`
+- **WHEN** create is called with otherwise valid input
+- **THEN** the system SHALL NOT produce unknown-field errors for any of these fields
 
 ---
 
@@ -206,17 +216,20 @@ When `spec.resources.cpu` is absent, it SHALL be omitted from output. When prese
 ---
 
 ### Requirement: Migration strategy validation and default
-`spec.migration.strategy` SHALL default to `"FullStop"`. It SHALL only accept the value `"FullStop"`; any other value SHALL produce an invalid error.
 
-#### Scenario: Migration strategy defaults to FullStop
-- **WHEN** `spec.migration.strategy` is not specified
-- **THEN** output has `spec.migration.strategy = "FullStop"`
+**Updated:** `spec.migration.strategy` SHALL default to `"FullStop"` when absent. Accepted values are `"FullStop"` and `"LiveMigration"`. `"LiveMigration"` is accepted when `spec.regions` is absent, but SHALL be rejected when `spec.regions` is present. Any other value SHALL produce an `invalid` error. (adapts mesh-management/migration-strategy-validation-and-default)
 
-#### Scenario: Invalid migration strategy rejected
-- **WHEN** `spec.migration.strategy` is `"RollingUpdate"`
-- **THEN** output error `{"field":"spec.migration.strategy","type":"invalid","message":"<msg>"}`
+#### Scenario: LiveMigration rejected when regions present
 
----
+- **GIVEN** a mesh input with `spec.regions` set and `spec.migration.strategy: "LiveMigration"`
+- **WHEN** create or update is called
+- **THEN** the system SHALL return an `invalid` error with `field = "spec.migration.strategy"` and `message = "LiveMigration strategy is not supported with multi-region topology"`
+
+#### Scenario: LiveMigration accepted without regions
+
+- **GIVEN** a mesh input without `spec.regions` and `spec.migration.strategy: "LiveMigration"`
+- **WHEN** create is called
+- **THEN** the system SHALL NOT reject the migration strategy
 
 ### Requirement: Forbidden autoScaling field
 Any field named `autoScaling` anywhere under `spec` SHALL be rejected.
@@ -245,17 +258,21 @@ All validation and operational errors SHALL be printed as `{"errors":[...]}` to 
 ---
 
 ### Requirement: Success output — create and describe
-**Updated:** The full resource JSON for create and describe SHALL include `status.connectionDetails` when `spec.exposure` is configured, and `status.managementConnectionDetails` when `spec.management.enabled` is `true`. Both fields are absent when not applicable.
 
-(adapts mesh-management/success-output-create-and-describe)
+**Updated:** The full resource JSON for create and describe SHALL include (adapts mesh-management/success-output-create-and-describe):
 
-#### Scenario: Create with exposure includes connectionDetails
-- **WHEN** a mesh is created with a valid `spec.exposure` block
-- **THEN** the response JSON includes `status.connectionDetails`
+- `spec.placement` — always present with defaults applied
+- `status.telemetryProbe` — always present
+- `status.configRefresh` — present in update responses only when `configBundleRef` changed (absent from describe)
+- `status.conditions` — includes region conditions when `spec.regions` is present
 
-#### Scenario: Create without exposure omits connectionDetails
-- **WHEN** a mesh is created without `spec.exposure`
-- **THEN** `status.connectionDetails` is absent from the response
+#### Scenario: create response includes placement and telemetryProbe
+
+- **GIVEN** a minimal mesh create input without placement or telemetry tags
+- **WHEN** create succeeds
+- **THEN** the response SHALL include `spec.placement.affinity` with defaults and `status.telemetryProbe: {"enabled": true}`
+
+---
 
 ### Requirement: Success output — delete
 Successful `delete` SHALL print `{"message":"<non-empty>","metadata":{"name":"<string>"}}`. The exact message wording is not part of the contract.
