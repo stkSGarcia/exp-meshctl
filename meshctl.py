@@ -22,6 +22,18 @@ TRANSIENT_CONDITION_TYPES = {"Scaling"}
 VALID_DIGEST_ALGORITHMS = {"SHA-256", "SHA-384", "SHA-512"}
 VALID_ENCRYPTION_SOURCES = {"None", "Secret", "Service"}
 VALID_CLIENT_MODES = {"None", "Authenticate", "Validate"}
+VALID_MIGRATION_STRATEGIES = {"FullStop", "LiveMigration", "RollingPatch"}
+RUNTIME_CATALOG = {
+    "3.0.0": "deprecated",
+    "3.1.0": "skipped",
+    "3.1.1": "supported",
+    "4.0.0": "supported",
+}
+MIGRATION_STAGE_SEQUENCES = {
+    "FullStop": ["Migrate"],
+    "RollingPatch": ["Migrate"],
+    "LiveMigration": ["Prepare", "Migrate", "Complete"],
+}
 
 
 # --- Output helpers ---
@@ -36,6 +48,65 @@ def make_error(field, type_, message):
 
 def error_out(errors):
     print_json({"errors": sorted(errors, key=lambda e: (e["field"], e["type"]))})
+
+
+def success_out(resource, warnings=None):
+    out = format_resource_for_output(resource)
+    if warnings:
+        out["warnings"] = sorted(warnings, key=lambda w: (w["field"], w["message"]))
+    print_json(out)
+
+
+# --- Runtime version helpers ---
+
+def parse_runtime_version(v):
+    """Return (major, minor, patch) int tuple or None."""
+    if not isinstance(v, str) or not RUNTIME_RE.match(v):
+        return None
+    parts = v.split(".")
+    return tuple(int(p) for p in parts)
+
+
+def validate_runtime_catalog(version):
+    """Return (error, warning) — at most one will be non-None."""
+    status = RUNTIME_CATALOG.get(version)
+    if status is None:
+        return (
+            make_error("spec.runtime", "invalid", f"runtime version '{version}' is not in the supported catalog"),
+            None,
+        )
+    if status == "skipped":
+        return (
+            make_error("spec.runtime", "invalid", f"runtime version '{version}' is skipped and cannot be targeted"),
+            None,
+        )
+    if status == "deprecated":
+        return (
+            None,
+            {"field": "spec.runtime", "message": f"runtime version '{version}' is deprecated"},
+        )
+    return None, None
+
+
+# --- Stability helper ---
+
+def compute_stable(conditions):
+    cond_map = {c["type"]: c["status"] for c in conditions}
+    if cond_map.get("Healthy") != "True":
+        return False
+    if cond_map.get("PrechecksPassed") != "True":
+        return False
+    if cond_map.get("GracefulShutdown", "False") == "True":
+        return False
+    if cond_map.get("Scaling", "False") == "True":
+        return False
+    if cond_map.get("Migration", "False") == "True":
+        return False
+    return True
+
+
+def is_migration_active(conditions):
+    return any(c["type"] == "Migration" and c["status"] == "True" for c in conditions)
 
 
 # --- Store ---
@@ -239,11 +310,12 @@ def format_resource_for_output(resource):
 
 # --- Validation + default application (tasks 1.1-1.5, 6.2, 6.3) ---
 
-def validate_and_build(doc, is_update=False):
+def validate_and_build(doc, is_update=False):  # returns (result, errors, warnings)
     errors = []
+    warnings = []
 
     if "metadata" not in doc or "spec" not in doc:
-        return None, [make_error("", "parse", "document must have 'metadata' and 'spec' keys")]
+        return None, [make_error("", "parse", "document must have 'metadata' and 'spec' keys")], []
 
     metadata = doc["metadata"]
     spec = doc["spec"]
@@ -300,7 +372,13 @@ def validate_and_build(doc, is_update=False):
                 "runtime must be in major.minor.patch format with non-negative integers",
             ))
         else:
-            runtime = raw_runtime
+            cat_err, cat_warn = validate_runtime_catalog(raw_runtime)
+            if cat_err:
+                errors.append(cat_err)
+            else:
+                runtime = raw_runtime
+                if cat_warn:
+                    warnings.append(cat_warn)
 
     raw_resources = spec.get("resources")
     has_resources = isinstance(raw_resources, dict)
@@ -560,12 +638,19 @@ def validate_and_build(doc, is_update=False):
     raw_migration = spec.get("migration")
     if isinstance(raw_migration, dict) and "strategy" in raw_migration:
         raw_strategy = raw_migration["strategy"]
-        if raw_strategy != "FullStop":
+        if raw_strategy not in VALID_MIGRATION_STRATEGIES:
             errors.append(make_error(
                 "spec.migration.strategy", "invalid",
-                f"migration.strategy must be 'FullStop', got {raw_strategy!r}",
+                f"migration.strategy must be one of FullStop, LiveMigration, RollingPatch; got {raw_strategy!r}",
             ))
             strategy = None
+        else:
+            strategy = raw_strategy
+            if raw_strategy == "LiveMigration" and spec.get("regions"):
+                errors.append(make_error(
+                    "spec.migration.strategy", "invalid",
+                    "LiveMigration strategy is not supported with multi-region topology",
+                ))
 
     # spec.network.storage (tasks 1.2, 6.3)
     raw_network = spec.get("network")
@@ -631,7 +716,7 @@ def validate_and_build(doc, is_update=False):
             rf = None
 
     if errors:
-        return None, errors
+        return None, errors, []
 
     if auth_enabled:
         auth_out = {"enabled": True, "digestAlgorithm": digest_algorithm}
@@ -667,10 +752,10 @@ def validate_and_build(doc, is_update=False):
     if has_cpu:
         out_spec["resources"]["cpu"] = cpu
 
-    return {"metadata": {"name": name}, "spec": out_spec}, []
+    return {"metadata": {"name": name}, "spec": out_spec}, [], warnings
 
 
-# --- Merge helpers (tasks 3.1, 3.2) ---
+# --- Merge helpers ---
 
 def deep_merge(stored, update):
     """Recursively merge update into stored; None values in update keep stored value."""
@@ -698,6 +783,86 @@ def check_immutable(stored_spec, merged_spec):
             "field 'spec.network.storage.size' is immutable after creation",
         ))
     return errors
+
+
+# --- Migration lifecycle helpers ---
+
+def check_migration_guards(stored, update_spec):
+    """Return errors if a locked field is being changed during an active migration."""
+    errors = []
+    conditions = stored.get("status", {}).get("conditions", [])
+    if not is_migration_active(conditions):
+        return errors
+    stored_runtime = stored.get("spec", {}).get("runtime")
+    new_runtime = update_spec.get("runtime")
+    if new_runtime is not None and new_runtime != stored_runtime:
+        errors.append(make_error(
+            "spec.runtime", "invalid",
+            "cannot change runtime version while a migration is in progress",
+        ))
+    stored_strategy = stored.get("spec", {}).get("migration", {}).get("strategy")
+    new_strategy = (update_spec.get("migration") or {}).get("strategy")
+    if new_strategy is not None and new_strategy != stored_strategy:
+        errors.append(make_error(
+            "spec.migration.strategy", "invalid",
+            "cannot change migration strategy while a migration is in progress",
+        ))
+    return errors
+
+
+def check_version_change_rules(stored_runtime, new_runtime, strategy, spec):
+    """Return errors for version-change constraint violations. Called only when a version change is detected."""
+    errors = []
+    src = parse_runtime_version(stored_runtime)
+    tgt = parse_runtime_version(new_runtime)
+    if src is None or tgt is None:
+        return errors
+
+    # Downgrade check — all strategies
+    if tgt < src:
+        errors.append(make_error(
+            "spec.runtime", "invalid",
+            f"version downgrade from '{stored_runtime}' to '{new_runtime}' is not allowed",
+        ))
+        return errors  # no further checks make sense after downgrade error
+
+    # RollingPatch rules (both checked independently)
+    if strategy == "RollingPatch":
+        if (tgt[0], tgt[1]) != (src[0], src[1]):
+            errors.append(make_error(
+                "spec.runtime", "invalid",
+                f"RollingPatch requires the same major and minor version; "
+                f"source is {src[0]}.{src[1]}.x but target is {tgt[0]}.{tgt[1]}.x",
+            ))
+        if tgt[0] < 4:
+            errors.append(make_error(
+                "spec.runtime", "invalid",
+                f"RollingPatch requires target major version to be at least 4; got {tgt[0]}",
+            ))
+
+    return errors
+
+
+def start_migration(resource, source_runtime, target_runtime, strategy):
+    """Mutate resource in-place to record migration start."""
+    conditions = resource["status"].get("conditions", [])
+    conditions = set_condition(conditions, "Migration", "True", "")
+    resource["status"]["conditions"] = conditions
+    resource["status"]["migration"] = {
+        "sourceRuntime": source_runtime,
+        "targetRuntime": target_runtime,
+        "stage": MIGRATION_STAGE_SEQUENCES[strategy][0],
+    }
+    resource["status"]["stable"] = False
+
+
+def complete_migration(resource):
+    """Mutate resource in-place to record migration completion."""
+    conditions = resource["status"].get("conditions", [])
+    conditions = remove_condition(conditions, "Migration")
+    resource["status"]["conditions"] = conditions
+    resource["status"].pop("migration", None)
+    resource["status"]["stable"] = compute_stable(conditions)
 
 
 # --- Vault validation ---
@@ -1024,7 +1189,7 @@ def cmd_create(args):
         error_out(errs)
         return
 
-    result, errs = validate_and_build(doc)
+    result, errs, warns = validate_and_build(doc)
     if errs:
         error_out(errs)
         return
@@ -1035,12 +1200,11 @@ def cmd_create(args):
         error_out([make_error("metadata.name", "duplicate", f"mesh '{name}' already exists")])
         return
 
-    # task 2.2: enrich status
     result["status"] = build_initial_status(result["spec"]["instances"])
 
     store[name] = result
     save_store(store)
-    print_json(format_resource_for_output(result))
+    success_out(result, warns)
 
 
 def cmd_list(_args):
@@ -1059,7 +1223,6 @@ def cmd_describe(args):
         error_out([make_error("metadata.name", "not_found", f"mesh '{args.name}' not found")])
         return
 
-    # task 2.3: strip transient Scaling and resolve instance counts
     resource = copy.deepcopy(store[args.name])
     status = resource["status"]
     conditions = status.get("conditions", [])
@@ -1069,7 +1232,7 @@ def cmd_describe(args):
     if had_scaling and status.get("state") == "Running":
         n = resource["spec"]["instances"]
         status["instances"] = {"ready": n, "starting": 0, "stopped": 0}
-        status["stable"] = True
+    status["stable"] = compute_stable(status["conditions"])
 
     print_json(format_resource_for_output(resource))
 
@@ -1093,7 +1256,7 @@ def cmd_delete(args):
     print_json({"message": f"mesh '{name}' deleted", "metadata": {"name": name}})
 
 
-def cmd_update(args):  # tasks 3.3, 4.3
+def cmd_update(args):
     doc, errs = load_yaml_file(args.file)
     if errs:
         error_out(errs)
@@ -1121,14 +1284,14 @@ def cmd_update(args):  # tasks 3.3, 4.3
     stored_conditions = stored["status"].get("conditions", [])
     had_scaling = any(c["type"] == "Scaling" for c in stored_conditions)
 
-    # Resolve transient state before merging
+    # Resolve transient Scaling before merging
     resolved_conditions = [c for c in stored_conditions if c["type"] not in TRANSIENT_CONDITION_TYPES]
     resolved_status = copy.deepcopy(stored["status"])
     resolved_status["conditions"] = resolved_conditions
     if had_scaling and resolved_status.get("state") == "Running":
         n = stored["spec"]["instances"]
         resolved_status["instances"] = {"ready": n, "starting": 0, "stopped": 0}
-        resolved_status["stable"] = True
+    resolved_status["stable"] = compute_stable(resolved_conditions)
 
     old_instances = stored["spec"]["instances"]
     has_graceful = any(c["type"] == "GracefulShutdown" for c in resolved_conditions)
@@ -1137,8 +1300,10 @@ def cmd_update(args):  # tasks 3.3, 4.3
     if not isinstance(update_spec, dict):
         update_spec = {}
 
-    # Track whether instances was explicitly provided (for resume-with-omitted logic)
     raw_instances_in_update = update_spec.get("instances")
+
+    # Migration guards — checked before merge/validation, accumulated with other errors
+    guard_errors = check_migration_guards(stored, update_spec)
 
     # Deep merge spec
     merged_spec = deep_merge(stored["spec"], update_spec)
@@ -1157,19 +1322,112 @@ def cmd_update(args):  # tasks 3.3, 4.3
 
     merged_doc = {"metadata": {"name": raw_name}, "spec": merged_spec}
 
-    result, errs = validate_and_build(merged_doc, is_update=True)
-    if errs:
-        error_out(errs)
+    result, val_errs, warns = validate_and_build(merged_doc, is_update=True)
+
+    # Combine guard errors + validation errors; report all
+    all_errors = guard_errors + val_errs
+    if all_errors:
+        error_out(all_errors)
+        return
+
+    # Version change rules (only when no validation errors and no migration active)
+    stored_runtime = stored["spec"].get("runtime")
+    new_runtime = result["spec"].get("runtime")
+    version_errors = []
+    is_version_change = (
+        stored_runtime is not None
+        and new_runtime is not None
+        and stored_runtime != new_runtime
+    )
+    if is_version_change and not is_migration_active(resolved_conditions):
+        strategy = result["spec"].get("migration", {}).get("strategy", "FullStop")
+        version_errors = check_version_change_rules(stored_runtime, new_runtime, strategy, result["spec"])
+    if version_errors:
+        error_out(version_errors)
         return
 
     new_instances = result["spec"]["instances"]
     transition = detect_lifecycle(old_instances, new_instances, resolved_conditions)
     new_status = apply_lifecycle(transition, resolved_status, old_instances, new_instances)
 
+    # Preserve status.migration from resolved state (guards already blocked changes)
+    if "migration" in resolved_status:
+        new_status["migration"] = resolved_status["migration"]
+
     result["status"] = new_status
+
+    # Start migration when a version change is detected
+    if is_version_change and not is_migration_active(resolved_conditions):
+        strategy = result["spec"].get("migration", {}).get("strategy", "FullStop")
+        start_migration(result, stored_runtime, new_runtime, strategy)
+
     store[raw_name] = result
     save_store(store)
-    print_json(format_resource_for_output(result))
+    success_out(result, warns)
+
+
+def cmd_migrate(args):
+    store = load_store()
+    name = args.name
+    if name not in store:
+        error_out([make_error("metadata.name", "not_found", f"mesh '{name}' not found")])
+        return
+
+    resource = copy.deepcopy(store[name])
+    conditions = resource["status"].get("conditions", [])
+    if not is_migration_active(conditions):
+        error_out([make_error(
+            "status.migration", "invalid",
+            f"no active migration for mesh '{name}'",
+        )])
+        return
+
+    migration = resource["status"]["migration"]
+    strategy = resource["spec"].get("migration", {}).get("strategy", "FullStop")
+    stages = MIGRATION_STAGE_SEQUENCES.get(strategy, ["Migrate"])
+    current_stage = migration["stage"]
+
+    if current_stage == stages[-1]:
+        # Final stage — complete the migration
+        complete_migration(resource)
+    else:
+        # Advance to next stage
+        idx = stages.index(current_stage)
+        migration["stage"] = stages[idx + 1]
+
+    store[name] = resource
+    save_store(store)
+    print_json(format_resource_for_output(resource))
+
+
+def cmd_rollback(args):
+    store = load_store()
+    name = args.name
+    if name not in store:
+        error_out([make_error("metadata.name", "not_found", f"mesh '{name}' not found")])
+        return
+
+    resource = copy.deepcopy(store[name])
+    conditions = resource["status"].get("conditions", [])
+    if not is_migration_active(conditions):
+        error_out([make_error(
+            "status.migration", "invalid",
+            f"no active migration for mesh '{name}'",
+        )])
+        return
+
+    strategy = resource["spec"].get("migration", {}).get("strategy", "FullStop")
+    if strategy != "LiveMigration":
+        error_out([make_error(
+            "spec.migration.strategy", "invalid",
+            f"rollback is only supported for LiveMigration strategy",
+        )])
+        return
+
+    complete_migration(resource)
+    store[name] = resource
+    save_store(store)
+    print_json(format_resource_for_output(resource))
 
 
 # --- Vault command handlers ---
@@ -1816,6 +2074,12 @@ def main():
     update_p = mesh_sub.add_parser("update")
     update_p.add_argument("-f", dest="file", required=True)
 
+    migrate_p = mesh_sub.add_parser("migrate")
+    migrate_p.add_argument("name")
+
+    rollback_p = mesh_sub.add_parser("rollback")
+    rollback_p.add_argument("name")
+
     vault_p = top_sub.add_parser("vault")
     vault_sub = vault_p.add_subparsers(dest="operation")
 
@@ -1887,6 +2151,8 @@ def main():
             "describe": cmd_describe,
             "delete": cmd_delete,
             "update": cmd_update,
+            "migrate": cmd_migrate,
+            "rollback": cmd_rollback,
         }[args.operation](args)
     elif args.command == "vault":
         if not args.operation:
