@@ -11,6 +11,9 @@ import yaml
 
 STORE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "store.json")
 VAULT_STORE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "vault_store.json")
+TASK_STORE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "task_store.json")
+SNAPSHOT_STORE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "snapshot_store.json")
+RECOVERY_STORE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "recovery_store.json")
 
 NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]*[a-z0-9]$")
 RUNTIME_RE = re.compile(r"^\d+\.\d+\.\d+$")
@@ -79,6 +82,52 @@ def save_vault_store(store):
         except OSError:
             pass
         raise
+
+
+def _load_json_store(path):
+    if not os.path.exists(path):
+        return {}
+    with open(path) as f:
+        return json.load(f)
+
+
+def _save_json_store(path, store):
+    dir_ = os.path.dirname(path)
+    fd, tmp = tempfile.mkstemp(dir=dir_)
+    try:
+        with os.fdopen(fd, "w") as f:
+            json.dump(store, f)
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+
+def load_task_store():
+    return _load_json_store(TASK_STORE_PATH)
+
+
+def save_task_store(store):
+    _save_json_store(TASK_STORE_PATH, store)
+
+
+def load_snapshot_store():
+    return _load_json_store(SNAPSHOT_STORE_PATH)
+
+
+def save_snapshot_store(store):
+    _save_json_store(SNAPSHOT_STORE_PATH, store)
+
+
+def load_recovery_store():
+    return _load_json_store(RECOVERY_STORE_PATH)
+
+
+def save_recovery_store(store):
+    _save_json_store(RECOVERY_STORE_PATH, store)
 
 
 # --- YAML loader ---
@@ -737,6 +786,169 @@ def validate_vault(doc, mesh_store=None):
     return {"metadata": {"name": name}, "spec": out_spec}, []
 
 
+# --- One-shot resource shared helpers ---
+
+def run_state_guard(resource):
+    """Return errors if resource is not in Initializing state."""
+    state = resource.get("status", {}).get("state", "")
+    if state != "Initializing":
+        return [make_error(
+            "status.state", "invalid",
+            f"resource is in state '{state}', expected 'Initializing'",
+        )]
+    return []
+
+
+def full_spec_immutability_check(stored_spec, incoming_spec):
+    """Return immutable errors for any field in incoming_spec that differs from stored_spec."""
+    if not isinstance(incoming_spec, dict):
+        return []
+    errors = []
+    for key, value in incoming_spec.items():
+        if key not in stored_spec:
+            errors.append(make_error(
+                f"spec.{key}", "immutable",
+                f"field 'spec.{key}' is immutable after creation",
+            ))
+        elif stored_spec.get(key) != value:
+            errors.append(make_error(
+                f"spec.{key}", "immutable",
+                f"field 'spec.{key}' is immutable after creation",
+            ))
+    return errors
+
+
+def validate_resource_name(metadata):
+    """Return (name, errors) — shared name validation for all resource kinds."""
+    errors = []
+    name = None
+    raw_name = (metadata or {}).get("name")
+    if raw_name is None or raw_name == "":
+        errors.append(make_error("metadata.name", "required", "name is required and must not be empty"))
+    elif not isinstance(raw_name, str):
+        errors.append(make_error("metadata.name", "required", "name must be a non-empty string"))
+    elif not NAME_RE.match(raw_name):
+        errors.append(make_error(
+            "metadata.name", "invalid",
+            "name must be lowercase alphanumeric with interior hyphens only, minimum 2 characters",
+        ))
+    else:
+        name = raw_name
+    return name, errors
+
+
+def validate_meshref(spec, mesh_store):
+    """Return (mesh_ref, errors) — validates spec.meshRef against the mesh store."""
+    errors = []
+    mesh_ref = None
+    raw_mesh_ref = (spec or {}).get("meshRef")
+    if not raw_mesh_ref:
+        errors.append(make_error("spec.meshRef", "invalid", "meshRef is required and must reference an existing mesh"))
+    elif not isinstance(raw_mesh_ref, str):
+        errors.append(make_error("spec.meshRef", "invalid", "meshRef must be a non-empty string"))
+    elif raw_mesh_ref not in mesh_store:
+        errors.append(make_error("spec.meshRef", "invalid", f"mesh '{raw_mesh_ref}' not found"))
+    else:
+        mesh_ref = raw_mesh_ref
+    return mesh_ref, errors
+
+
+def validate_op_resources(spec):
+    """Validate resources.memory / resources.cpu for operational resources. Returns (memory, cpu, errors)."""
+    errors = []
+    raw_resources = (spec or {}).get("resources")
+    has_resources = isinstance(raw_resources, dict)
+
+    has_memory = has_resources and "memory" in raw_resources
+    memory = None
+    if not has_memory:
+        memory = {"limit": "1Gi", "request": "1Gi"}
+    else:
+        raw_memory = raw_resources["memory"]
+        if not isinstance(raw_memory, dict):
+            errors.append(make_error("spec.resources.memory", "invalid", "memory must be an object"))
+        else:
+            mem_limit_str = raw_memory.get("limit")
+            mem_req_str = raw_memory.get("request")
+            if mem_limit_str is None:
+                errors.append(make_error("spec.resources.memory.limit", "required", "memory.limit is required"))
+            else:
+                if not isinstance(mem_limit_str, str):
+                    mem_limit_str = str(mem_limit_str)
+                mem_limit_val = parse_memory_quantity(mem_limit_str)
+                if mem_limit_val is None:
+                    errors.append(make_error(
+                        "spec.resources.memory.limit", "invalid",
+                        f"invalid memory quantity: {mem_limit_str!r}",
+                    ))
+                else:
+                    if mem_req_str is None:
+                        mem_req_str = mem_limit_str
+                        mem_req_val = mem_limit_val
+                    else:
+                        if not isinstance(mem_req_str, str):
+                            mem_req_str = str(mem_req_str)
+                        mem_req_val = parse_memory_quantity(mem_req_str)
+                        if mem_req_val is None:
+                            errors.append(make_error(
+                                "spec.resources.memory.request", "invalid",
+                                f"invalid memory quantity: {mem_req_str!r}",
+                            ))
+                        elif mem_req_val > mem_limit_val:
+                            errors.append(make_error(
+                                "spec.resources.memory.request", "invalid",
+                                "memory request must not exceed limit",
+                            ))
+                            mem_req_val = None
+                    if not errors or all(e["field"] not in ("spec.resources.memory.limit", "spec.resources.memory.request") for e in errors):
+                        if mem_req_val is not None:
+                            memory = {"limit": mem_limit_str, "request": mem_req_str}
+
+    has_cpu = has_resources and "cpu" in raw_resources
+    cpu = None
+    if has_cpu:
+        raw_cpu = raw_resources["cpu"]
+        if not isinstance(raw_cpu, dict):
+            errors.append(make_error("spec.resources.cpu.limit", "required", "cpu.limit is required"))
+        else:
+            cpu_limit_str = raw_cpu.get("limit")
+            cpu_req_str = raw_cpu.get("request")
+            if cpu_limit_str is None:
+                errors.append(make_error("spec.resources.cpu.limit", "required", "cpu.limit is required"))
+            else:
+                if not isinstance(cpu_limit_str, str):
+                    cpu_limit_str = str(cpu_limit_str)
+                cpu_limit_val = parse_cpu_quantity(cpu_limit_str)
+                if cpu_limit_val is None:
+                    errors.append(make_error(
+                        "spec.resources.cpu.limit", "invalid",
+                        f"invalid CPU quantity: {cpu_limit_str!r}",
+                    ))
+                else:
+                    if cpu_req_str is None:
+                        cpu_req_str = cpu_limit_str
+                        cpu_req_val = cpu_limit_val
+                    else:
+                        if not isinstance(cpu_req_str, str):
+                            cpu_req_str = str(cpu_req_str)
+                        cpu_req_val = parse_cpu_quantity(cpu_req_str)
+                        if cpu_req_val is None:
+                            errors.append(make_error(
+                                "spec.resources.cpu.request", "invalid",
+                                f"invalid CPU quantity: {cpu_req_str!r}",
+                            ))
+                        elif cpu_req_val > cpu_limit_val:
+                            errors.append(make_error(
+                                "spec.resources.cpu.request", "invalid",
+                                "CPU request must not exceed limit",
+                            ))
+                            cpu_req_val = None
+                    if cpu_req_val is not None:
+                        cpu = {"limit": cpu_limit_str, "request": cpu_req_str}
+
+    return memory, cpu, errors
+
+
 # --- Vault status helper ---
 
 def build_vault_status(mesh):
@@ -1084,6 +1296,503 @@ def vault_cmd_update(args):
     print_json(result)
 
 
+# --- Task validation ---
+
+def validate_task(doc, mesh_store):
+    errors = []
+    if not isinstance(doc, dict) or "metadata" not in doc or "spec" not in doc:
+        return None, [make_error("", "parse", "document must have 'metadata' and 'spec' keys")]
+
+    metadata = doc["metadata"] if isinstance(doc["metadata"], dict) else {}
+    spec = doc["spec"] if isinstance(doc["spec"], dict) else {}
+
+    name, name_errs = validate_resource_name(metadata)
+    errors.extend(name_errs)
+
+    mesh_ref, mesh_errs = validate_meshref(spec, mesh_store)
+    errors.extend(mesh_errs)
+
+    has_inline = "inline" in spec
+    has_bundle_ref = "bundleRef" in spec
+    inline_val = spec.get("inline")
+    bundle_ref_val = spec.get("bundleRef")
+
+    exclusive_ok = True
+    if has_inline and has_bundle_ref:
+        errors.append(make_error("spec", "invalid", "exactly one of 'spec.inline' or 'spec.bundleRef' must be set"))
+        exclusive_ok = False
+    elif not has_inline and not has_bundle_ref:
+        errors.append(make_error("spec", "invalid", "exactly one of 'spec.inline' or 'spec.bundleRef' must be set"))
+        exclusive_ok = False
+    elif has_inline and (inline_val is None or inline_val == ""):
+        errors.append(make_error("spec", "invalid", "exactly one of 'spec.inline' or 'spec.bundleRef' must be set"))
+        exclusive_ok = False
+    elif has_bundle_ref and (bundle_ref_val is None or bundle_ref_val == ""):
+        errors.append(make_error("spec", "invalid", "exactly one of 'spec.inline' or 'spec.bundleRef' must be set"))
+        exclusive_ok = False
+
+    if errors:
+        return None, errors
+
+    out_spec = {"meshRef": mesh_ref}
+    if has_inline and exclusive_ok:
+        out_spec["inline"] = inline_val
+    elif has_bundle_ref and exclusive_ok:
+        out_spec["bundleRef"] = bundle_ref_val
+
+    return {"metadata": {"name": name}, "spec": out_spec}, []
+
+
+# --- Task command handlers ---
+
+def task_cmd_create(args):
+    doc, errs = load_yaml_file(args.file)
+    if errs:
+        error_out(errs)
+        return
+
+    mesh_store = load_store()
+    result, errs = validate_task(doc, mesh_store)
+    if errs:
+        error_out(errs)
+        return
+
+    name = result["metadata"]["name"]
+    task_store = load_task_store()
+    if name in task_store:
+        error_out([make_error("metadata.name", "duplicate", f"task '{name}' already exists")])
+        return
+
+    result["status"] = {"state": "Initializing"}
+    task_store[name] = result
+    save_task_store(task_store)
+    print_json(result)
+
+
+def task_cmd_list(_args):
+    task_store = load_task_store()
+    items = sorted(task_store.values(), key=lambda r: r["metadata"]["name"])
+    print_json(items)
+
+
+def task_cmd_describe(args):
+    task_store = load_task_store()
+    if args.name not in task_store:
+        error_out([make_error("metadata.name", "not_found", f"task '{args.name}' not found")])
+        return
+    print_json(task_store[args.name])
+
+
+def task_cmd_update(args):
+    doc, errs = load_yaml_file(args.file)
+    if errs:
+        error_out(errs)
+        return
+
+    metadata = doc.get("metadata") or {}
+    raw_name = metadata.get("name") if isinstance(metadata, dict) else None
+    if not raw_name:
+        error_out([make_error("metadata.name", "required", "name is required")])
+        return
+
+    task_store = load_task_store()
+    if raw_name not in task_store:
+        error_out([make_error("metadata.name", "not_found", f"task '{raw_name}' not found")])
+        return
+
+    stored = task_store[raw_name]
+    incoming_spec = doc.get("spec") or {}
+    if not isinstance(incoming_spec, dict):
+        incoming_spec = {}
+
+    imm_errs = full_spec_immutability_check(stored["spec"], incoming_spec)
+    if imm_errs:
+        error_out(imm_errs)
+        return
+
+    print_json(stored)
+
+
+def task_cmd_delete(args):
+    task_store = load_task_store()
+    name = args.name
+    if name not in task_store:
+        error_out([make_error("metadata.name", "not_found", f"task '{name}' not found")])
+        return
+    del task_store[name]
+    save_task_store(task_store)
+    print_json({"message": f"task '{name}' deleted", "metadata": {"name": name}})
+
+
+def task_cmd_run(args):
+    task_store = load_task_store()
+    name = args.name
+    if name not in task_store:
+        error_out([make_error("metadata.name", "not_found", f"task '{name}' not found")])
+        return
+
+    resource = copy.deepcopy(task_store[name])
+    errs = run_state_guard(resource)
+    if errs:
+        error_out(errs)
+        return
+
+    resource["status"]["state"] = "Running"
+
+    inline = resource["spec"].get("inline")
+    if inline is not None:
+        lines = inline.splitlines()
+        for i, line in enumerate(lines):
+            if line.startswith("FAIL:"):
+                reason = line[len("FAIL:"):].strip()
+                resource["status"]["state"] = "Failed"
+                resource["status"]["detail"] = f"command {i} failed: {reason}"
+                task_store[name] = resource
+                save_task_store(task_store)
+                print_json(resource)
+                return
+
+    resource["status"]["state"] = "Succeeded"
+    resource["status"].pop("detail", None)
+    task_store[name] = resource
+    save_task_store(task_store)
+    print_json(resource)
+
+
+# --- Snapshot validation ---
+
+def validate_snapshot(doc, mesh_store):
+    errors = []
+    if not isinstance(doc, dict) or "metadata" not in doc or "spec" not in doc:
+        return None, [make_error("", "parse", "document must have 'metadata' and 'spec' keys")]
+
+    metadata = doc["metadata"] if isinstance(doc["metadata"], dict) else {}
+    spec = doc["spec"] if isinstance(doc["spec"], dict) else {}
+
+    name, name_errs = validate_resource_name(metadata)
+    errors.extend(name_errs)
+
+    mesh_ref, mesh_errs = validate_meshref(spec, mesh_store)
+    errors.extend(mesh_errs)
+
+    memory, cpu, res_errs = validate_op_resources(spec)
+    errors.extend(res_errs)
+
+    if errors:
+        return None, errors
+
+    out_spec = {
+        "meshRef": mesh_ref,
+        "resources": {"memory": memory},
+    }
+    if cpu is not None:
+        out_spec["resources"]["cpu"] = cpu
+    scope = spec.get("scope")
+    if scope is not None:
+        out_spec["scope"] = scope
+    storage = spec.get("storage")
+    if isinstance(storage, dict):
+        out_spec["storage"] = storage
+
+    return {"metadata": {"name": name}, "spec": out_spec}, []
+
+
+# --- Snapshot command handlers ---
+
+def snapshot_cmd_create(args):
+    doc, errs = load_yaml_file(args.file)
+    if errs:
+        error_out(errs)
+        return
+
+    mesh_store = load_store()
+    result, errs = validate_snapshot(doc, mesh_store)
+    if errs:
+        error_out(errs)
+        return
+
+    name = result["metadata"]["name"]
+    snapshot_store = load_snapshot_store()
+    if name in snapshot_store:
+        error_out([make_error("metadata.name", "duplicate", f"snapshot '{name}' already exists")])
+        return
+
+    result["status"] = {"state": "Initializing"}
+    snapshot_store[name] = result
+    save_snapshot_store(snapshot_store)
+    print_json(result)
+
+
+def snapshot_cmd_list(_args):
+    snapshot_store = load_snapshot_store()
+    items = sorted(snapshot_store.values(), key=lambda r: r["metadata"]["name"])
+    print_json(items)
+
+
+def snapshot_cmd_describe(args):
+    snapshot_store = load_snapshot_store()
+    if args.name not in snapshot_store:
+        error_out([make_error("metadata.name", "not_found", f"snapshot '{args.name}' not found")])
+        return
+    print_json(snapshot_store[args.name])
+
+
+def snapshot_cmd_update(args):
+    doc, errs = load_yaml_file(args.file)
+    if errs:
+        error_out(errs)
+        return
+
+    metadata = doc.get("metadata") or {}
+    raw_name = metadata.get("name") if isinstance(metadata, dict) else None
+    if not raw_name:
+        error_out([make_error("metadata.name", "required", "name is required")])
+        return
+
+    snapshot_store = load_snapshot_store()
+    if raw_name not in snapshot_store:
+        error_out([make_error("metadata.name", "not_found", f"snapshot '{raw_name}' not found")])
+        return
+
+    stored = snapshot_store[raw_name]
+    incoming_spec = doc.get("spec") or {}
+    if not isinstance(incoming_spec, dict):
+        incoming_spec = {}
+
+    imm_errs = full_spec_immutability_check(stored["spec"], incoming_spec)
+    if imm_errs:
+        error_out(imm_errs)
+        return
+
+    print_json(stored)
+
+
+def snapshot_cmd_delete(args):
+    snapshot_store = load_snapshot_store()
+    name = args.name
+    if name not in snapshot_store:
+        error_out([make_error("metadata.name", "not_found", f"snapshot '{name}' not found")])
+        return
+
+    recovery_store = load_recovery_store()
+    dependent = sorted(
+        r["metadata"]["name"] for r in recovery_store.values()
+        if r["spec"].get("snapshotRef") == name
+    )
+    if dependent:
+        error_out([make_error(
+            "metadata.name", "conflict",
+            f"snapshot '{name}' is referenced by recovery resource(s): {', '.join(dependent)}",
+        )])
+        return
+
+    del snapshot_store[name]
+    save_snapshot_store(snapshot_store)
+    print_json({"message": f"snapshot '{name}' deleted", "metadata": {"name": name}})
+
+
+def snapshot_cmd_run(args):
+    snapshot_store = load_snapshot_store()
+    name = args.name
+    if name not in snapshot_store:
+        error_out([make_error("metadata.name", "not_found", f"snapshot '{name}' not found")])
+        return
+
+    resource = copy.deepcopy(snapshot_store[name])
+    errs = run_state_guard(resource)
+    if errs:
+        error_out(errs)
+        return
+
+    resource["status"]["state"] = "Running"
+
+    mesh_store = load_store()
+    mesh_ref = resource["spec"]["meshRef"]
+    mesh = mesh_store.get(mesh_ref)
+    stable = mesh is not None and mesh.get("status", {}).get("stable", False)
+
+    if not stable:
+        resource["status"]["state"] = "Unknown"
+        resource["status"]["detail"] = f"mesh '{mesh_ref}' is not stable"
+        resource["status"].pop("storageRef", None)
+    else:
+        resource["status"]["state"] = "Succeeded"
+        resource["status"]["storageRef"] = f"snapshot-{name}-storage"
+        resource["status"].pop("detail", None)
+
+    snapshot_store[name] = resource
+    save_snapshot_store(snapshot_store)
+    print_json(resource)
+
+
+# --- Recovery validation ---
+
+def validate_recovery(doc, mesh_store, snapshot_store):
+    errors = []
+    if not isinstance(doc, dict) or "metadata" not in doc or "spec" not in doc:
+        return None, [make_error("", "parse", "document must have 'metadata' and 'spec' keys")]
+
+    metadata = doc["metadata"] if isinstance(doc["metadata"], dict) else {}
+    spec = doc["spec"] if isinstance(doc["spec"], dict) else {}
+
+    name, name_errs = validate_resource_name(metadata)
+    errors.extend(name_errs)
+
+    mesh_ref, mesh_errs = validate_meshref(spec, mesh_store)
+    errors.extend(mesh_errs)
+
+    snapshot_ref = None
+    raw_snapshot_ref = spec.get("snapshotRef")
+    if not raw_snapshot_ref:
+        errors.append(make_error("spec.snapshotRef", "invalid", "snapshotRef is required and must reference an existing snapshot"))
+    elif not isinstance(raw_snapshot_ref, str):
+        errors.append(make_error("spec.snapshotRef", "invalid", "snapshotRef must be a non-empty string"))
+    elif raw_snapshot_ref not in snapshot_store:
+        errors.append(make_error("spec.snapshotRef", "invalid", f"snapshot '{raw_snapshot_ref}' not found"))
+    else:
+        snapshot_ref = raw_snapshot_ref
+        if mesh_ref is not None:
+            snap_mesh_ref = snapshot_store[snapshot_ref]["spec"].get("meshRef")
+            if snap_mesh_ref != mesh_ref:
+                errors.append(make_error(
+                    "spec.snapshotRef", "invalid",
+                    f"snapshot '{snapshot_ref}' belongs to mesh '{snap_mesh_ref}', not '{mesh_ref}'",
+                ))
+
+    memory, cpu, res_errs = validate_op_resources(spec)
+    errors.extend(res_errs)
+
+    if errors:
+        return None, errors
+
+    out_spec = {
+        "meshRef": mesh_ref,
+        "snapshotRef": snapshot_ref,
+        "resources": {"memory": memory},
+    }
+    if cpu is not None:
+        out_spec["resources"]["cpu"] = cpu
+    scope = spec.get("scope")
+    if scope is not None:
+        out_spec["scope"] = scope
+
+    return {"metadata": {"name": name}, "spec": out_spec}, []
+
+
+# --- Recovery command handlers ---
+
+def recovery_cmd_create(args):
+    doc, errs = load_yaml_file(args.file)
+    if errs:
+        error_out(errs)
+        return
+
+    mesh_store = load_store()
+    snapshot_store = load_snapshot_store()
+    result, errs = validate_recovery(doc, mesh_store, snapshot_store)
+    if errs:
+        error_out(errs)
+        return
+
+    name = result["metadata"]["name"]
+    recovery_store = load_recovery_store()
+    if name in recovery_store:
+        error_out([make_error("metadata.name", "duplicate", f"recovery '{name}' already exists")])
+        return
+
+    result["status"] = {"state": "Initializing"}
+    recovery_store[name] = result
+    save_recovery_store(recovery_store)
+    print_json(result)
+
+
+def recovery_cmd_list(_args):
+    recovery_store = load_recovery_store()
+    items = sorted(recovery_store.values(), key=lambda r: r["metadata"]["name"])
+    print_json(items)
+
+
+def recovery_cmd_describe(args):
+    recovery_store = load_recovery_store()
+    if args.name not in recovery_store:
+        error_out([make_error("metadata.name", "not_found", f"recovery '{args.name}' not found")])
+        return
+    print_json(recovery_store[args.name])
+
+
+def recovery_cmd_update(args):
+    doc, errs = load_yaml_file(args.file)
+    if errs:
+        error_out(errs)
+        return
+
+    metadata = doc.get("metadata") or {}
+    raw_name = metadata.get("name") if isinstance(metadata, dict) else None
+    if not raw_name:
+        error_out([make_error("metadata.name", "required", "name is required")])
+        return
+
+    recovery_store = load_recovery_store()
+    if raw_name not in recovery_store:
+        error_out([make_error("metadata.name", "not_found", f"recovery '{raw_name}' not found")])
+        return
+
+    stored = recovery_store[raw_name]
+    incoming_spec = doc.get("spec") or {}
+    if not isinstance(incoming_spec, dict):
+        incoming_spec = {}
+
+    imm_errs = full_spec_immutability_check(stored["spec"], incoming_spec)
+    if imm_errs:
+        error_out(imm_errs)
+        return
+
+    print_json(stored)
+
+
+def recovery_cmd_delete(args):
+    recovery_store = load_recovery_store()
+    name = args.name
+    if name not in recovery_store:
+        error_out([make_error("metadata.name", "not_found", f"recovery '{name}' not found")])
+        return
+    del recovery_store[name]
+    save_recovery_store(recovery_store)
+    print_json({"message": f"recovery '{name}' deleted", "metadata": {"name": name}})
+
+
+def recovery_cmd_run(args):
+    recovery_store = load_recovery_store()
+    name = args.name
+    if name not in recovery_store:
+        error_out([make_error("metadata.name", "not_found", f"recovery '{name}' not found")])
+        return
+
+    resource = copy.deepcopy(recovery_store[name])
+    errs = run_state_guard(resource)
+    if errs:
+        error_out(errs)
+        return
+
+    resource["status"]["state"] = "Running"
+
+    mesh_store = load_store()
+    mesh_ref = resource["spec"]["meshRef"]
+    mesh = mesh_store.get(mesh_ref)
+    stable = mesh is not None and mesh.get("status", {}).get("stable", False)
+
+    if not stable:
+        resource["status"]["state"] = "Unknown"
+        resource["status"]["detail"] = f"mesh '{mesh_ref}' is not stable"
+    else:
+        resource["status"]["state"] = "Succeeded"
+        resource["status"].pop("detail", None)
+
+    recovery_store[name] = resource
+    save_recovery_store(recovery_store)
+    print_json(resource)
+
+
 # --- CLI entry point (tasks 5.1, 5.2) ---
 
 def main():
@@ -1124,6 +1833,48 @@ def main():
     vault_update_p = vault_sub.add_parser("update")
     vault_update_p.add_argument("-f", dest="file", required=True)
 
+    task_p = top_sub.add_parser("task")
+    task_sub = task_p.add_subparsers(dest="operation")
+    task_create_p = task_sub.add_parser("create")
+    task_create_p.add_argument("-f", dest="file", required=True)
+    task_sub.add_parser("list")
+    task_describe_p = task_sub.add_parser("describe")
+    task_describe_p.add_argument("name")
+    task_update_p = task_sub.add_parser("update")
+    task_update_p.add_argument("-f", dest="file", required=True)
+    task_delete_p = task_sub.add_parser("delete")
+    task_delete_p.add_argument("name")
+    task_run_p = task_sub.add_parser("run")
+    task_run_p.add_argument("name")
+
+    snapshot_p = top_sub.add_parser("snapshot")
+    snapshot_sub = snapshot_p.add_subparsers(dest="operation")
+    snapshot_create_p = snapshot_sub.add_parser("create")
+    snapshot_create_p.add_argument("-f", dest="file", required=True)
+    snapshot_sub.add_parser("list")
+    snapshot_describe_p = snapshot_sub.add_parser("describe")
+    snapshot_describe_p.add_argument("name")
+    snapshot_update_p = snapshot_sub.add_parser("update")
+    snapshot_update_p.add_argument("-f", dest="file", required=True)
+    snapshot_delete_p = snapshot_sub.add_parser("delete")
+    snapshot_delete_p.add_argument("name")
+    snapshot_run_p = snapshot_sub.add_parser("run")
+    snapshot_run_p.add_argument("name")
+
+    recovery_p = top_sub.add_parser("recovery")
+    recovery_sub = recovery_p.add_subparsers(dest="operation")
+    recovery_create_p = recovery_sub.add_parser("create")
+    recovery_create_p.add_argument("-f", dest="file", required=True)
+    recovery_sub.add_parser("list")
+    recovery_describe_p = recovery_sub.add_parser("describe")
+    recovery_describe_p.add_argument("name")
+    recovery_update_p = recovery_sub.add_parser("update")
+    recovery_update_p.add_argument("-f", dest="file", required=True)
+    recovery_delete_p = recovery_sub.add_parser("delete")
+    recovery_delete_p.add_argument("name")
+    recovery_run_p = recovery_sub.add_parser("run")
+    recovery_run_p.add_argument("name")
+
     args = parser.parse_args()
 
     if args.command == "mesh":
@@ -1147,6 +1898,42 @@ def main():
             "describe": vault_cmd_describe,
             "delete": vault_cmd_delete,
             "update": vault_cmd_update,
+        }[args.operation](args)
+    elif args.command == "task":
+        if not args.operation:
+            parser.print_usage(sys.stderr)
+            sys.exit(1)
+        {
+            "create": task_cmd_create,
+            "list": task_cmd_list,
+            "describe": task_cmd_describe,
+            "update": task_cmd_update,
+            "delete": task_cmd_delete,
+            "run": task_cmd_run,
+        }[args.operation](args)
+    elif args.command == "snapshot":
+        if not args.operation:
+            parser.print_usage(sys.stderr)
+            sys.exit(1)
+        {
+            "create": snapshot_cmd_create,
+            "list": snapshot_cmd_list,
+            "describe": snapshot_cmd_describe,
+            "update": snapshot_cmd_update,
+            "delete": snapshot_cmd_delete,
+            "run": snapshot_cmd_run,
+        }[args.operation](args)
+    elif args.command == "recovery":
+        if not args.operation:
+            parser.print_usage(sys.stderr)
+            sys.exit(1)
+        {
+            "create": recovery_cmd_create,
+            "list": recovery_cmd_list,
+            "describe": recovery_cmd_describe,
+            "update": recovery_cmd_update,
+            "delete": recovery_cmd_delete,
+            "run": recovery_cmd_run,
         }[args.operation](args)
     else:
         parser.print_usage(sys.stderr)

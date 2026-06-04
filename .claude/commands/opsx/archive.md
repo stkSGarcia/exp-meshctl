@@ -59,24 +59,23 @@ Archive a completed change in the experimental workflow.
    - If changes needed: "Sync now (recommended)", "Archive without syncing"
    - If already synced: "Archive now", "Sync anyway", "Cancel"
 
-   If user chooses sync, use Task tool (subagent_type: "general-purpose", prompt: "Use Skill tool to invoke openspec-sync-specs for change '<name>'. Delta spec analysis: <include the analyzed delta spec summary>"). Proceed to archive regardless of choice.
+   Note the user's choice (sync or skip) — it will be passed to the archive command.
 
 5. **Perform the archive**
 
-   Create the archive directory if it doesn't exist:
+   Run the openspec archive command, which handles spec sync, moves the change to archive, and indexes specs into the knowledge graph:
+
+   **If user chose to sync specs:**
    ```bash
-   mkdir -p openspec/changes/archive
+   openspec archive <name> --yes
    ```
 
-   Generate target name using current date: `YYYY-MM-DD-<change-name>`
-
-   **Check if target already exists:**
-   - If yes: Fail with error, suggest renaming existing archive or using different date
-   - If no: Move the change directory to archive
-
+   **If user chose to skip sync:**
    ```bash
-   mv openspec/changes/<name> openspec/changes/archive/YYYY-MM-DD-<name>
+   openspec archive <name> --yes --skip-specs
    ```
+
+   If the command exits with a non-zero code, surface the error to the user and stop.
 
 6. **Display summary**
 
@@ -120,7 +119,7 @@ All artifacts complete. All tasks complete.
 
 **Change:** <change-name>
 **Schema:** <schema-name>
-**Archived to:** openspec/changes/archive/YYYY-MM-DD-<name>/
+**Archived to:** the archive path derived from `planningHome.changesDir`/YYYY-MM-DD-<name>/
 **Specs:** Sync skipped (user chose to skip)
 
 **Warnings:**

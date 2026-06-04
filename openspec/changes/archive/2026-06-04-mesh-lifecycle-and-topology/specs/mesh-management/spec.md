@@ -90,7 +90,7 @@ The system SHALL detect when `spec.instances` decreases (but stays above 0) in a
 ---
 
 ### Requirement: Stop lifecycle
-Stop occurs when `spec.instances` changes from a positive value to `0`.
+The system SHALL treat a stop as occurring when `spec.instances` changes from a positive value to `0`.
 
 #### Scenario: Stop update response
 - **WHEN** `spec.instances` changes from N (N > 0) to `0` in an update
@@ -103,7 +103,7 @@ Stop occurs when `spec.instances` changes from a positive value to `0`.
 ---
 
 ### Requirement: Resume lifecycle
-Resume occurs when a stopped mesh (with `GracefulShutdown` present) sets `spec.instances` to a positive value or omits it.
+The system SHALL treat a resume as occurring when a stopped mesh (with `GracefulShutdown` present) sets `spec.instances` to a positive value or omits it.
 
 #### Scenario: Resume with explicit instance count
 - **WHEN** a stopped mesh is updated with a positive `spec.instances`

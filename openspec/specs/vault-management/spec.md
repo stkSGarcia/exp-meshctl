@@ -1,11 +1,8 @@
-# Vault Management
+# vault-management Specification
 
 ## Purpose
-
-TBD — Defines the requirements for the `meshctl` CLI tool's vault management operations, including creating, listing, describing, updating, and deleting vault resources, along with all input validation rules, default-application logic, and output format contracts.
-
+TBD - created by archiving change vault-resource-management. Update Purpose after archive.
 ## Requirements
-
 ### Requirement: CLI entry point for vault
 The tool SHALL be invokable as `uv run --project /app meshctl.py vault <operation> [arguments]` and SHALL route to the correct vault operation handler.
 
@@ -248,3 +245,4 @@ All vault validation and operational errors SHALL use the same JSON error shape 
 #### Scenario: Multiple vault errors
 - **WHEN** multiple validation rules fail simultaneously on a vault command
 - **THEN** output `{"errors":[...]}` containing all violations; order is not significant
+

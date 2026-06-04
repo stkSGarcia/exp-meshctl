@@ -1,11 +1,8 @@
-# Mesh Management
+# mesh-management Specification
 
 ## Purpose
-
-Defines the requirements for the `meshctl` CLI tool's mesh management operations, including creating, listing, describing, and deleting mesh resources, along with all input validation rules and output format contracts.
-
+TBD - created by archiving change implement-meshctl. Update Purpose after archive.
 ## Requirements
-
 ### Requirement: CLI entry point
 The tool SHALL be invokable as `uv run --project /app meshctl.py mesh <operation> [arguments]` and SHALL route to the correct operation handler.
 
@@ -76,8 +73,6 @@ The system SHALL remove the named mesh from the store and print a confirmation J
 #### Scenario: Delete blocked when dependent vaults exist
 - **WHEN** the named mesh exists and one or more vaults have `spec.meshRef` equal to that mesh name
 - **THEN** output `{"errors":[{"field":"metadata.name","type":"conflict","message":"<msg>"}]}` naming the dependent vaults, and do not delete the mesh
-
----
 
 ### Requirement: YAML input schema
 The system SHALL accept a YAML document that is a mapping with top-level keys `metadata` and `spec`. Any other top-level structure SHALL produce a parse error.
@@ -214,6 +209,284 @@ When `spec.resources.cpu` is absent, it SHALL be omitted from output. When prese
 
 ---
 
+### Requirement: Migration strategy validation and default
+`spec.migration.strategy` SHALL default to `"FullStop"`. It SHALL only accept the value `"FullStop"`; any other value SHALL produce an invalid error.
+
+#### Scenario: Migration strategy defaults to FullStop
+- **WHEN** `spec.migration.strategy` is not specified
+- **THEN** output has `spec.migration.strategy = "FullStop"`
+
+#### Scenario: Invalid migration strategy rejected
+- **WHEN** `spec.migration.strategy` is `"RollingUpdate"`
+- **THEN** output error `{"field":"spec.migration.strategy","type":"invalid","message":"<msg>"}`
+
+---
+
+### Requirement: Forbidden autoScaling field
+Any field named `autoScaling` anywhere under `spec` SHALL be rejected.
+
+#### Scenario: autoScaling at spec root
+- **WHEN** the input has `spec.autoScaling: ...`
+- **THEN** output error `{"field":"spec.autoScaling","type":"forbidden","message":"<msg>"}`
+
+#### Scenario: autoScaling nested under spec
+- **WHEN** the input has `spec.resources.autoScaling: ...`
+- **THEN** output error `{"field":"spec.resources.autoScaling","type":"forbidden","message":"<msg>"}`
+
+---
+
+### Requirement: Error output format
+All validation and operational errors SHALL be printed as `{"errors":[...]}` to stdout with nothing to stderr. Each error object SHALL have `field` (dot-path string), `message` (human-readable string), and `type` (one of: `required`, `invalid`, `forbidden`, `duplicate`, `not_found`, `parse`, `immutable`). When multiple errors are present, the array SHALL be sorted by `field` ascending, with ties broken by `type` ascending.
+
+#### Scenario: Single error
+- **WHEN** one validation rule fails
+- **THEN** output `{"errors":[{"field":"<path>","type":"<type>","message":"<msg>"}]}`
+
+#### Scenario: Multiple errors sorted by field then type
+- **WHEN** multiple validation rules fail simultaneously
+- **THEN** output `{"errors":[...]}` containing all violations, sorted by `field` ascending then `type` ascending
+
+---
+
+### Requirement: Success output — create and describe
+The system SHALL print the full resource JSON with `metadata`, `spec` (all defaulted fields including network topology and `access`), and a `status` block containing `state`, `stable`, `instances`, `conditions`, and (when stopped) `desiredInstancesOnResume`. The `spec.access` section SHALL include all applicable defaults for `authentication`, `permissions`, and `encryption`.
+
+#### Scenario: Create success output includes full status
+- **WHEN** create succeeds with `spec.instances > 0`
+- **THEN** output includes `status.state = "Running"`, `status.stable = true`, `status.instances = {"ready":spec.instances,"starting":0,"stopped":0}`, and `status.conditions` with `Healthy` and `PrechecksPassed`
+
+#### Scenario: New mesh starts as Running
+- **WHEN** a mesh is first created with positive instances
+- **THEN** `status.state = "Running"`
+
+#### Scenario: spec.access included in output with defaults
+- **WHEN** create or describe succeeds and `spec.access` was not specified in input
+- **THEN** output includes `spec.access` with all applicable defaults applied
+
+---
+
+### Requirement: Success output — delete
+Successful `delete` SHALL print `{"message":"<non-empty>","metadata":{"name":"<string>"}}`. The exact message wording is not part of the contract.
+
+#### Scenario: Delete confirmation printed
+- **WHEN** delete succeeds
+- **THEN** output contains a non-empty `message` and `metadata.name` matching the deleted resource
+
+### Requirement: Mesh update
+The system SHALL read a YAML document from the file path given by `-f`, merge its fields into the stored mesh using field-level merge rules, validate all constraints, and — if valid — persist the updated resource and print the full resource JSON to stdout.
+
+#### Scenario: Valid update persists and prints
+- **WHEN** a valid YAML file is provided whose `metadata.name` matches a stored mesh
+- **THEN** the merged resource is persisted and the full resource JSON is printed
+
+#### Scenario: Missing mesh rejected
+- **WHEN** `update` is called with a name that does not exist in the store
+- **THEN** output `{"errors":[{"field":"metadata.name","type":"not_found","message":"<msg>"}]}` and do not persist
+
+#### Scenario: Validation error rolls back entire update
+- **WHEN** the update YAML produces any validation error after merging
+- **THEN** output all errors and persist nothing
+
+---
+
+### Requirement: Field-level merge semantics
+The system SHALL merge update fields into the stored resource using leaf-level replacement, leaving omitted fields unchanged.
+
+#### Scenario: Provided leaf replaces stored leaf
+- **WHEN** the update YAML includes a field that exists in the stored mesh
+- **THEN** the stored value is replaced with the provided value
+
+#### Scenario: Omitted field is kept
+- **WHEN** the update YAML omits a field
+- **THEN** the stored value for that field is unchanged
+
+#### Scenario: Nested objects merged field by field
+- **WHEN** the update YAML provides a partial nested object (e.g., only `spec.resources.memory.limit`)
+- **THEN** sibling fields not mentioned retain their stored values
+
+#### Scenario: Create-time defaults not re-applied on update
+- **WHEN** an omitted field has a create-time default and that field is already stored
+- **THEN** the stored value is kept unchanged, not replaced by the default
+
+#### Scenario: Setting storage className does not affect storage size
+- **WHEN** the update YAML sets `spec.network.storage.className`
+- **THEN** `spec.network.storage.size` and `spec.network.replicationFactor` retain their stored values
+
+---
+
+### Requirement: Status conditions
+The system SHALL maintain a `status.conditions` array on each mesh. Each element SHALL have `type` (string), `status` (string, `"True"` or `"False"`), and `message` (string, empty when unused). The array SHALL be sorted by `type` ascending and each `type` SHALL appear at most once.
+
+#### Scenario: New mesh has Healthy and PrechecksPassed conditions
+- **WHEN** a mesh is created
+- **THEN** `status.conditions` contains exactly `[{"type":"Healthy","status":"True","message":""},{"type":"PrechecksPassed","status":"True","message":""}]`
+
+#### Scenario: Conditions sorted by type
+- **WHEN** conditions are set in any order
+- **THEN** `status.conditions` is returned sorted by `type` ascending
+
+#### Scenario: Condition type appears at most once
+- **WHEN** a condition of a given type is set
+- **THEN** no duplicate type exists in the array
+
+#### Scenario: Clearing a condition removes it
+- **WHEN** a condition is cleared
+- **THEN** that `type` is absent from `status.conditions`
+
+---
+
+### Requirement: Scale up lifecycle
+The system SHALL detect when `spec.instances` increases in an update and reflect the transition in the response and on the next describe.
+
+#### Scenario: Scale up update response
+- **WHEN** `spec.instances` increases from N to M (M > N > 0) in an update
+- **THEN** the update response has `status.instances.ready = N`, `status.instances.starting = M - N`, and `status.conditions` includes `{"type":"Scaling","status":"True","message":"<non-empty>"}`
+
+#### Scenario: Scale up stabilizes on next describe
+- **WHEN** a describe is performed after a scale-up update
+- **THEN** `status.instances.ready = M`, `status.instances.starting = 0`, and `Scaling` is absent from `status.conditions`
+
+---
+
+### Requirement: Scale down lifecycle
+The system SHALL detect when `spec.instances` decreases (but stays above 0) in an update and reflect the transition.
+
+#### Scenario: Scale down update response
+- **WHEN** `spec.instances` decreases from N to M (0 < M < N) in an update
+- **THEN** `status.conditions` includes `{"type":"Scaling","status":"True","message":"<any>"}` in the update response
+
+#### Scenario: Scale down stabilizes on next describe
+- **WHEN** a describe is performed after a scale-down update
+- **THEN** `Scaling` is absent from `status.conditions`
+
+---
+
+### Requirement: Stop lifecycle
+The system SHALL treat a stop as occurring when `spec.instances` changes from a positive value to `0`.
+
+#### Scenario: Stop update response
+- **WHEN** `spec.instances` changes from N (N > 0) to `0` in an update
+- **THEN** `status.instances = {"ready":0,"starting":0,"stopped":N}`, `status.state = "Stopped"`, `status.desiredInstancesOnResume = N`, and `status.conditions` includes `{"type":"GracefulShutdown","status":"True","message":""}`
+
+#### Scenario: GracefulShutdown persists through describes
+- **WHEN** a describe is performed on a stopped mesh
+- **THEN** `GracefulShutdown` remains in `status.conditions` and `status.desiredInstancesOnResume` is present
+
+---
+
+### Requirement: Resume lifecycle
+The system SHALL treat a resume as occurring when a stopped mesh (with `GracefulShutdown` present) sets `spec.instances` to a positive value or omits it.
+
+#### Scenario: Resume with explicit instance count
+- **WHEN** a stopped mesh is updated with a positive `spec.instances`
+- **THEN** `GracefulShutdown` is removed, `status.desiredInstancesOnResume` is removed, `status.instances = {"ready":0,"starting":spec.instances,"stopped":0}`, and `status.state = "Running"`
+
+#### Scenario: Resume with omitted instances uses stored desiredInstancesOnResume
+- **WHEN** a stopped mesh is updated and `spec.instances` is omitted or null
+- **THEN** the target count is taken from `status.desiredInstancesOnResume` and `status.instances.starting` equals that count
+
+#### Scenario: Resume stabilizes on next describe
+- **WHEN** a describe is performed after a resume update
+- **THEN** `status.instances.ready` equals the target count and `status.instances.starting = 0`
+
+---
+
+### Requirement: Network storage field
+The mesh spec SHALL support `spec.network.storage` with sub-fields `size` (string, memory quantity format), `ephemeral` (boolean, default `false`), and `className` (string, optional). `size` SHALL default to `"1Gi"` on create when omitted.
+
+#### Scenario: Storage defaults on create
+- **WHEN** `spec.network.storage` is absent on create
+- **THEN** `spec.network.storage.size = "1Gi"` and `spec.network.storage.ephemeral = false`
+
+#### Scenario: Valid storage accepted
+- **WHEN** `spec.network.storage.size` is a valid memory quantity
+- **THEN** the value is accepted and persisted
+
+#### Scenario: Invalid storage size rejected
+- **WHEN** `spec.network.storage.size` is not a valid memory quantity (e.g., `"abc"` or `"-1Gi"`)
+- **THEN** output error `{"field":"spec.network.storage.size","type":"invalid","message":"<msg>"}`
+
+#### Scenario: Storage size immutable
+- **WHEN** an update provides a `spec.network.storage.size` that differs from the stored value
+- **THEN** output error `{"field":"spec.network.storage.size","type":"immutable","message":"field 'spec.network.storage.size' is immutable after creation"}`
+
+#### Scenario: Storage size immutable even when ephemeral is true
+- **WHEN** an update provides a different `spec.network.storage.size` and `ephemeral` is `true`
+- **THEN** output the same immutable error
+
+---
+
+### Requirement: Network storage output format
+The system SHALL conditionally include `spec.network.storage` fields in output based on the `ephemeral` flag.
+
+#### Scenario: Non-ephemeral storage output
+- **WHEN** `spec.network.storage.ephemeral` is `false`
+- **THEN** output includes both `ephemeral` and `size` fields
+
+#### Scenario: Ephemeral storage output
+- **WHEN** `spec.network.storage.ephemeral` is `true`
+- **THEN** output includes only `ephemeral` (omit `size`)
+
+---
+
+### Requirement: Replication factor
+`spec.network.replicationFactor` SHALL be a positive integer. It SHALL have a computed default equal to `spec.instances` (capped at 3, minimum 1) when omitted on create. It SHALL be at least `1` and SHALL NOT exceed `spec.instances`.
+
+#### Scenario: Replication factor defaults to instance count (capped at 3)
+- **WHEN** `spec.network.replicationFactor` is absent on create and `spec.instances = 2`
+- **THEN** `spec.network.replicationFactor = 2`
+
+#### Scenario: Replication factor defaults to 3 when instances exceed 3
+- **WHEN** `spec.network.replicationFactor` is absent on create and `spec.instances = 5`
+- **THEN** `spec.network.replicationFactor = 3`
+
+#### Scenario: Replication factor below 1 rejected
+- **WHEN** `spec.network.replicationFactor` is `0` or negative
+- **THEN** output error `{"field":"spec.network.replicationFactor","type":"invalid","message":"<msg>"}`
+
+#### Scenario: Replication factor exceeds instance count rejected
+- **WHEN** `spec.network.replicationFactor` exceeds `spec.instances` after merge
+- **THEN** output error `{"field":"spec.network.replicationFactor","type":"invalid","message":"<msg> (got <rf>, max <instances>)"}`
+
+---
+
+### Requirement: Enriched status model
+The system SHALL include additional status fields on create, update, and describe responses.
+
+#### Scenario: status.stable on steady state
+- **WHEN** no transient conditions (e.g., `Scaling`) are active
+- **THEN** `status.stable = true`
+
+#### Scenario: status.stable during transition
+- **WHEN** a transient condition is active
+- **THEN** `status.stable = false`
+
+#### Scenario: status.instances on create
+- **WHEN** a mesh is created with `spec.instances > 0`
+- **THEN** `status.instances = {"ready":spec.instances,"starting":0,"stopped":0}`
+
+#### Scenario: status.desiredInstancesOnResume absent when running
+- **WHEN** the mesh is in `Running` state
+- **THEN** `status.desiredInstancesOnResume` is absent from the output
+
+---
+
+### Requirement: Immutable field error type
+The system SHALL reject any update that attempts to change a field marked immutable after creation, using the `immutable` error type.
+
+#### Scenario: Immutable field change produces correct error shape
+- **WHEN** an update changes an immutable field
+- **THEN** output `{"errors":[{"field":"<path>","type":"immutable","message":"field '<path>' is immutable after creation"}]}`
+
+---
+
+### Requirement: Post-merge constraint error messages
+The system SHALL produce `invalid` errors with messages that name the actual value and the relevant limit when post-merge constraints fail.
+
+#### Scenario: Replication factor constraint message includes values
+- **WHEN** `spec.network.replicationFactor` exceeds `spec.instances` after merge
+- **THEN** the error message names the actual replication factor value and the instance count limit
+
 ### Requirement: Authentication digest algorithm validation
 `spec.access.authentication.digestAlgorithm`, when present, SHALL be one of `"SHA-256"`, `"SHA-384"`, or `"SHA-512"`. Any other value SHALL produce an `invalid` error.
 
@@ -325,284 +598,3 @@ When `spec.access` is entirely absent from the input, the system SHALL output th
 - **WHEN** `spec.access.permissions.enabled` is `false` (or defaulted to false)
 - **THEN** `spec.access.permissions.roles` is absent from output
 
----
-
-### Requirement: Migration strategy validation and default
-`spec.migration.strategy` SHALL default to `"FullStop"`. It SHALL only accept the value `"FullStop"`; any other value SHALL produce an invalid error.
-
-#### Scenario: Migration strategy defaults to FullStop
-- **WHEN** `spec.migration.strategy` is not specified
-- **THEN** output has `spec.migration.strategy = "FullStop"`
-
-#### Scenario: Invalid migration strategy rejected
-- **WHEN** `spec.migration.strategy` is `"RollingUpdate"`
-- **THEN** output error `{"field":"spec.migration.strategy","type":"invalid","message":"<msg>"}`
-
----
-
-### Requirement: Forbidden autoScaling field
-Any field named `autoScaling` anywhere under `spec` SHALL be rejected.
-
-#### Scenario: autoScaling at spec root
-- **WHEN** the input has `spec.autoScaling: ...`
-- **THEN** output error `{"field":"spec.autoScaling","type":"forbidden","message":"<msg>"}`
-
-#### Scenario: autoScaling nested under spec
-- **WHEN** the input has `spec.resources.autoScaling: ...`
-- **THEN** output error `{"field":"spec.resources.autoScaling","type":"forbidden","message":"<msg>"}`
-
----
-
-### Requirement: Error output format
-All validation and operational errors SHALL be printed as `{"errors":[...]}` to stdout with nothing to stderr. Each error object SHALL have `field` (dot-path string), `message` (human-readable string), and `type` (one of: `required`, `invalid`, `forbidden`, `duplicate`, `not_found`, `parse`, `immutable`). When multiple errors are present, the array SHALL be sorted by `field` ascending, with ties broken by `type` ascending.
-
-#### Scenario: Single error
-- **WHEN** one validation rule fails
-- **THEN** output `{"errors":[{"field":"<path>","type":"<type>","message":"<msg>"}]}`
-
-#### Scenario: Multiple errors sorted by field then type
-- **WHEN** multiple validation rules fail simultaneously
-- **THEN** output `{"errors":[...]}` containing all violations, sorted by `field` ascending then `type` ascending
-
----
-
-### Requirement: Success output — create and describe
-The system SHALL print the full resource JSON with `metadata`, `spec` (all defaulted fields including network topology and `access`), and a `status` block containing `state`, `stable`, `instances`, `conditions`, and (when stopped) `desiredInstancesOnResume`. The `spec.access` section SHALL include all applicable defaults for `authentication`, `permissions`, and `encryption`.
-
-#### Scenario: Create success output includes full status
-- **WHEN** create succeeds with `spec.instances > 0`
-- **THEN** output includes `status.state = "Running"`, `status.stable = true`, `status.instances = {"ready":spec.instances,"starting":0,"stopped":0}`, and `status.conditions` with `Healthy` and `PrechecksPassed`
-
-#### Scenario: New mesh starts as Running
-- **WHEN** a mesh is first created with positive instances
-- **THEN** `status.state = "Running"`
-
-#### Scenario: spec.access included in output with defaults
-- **WHEN** create or describe succeeds and `spec.access` was not specified in input
-- **THEN** output includes `spec.access` with all applicable defaults applied
-
----
-
-### Requirement: Success output — delete
-Successful `delete` SHALL print `{"message":"<non-empty>","metadata":{"name":"<string>"}}`. The exact message wording is not part of the contract.
-
-#### Scenario: Delete confirmation printed
-- **WHEN** delete succeeds
-- **THEN** output contains a non-empty `message` and `metadata.name` matching the deleted resource
-
----
-
-### Requirement: Mesh update
-The system SHALL read a YAML document from the file path given by `-f`, merge its fields into the stored mesh using field-level merge rules, validate all constraints, and — if valid — persist the updated resource and print the full resource JSON to stdout.
-
-#### Scenario: Valid update persists and prints
-- **WHEN** a valid YAML file is provided whose `metadata.name` matches a stored mesh
-- **THEN** the merged resource is persisted and the full resource JSON is printed
-
-#### Scenario: Missing mesh rejected
-- **WHEN** `update` is called with a name that does not exist in the store
-- **THEN** output `{"errors":[{"field":"metadata.name","type":"not_found","message":"<msg>"}]}` and do not persist
-
-#### Scenario: Validation error rolls back entire update
-- **WHEN** the update YAML produces any validation error after merging
-- **THEN** output all errors and persist nothing
-
----
-
-### Requirement: Field-level merge semantics
-The system SHALL merge update fields into the stored resource using leaf-level replacement, leaving omitted fields unchanged.
-
-#### Scenario: Provided leaf replaces stored leaf
-- **WHEN** the update YAML includes a field that exists in the stored mesh
-- **THEN** the stored value is replaced with the provided value
-
-#### Scenario: Omitted field is kept
-- **WHEN** the update YAML omits a field
-- **THEN** the stored value for that field is unchanged
-
-#### Scenario: Nested objects merged field by field
-- **WHEN** the update YAML provides a partial nested object (e.g., only `spec.resources.memory.limit`)
-- **THEN** sibling fields not mentioned retain their stored values
-
-#### Scenario: Create-time defaults not re-applied on update
-- **WHEN** an omitted field has a create-time default and that field is already stored
-- **THEN** the stored value is kept unchanged, not replaced by the default
-
-#### Scenario: Setting storage className does not affect storage size
-- **WHEN** the update YAML sets `spec.network.storage.className`
-- **THEN** `spec.network.storage.size` and `spec.network.replicationFactor` retain their stored values
-
----
-
-### Requirement: Status conditions
-The system SHALL maintain a `status.conditions` array on each mesh. Each element SHALL have `type` (string), `status` (string, `"True"` or `"False"`), and `message` (string, empty when unused). The array SHALL be sorted by `type` ascending and each `type` SHALL appear at most once.
-
-#### Scenario: New mesh has Healthy and PrechecksPassed conditions
-- **WHEN** a mesh is created
-- **THEN** `status.conditions` contains exactly `[{"type":"Healthy","status":"True","message":""},{"type":"PrechecksPassed","status":"True","message":""}]`
-
-#### Scenario: Conditions sorted by type
-- **WHEN** conditions are set in any order
-- **THEN** `status.conditions` is returned sorted by `type` ascending
-
-#### Scenario: Condition type appears at most once
-- **WHEN** a condition of a given type is set
-- **THEN** no duplicate type exists in the array
-
-#### Scenario: Clearing a condition removes it
-- **WHEN** a condition is cleared
-- **THEN** that `type` is absent from `status.conditions`
-
----
-
-### Requirement: Scale up lifecycle
-The system SHALL detect when `spec.instances` increases in an update and reflect the transition in the response and on the next describe.
-
-#### Scenario: Scale up update response
-- **WHEN** `spec.instances` increases from N to M (M > N > 0) in an update
-- **THEN** the update response has `status.instances.ready = N`, `status.instances.starting = M - N`, and `status.conditions` includes `{"type":"Scaling","status":"True","message":"<non-empty>"}`
-
-#### Scenario: Scale up stabilizes on next describe
-- **WHEN** a describe is performed after a scale-up update
-- **THEN** `status.instances.ready = M`, `status.instances.starting = 0`, and `Scaling` is absent from `status.conditions`
-
----
-
-### Requirement: Scale down lifecycle
-The system SHALL detect when `spec.instances` decreases (but stays above 0) in an update and reflect the transition.
-
-#### Scenario: Scale down update response
-- **WHEN** `spec.instances` decreases from N to M (0 < M < N) in an update
-- **THEN** `status.conditions` includes `{"type":"Scaling","status":"True","message":"<any>"}` in the update response
-
-#### Scenario: Scale down stabilizes on next describe
-- **WHEN** a describe is performed after a scale-down update
-- **THEN** `Scaling` is absent from `status.conditions`
-
----
-
-### Requirement: Stop lifecycle
-Stop occurs when `spec.instances` changes from a positive value to `0`.
-
-#### Scenario: Stop update response
-- **WHEN** `spec.instances` changes from N (N > 0) to `0` in an update
-- **THEN** `status.instances = {"ready":0,"starting":0,"stopped":N}`, `status.state = "Stopped"`, `status.desiredInstancesOnResume = N`, and `status.conditions` includes `{"type":"GracefulShutdown","status":"True","message":""}`
-
-#### Scenario: GracefulShutdown persists through describes
-- **WHEN** a describe is performed on a stopped mesh
-- **THEN** `GracefulShutdown` remains in `status.conditions` and `status.desiredInstancesOnResume` is present
-
----
-
-### Requirement: Resume lifecycle
-Resume occurs when a stopped mesh (with `GracefulShutdown` present) sets `spec.instances` to a positive value or omits it.
-
-#### Scenario: Resume with explicit instance count
-- **WHEN** a stopped mesh is updated with a positive `spec.instances`
-- **THEN** `GracefulShutdown` is removed, `status.desiredInstancesOnResume` is removed, `status.instances = {"ready":0,"starting":spec.instances,"stopped":0}`, and `status.state = "Running"`
-
-#### Scenario: Resume with omitted instances uses stored desiredInstancesOnResume
-- **WHEN** a stopped mesh is updated and `spec.instances` is omitted or null
-- **THEN** the target count is taken from `status.desiredInstancesOnResume` and `status.instances.starting` equals that count
-
-#### Scenario: Resume stabilizes on next describe
-- **WHEN** a describe is performed after a resume update
-- **THEN** `status.instances.ready` equals the target count and `status.instances.starting = 0`
-
----
-
-### Requirement: Network storage field
-The mesh spec SHALL support `spec.network.storage` with sub-fields `size` (string, memory quantity format), `ephemeral` (boolean, default `false`), and `className` (string, optional). `size` SHALL default to `"1Gi"` on create when omitted.
-
-#### Scenario: Storage defaults on create
-- **WHEN** `spec.network.storage` is absent on create
-- **THEN** `spec.network.storage.size = "1Gi"` and `spec.network.storage.ephemeral = false`
-
-#### Scenario: Valid storage accepted
-- **WHEN** `spec.network.storage.size` is a valid memory quantity
-- **THEN** the value is accepted and persisted
-
-#### Scenario: Invalid storage size rejected
-- **WHEN** `spec.network.storage.size` is not a valid memory quantity (e.g., `"abc"` or `"-1Gi"`)
-- **THEN** output error `{"field":"spec.network.storage.size","type":"invalid","message":"<msg>"}`
-
-#### Scenario: Storage size immutable
-- **WHEN** an update provides a `spec.network.storage.size` that differs from the stored value
-- **THEN** output error `{"field":"spec.network.storage.size","type":"immutable","message":"field 'spec.network.storage.size' is immutable after creation"}`
-
-#### Scenario: Storage size immutable even when ephemeral is true
-- **WHEN** an update provides a different `spec.network.storage.size` and `ephemeral` is `true`
-- **THEN** output the same immutable error
-
----
-
-### Requirement: Network storage output format
-The system SHALL conditionally include `spec.network.storage` fields in output based on the `ephemeral` flag.
-
-#### Scenario: Non-ephemeral storage output
-- **WHEN** `spec.network.storage.ephemeral` is `false`
-- **THEN** output includes both `ephemeral` and `size` fields
-
-#### Scenario: Ephemeral storage output
-- **WHEN** `spec.network.storage.ephemeral` is `true`
-- **THEN** output includes only `ephemeral` (omit `size`)
-
----
-
-### Requirement: Replication factor
-`spec.network.replicationFactor` SHALL be a positive integer. It SHALL have a computed default equal to `spec.instances` (capped at 3, minimum 1) when omitted on create. It SHALL be at least `1` and SHALL NOT exceed `spec.instances`.
-
-#### Scenario: Replication factor defaults to instance count (capped at 3)
-- **WHEN** `spec.network.replicationFactor` is absent on create and `spec.instances = 2`
-- **THEN** `spec.network.replicationFactor = 2`
-
-#### Scenario: Replication factor defaults to 3 when instances exceed 3
-- **WHEN** `spec.network.replicationFactor` is absent on create and `spec.instances = 5`
-- **THEN** `spec.network.replicationFactor = 3`
-
-#### Scenario: Replication factor below 1 rejected
-- **WHEN** `spec.network.replicationFactor` is `0` or negative
-- **THEN** output error `{"field":"spec.network.replicationFactor","type":"invalid","message":"<msg>"}`
-
-#### Scenario: Replication factor exceeds instance count rejected
-- **WHEN** `spec.network.replicationFactor` exceeds `spec.instances` after merge
-- **THEN** output error `{"field":"spec.network.replicationFactor","type":"invalid","message":"<msg> (got <rf>, max <instances>)"}`
-
----
-
-### Requirement: Enriched status model
-The system SHALL include additional status fields on create, update, and describe responses.
-
-#### Scenario: status.stable on steady state
-- **WHEN** no transient conditions (e.g., `Scaling`) are active
-- **THEN** `status.stable = true`
-
-#### Scenario: status.stable during transition
-- **WHEN** a transient condition is active
-- **THEN** `status.stable = false`
-
-#### Scenario: status.instances on create
-- **WHEN** a mesh is created with `spec.instances > 0`
-- **THEN** `status.instances = {"ready":spec.instances,"starting":0,"stopped":0}`
-
-#### Scenario: status.desiredInstancesOnResume absent when running
-- **WHEN** the mesh is in `Running` state
-- **THEN** `status.desiredInstancesOnResume` is absent from the output
-
----
-
-### Requirement: Immutable field error type
-The system SHALL reject any update that attempts to change a field marked immutable after creation, using the `immutable` error type.
-
-#### Scenario: Immutable field change produces correct error shape
-- **WHEN** an update changes an immutable field
-- **THEN** output `{"errors":[{"field":"<path>","type":"immutable","message":"field '<path>' is immutable after creation"}]}`
-
----
-
-### Requirement: Post-merge constraint error messages
-The system SHALL produce `invalid` errors with messages that name the actual value and the relevant limit when post-merge constraints fail.
-
-#### Scenario: Replication factor constraint message includes values
-- **WHEN** `spec.network.replicationFactor` exceeds `spec.instances` after merge
-- **THEN** the error message names the actual replication factor value and the instance count limit
