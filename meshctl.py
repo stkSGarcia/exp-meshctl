@@ -23,6 +23,14 @@ VALID_DIGEST_ALGORITHMS = {"SHA-256", "SHA-384", "SHA-512"}
 VALID_ENCRYPTION_SOURCES = {"None", "Secret", "Service"}
 VALID_CLIENT_MODES = {"None", "Authenticate", "Validate"}
 VALID_MIGRATION_STRATEGIES = {"FullStop", "LiveMigration", "RollingPatch"}
+VALID_EXPOSURE_TYPES = {"Gateway", "DirectPort", "Balancer"}
+EXPOSURE_ALLOWED_FIELDS = {
+    "Gateway": {"hostname", "annotations"},
+    "DirectPort": {"port", "directPort"},
+    "Balancer": {"port"},
+}
+EXPOSURE_ALL_SUB_FIELDS = {"hostname", "annotations", "port", "directPort"}
+DEFAULT_EXPOSURE_PORT = 8080
 RUNTIME_CATALOG = {
     "3.0.0": "deprecated",
     "3.1.0": "skipped",
@@ -255,6 +263,24 @@ def find_autoscaling_paths(obj, path):
     return results
 
 
+# --- Connection details computation ---
+
+def compute_connection_details(name, exposure):
+    exp_type = exposure.get("type")
+    if exp_type == "Gateway":
+        host = exposure.get("hostname") or f"{name}-gateway"
+        port = 443
+    elif exp_type == "DirectPort":
+        host = name
+        port = exposure.get("directPort") or DEFAULT_EXPOSURE_PORT
+    elif exp_type == "Balancer":
+        host = f"{name}-external"
+        port = exposure.get("port") or DEFAULT_EXPOSURE_PORT
+    else:
+        return None
+    return {"host": host, "port": port, "protocol": "https"}
+
+
 # --- Storage output formatter (task 1.4) ---
 
 def format_storage(storage):
@@ -297,7 +323,7 @@ def build_initial_status(instances):
 # --- Resource output formatter ---
 
 def format_resource_for_output(resource):
-    """Apply output rules: storage format, hide desiredInstancesOnResume when running."""
+    """Apply output rules: storage format, hide desiredInstancesOnResume when running, inject connection details."""
     out = copy.deepcopy(resource)
     network = out.get("spec", {}).get("network")
     if network and "storage" in network:
@@ -305,6 +331,21 @@ def format_resource_for_output(resource):
     status = out.get("status", {})
     if status.get("state") != "Stopped":
         status.pop("desiredInstancesOnResume", None)
+    name = out.get("metadata", {}).get("name", "")
+    exposure = out.get("spec", {}).get("exposure")
+    if exposure is not None:
+        status["connectionDetails"] = compute_connection_details(name, exposure)
+    else:
+        status.pop("connectionDetails", None)
+    mgmt_enabled = (out.get("spec", {}).get("management") or {}).get("enabled", False)
+    if mgmt_enabled:
+        status["managementConnectionDetails"] = {
+            "host": f"{name}-admin",
+            "port": 9990,
+            "protocol": "https",
+        }
+    else:
+        status.pop("managementConnectionDetails", None)
     return out
 
 
@@ -715,6 +756,48 @@ def validate_and_build(doc, is_update=False):  # returns (result, errors, warnin
             ))
             rf = None
 
+    # spec.exposure
+    raw_exposure = spec.get("exposure")
+    exposure = None
+    if raw_exposure is not None:
+        if not isinstance(raw_exposure, dict):
+            errors.append(make_error("spec.exposure.type", "required", "exposure.type is required"))
+        else:
+            exp_type = raw_exposure.get("type")
+            if not exp_type:
+                errors.append(make_error("spec.exposure.type", "required", "exposure.type is required"))
+            elif exp_type not in VALID_EXPOSURE_TYPES:
+                errors.append(make_error(
+                    "spec.exposure.type", "invalid",
+                    f"exposure.type must be one of Gateway, DirectPort, Balancer",
+                ))
+            else:
+                allowed = EXPOSURE_ALLOWED_FIELDS[exp_type]
+                for sub in sorted(EXPOSURE_ALL_SUB_FIELDS - allowed):
+                    if sub in raw_exposure:
+                        errors.append(make_error(
+                            f"spec.exposure.{sub}", "forbidden",
+                            f"field 'spec.exposure.{sub}' is not allowed for exposure type '{exp_type}'",
+                        ))
+                exposure = {"type": exp_type}
+                if "hostname" in allowed and raw_exposure.get("hostname") is not None:
+                    exposure["hostname"] = raw_exposure["hostname"]
+                if "annotations" in allowed and raw_exposure.get("annotations") is not None:
+                    exposure["annotations"] = raw_exposure["annotations"]
+                if "port" in allowed and raw_exposure.get("port") is not None:
+                    exposure["port"] = raw_exposure["port"]
+                if "directPort" in allowed and raw_exposure.get("directPort") is not None:
+                    exposure["directPort"] = raw_exposure["directPort"]
+
+    # spec.management
+    raw_management = spec.get("management")
+    management_enabled = False
+    if isinstance(raw_management, dict):
+        raw_enabled = raw_management.get("enabled")
+        if raw_enabled is not None:
+            management_enabled = bool(raw_enabled)
+    management = {"enabled": management_enabled}
+
     if errors:
         return None, errors, []
 
@@ -746,11 +829,14 @@ def validate_and_build(doc, is_update=False):  # returns (result, errors, warnin
             "storage": storage,
             "replicationFactor": rf,
         },
+        "management": management,
     }
     if has_runtime:
         out_spec["runtime"] = runtime
     if has_cpu:
         out_spec["resources"]["cpu"] = cpu
+    if exposure is not None:
+        out_spec["exposure"] = exposure
 
     return {"metadata": {"name": name}, "spec": out_spec}, [], warnings
 
@@ -774,14 +860,21 @@ def check_immutable(stored_spec, merged_spec):
     """Return immutable errors for fields that changed after creation."""
     errors = []
     stored_size = (stored_spec.get("network") or {}).get("storage", {}).get("size")
-    if stored_size is None:
-        return errors
-    merged_size = (merged_spec.get("network") or {}).get("storage", {}).get("size")
-    if merged_size != stored_size:
-        errors.append(make_error(
-            "spec.network.storage.size", "immutable",
-            "field 'spec.network.storage.size' is immutable after creation",
-        ))
+    if stored_size is not None:
+        merged_size = (merged_spec.get("network") or {}).get("storage", {}).get("size")
+        if merged_size != stored_size:
+            errors.append(make_error(
+                "spec.network.storage.size", "immutable",
+                "field 'spec.network.storage.size' is immutable after creation",
+            ))
+    if "management" in stored_spec:
+        stored_mgmt = (stored_spec.get("management") or {}).get("enabled", False)
+        merged_mgmt = (merged_spec.get("management") or {}).get("enabled", False)
+        if merged_mgmt != stored_mgmt:
+            errors.append(make_error(
+                "spec.management.enabled", "immutable",
+                "field 'spec.management.enabled' is immutable after creation",
+            ))
     return errors
 
 
@@ -1398,6 +1491,19 @@ def cmd_migrate(args):
     store[name] = resource
     save_store(store)
     print_json(format_resource_for_output(resource))
+
+
+def cmd_shell(args):
+    store = load_store()
+    name = args.name
+    if name not in store:
+        error_out([make_error("metadata.name", "not_found", f"mesh '{name}' not found")])
+        return
+    exposure = store[name].get("spec", {}).get("exposure")
+    if exposure is None:
+        error_out([make_error("spec.exposure", "invalid", f"mesh '{name}' has no exposure configured")])
+        return
+    print_json(compute_connection_details(name, exposure))
 
 
 def cmd_rollback(args):
@@ -2080,6 +2186,9 @@ def main():
     rollback_p = mesh_sub.add_parser("rollback")
     rollback_p.add_argument("name")
 
+    shell_p = mesh_sub.add_parser("shell")
+    shell_p.add_argument("name")
+
     vault_p = top_sub.add_parser("vault")
     vault_sub = vault_p.add_subparsers(dest="operation")
 
@@ -2153,6 +2262,7 @@ def main():
             "update": cmd_update,
             "migrate": cmd_migrate,
             "rollback": cmd_rollback,
+            "shell": cmd_shell,
         }[args.operation](args)
     elif args.command == "vault":
         if not args.operation:

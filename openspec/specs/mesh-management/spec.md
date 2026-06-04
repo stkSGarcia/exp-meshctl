@@ -75,15 +75,11 @@ The system SHALL remove the named mesh from the store and print a confirmation J
 - **THEN** output `{"errors":[{"field":"metadata.name","type":"conflict","message":"<msg>"}]}` naming the dependent vaults, and do not delete the mesh
 
 ### Requirement: YAML input schema
-The system SHALL accept a YAML document that is a mapping with top-level keys `metadata` and `spec`. Any other top-level structure SHALL produce a parse error.
+**Updated:** The system SHALL accept `spec.exposure` (optional) and `spec.management` (optional) as recognized top-level keys under `spec`. All existing fields remain unchanged.
 
-#### Scenario: Valid mapping with metadata and spec
-- **WHEN** the YAML document has `metadata.name` and a `spec` block
-- **THEN** the document is accepted for further validation
-
-#### Scenario: Non-mapping document
-- **WHEN** the YAML document is a list or scalar
-- **THEN** output `{"errors":[{"field":"","type":"parse","message":"<msg>"}]}`
+#### Scenario: Exposure and management fields accepted
+- **WHEN** the input YAML includes `spec.exposure` and `spec.management`
+- **THEN** they are parsed and validated without a parse error
 
 ---
 
@@ -249,21 +245,17 @@ All validation and operational errors SHALL be printed as `{"errors":[...]}` to 
 ---
 
 ### Requirement: Success output — create and describe
-The system SHALL print the full resource JSON with `metadata`, `spec` (all defaulted fields including network topology and `access`), and a `status` block containing `state`, `stable`, `instances`, `conditions`, and (when stopped) `desiredInstancesOnResume`. The `spec.access` section SHALL include all applicable defaults for `authentication`, `permissions`, and `encryption`.
+**Updated:** The full resource JSON for create and describe SHALL include `status.connectionDetails` when `spec.exposure` is configured, and `status.managementConnectionDetails` when `spec.management.enabled` is `true`. Both fields are absent when not applicable.
 
-#### Scenario: Create success output includes full status
-- **WHEN** create succeeds with `spec.instances > 0`
-- **THEN** output includes `status.state = "Running"`, `status.stable = true`, `status.instances = {"ready":spec.instances,"starting":0,"stopped":0}`, and `status.conditions` with `Healthy` and `PrechecksPassed`
+(adapts mesh-management/success-output-create-and-describe)
 
-#### Scenario: New mesh starts as Running
-- **WHEN** a mesh is first created with positive instances
-- **THEN** `status.state = "Running"`
+#### Scenario: Create with exposure includes connectionDetails
+- **WHEN** a mesh is created with a valid `spec.exposure` block
+- **THEN** the response JSON includes `status.connectionDetails`
 
-#### Scenario: spec.access included in output with defaults
-- **WHEN** create or describe succeeds and `spec.access` was not specified in input
-- **THEN** output includes `spec.access` with all applicable defaults applied
-
----
+#### Scenario: Create without exposure omits connectionDetails
+- **WHEN** a mesh is created without `spec.exposure`
+- **THEN** `status.connectionDetails` is absent from the response
 
 ### Requirement: Success output — delete
 Successful `delete` SHALL print `{"message":"<non-empty>","metadata":{"name":"<string>"}}`. The exact message wording is not part of the contract.
