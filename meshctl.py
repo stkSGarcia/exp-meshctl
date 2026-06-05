@@ -41,6 +41,14 @@ MIGRATION_STAGES = {
 
 VALID_STRATEGIES = {"FullStop", "LiveMigration", "RollingPatch"}
 
+DEFAULT_EXPOSURE_PORT = 8080
+VALID_EXPOSURE_TYPES = {"Gateway", "DirectPort", "Balancer"}
+EXPOSURE_ALLOWED_FIELDS = {
+    "Gateway": {"hostname", "annotations"},
+    "DirectPort": {"port", "directPort"},
+    "Balancer": {"port"},
+}
+
 
 # --- Output helpers ---
 
@@ -261,6 +269,22 @@ def build_initial_status(instances):
     }
 
 
+# --- Connection details ---
+
+def compute_connection_details(name, exposure):
+    exp_type = exposure.get("type")
+    if exp_type == "Gateway":
+        host = exposure.get("hostname") or name
+        port = 443
+    elif exp_type == "DirectPort":
+        host = name
+        port = exposure.get("directPort") or DEFAULT_EXPOSURE_PORT
+    else:  # Balancer
+        host = f"{name}-external"
+        port = exposure.get("port") or DEFAULT_EXPOSURE_PORT
+    return {"host": host, "port": port, "protocol": "https"}
+
+
 # --- Resource output formatter ---
 
 def format_resource_for_output(resource):
@@ -272,6 +296,17 @@ def format_resource_for_output(resource):
     status = out.get("status", {})
     if status.get("state") != "Stopped":
         status.pop("desiredInstancesOnResume", None)
+    name = out.get("metadata", {}).get("name", "")
+    exposure = out.get("spec", {}).get("exposure")
+    if exposure:
+        status["connectionDetails"] = compute_connection_details(name, exposure)
+    if out.get("spec", {}).get("management", {}).get("enabled", False):
+        status["managementConnectionDetails"] = {
+            "host": f"{name}-admin",
+            "port": 9990,
+            "protocol": "https",
+        }
+    out["status"] = status
     return out
 
 
@@ -695,6 +730,51 @@ def validate_and_build(doc, is_update=False):
             ))
             rf = None
 
+    # spec.exposure (optional)
+    raw_exposure = spec.get("exposure")
+    has_exposure = raw_exposure is not None
+    exposure_out = None
+
+    if has_exposure:
+        if not isinstance(raw_exposure, dict):
+            errors.append(make_error("spec.exposure.type", "required", "exposure.type is required"))
+        else:
+            exp_type = raw_exposure.get("type")
+            if exp_type is None or exp_type == "":
+                errors.append(make_error("spec.exposure.type", "required", "exposure.type is required"))
+            elif exp_type not in VALID_EXPOSURE_TYPES:
+                errors.append(make_error(
+                    "spec.exposure.type", "invalid",
+                    "exposure.type must be one of Gateway, DirectPort, Balancer",
+                ))
+            else:
+                allowed = EXPOSURE_ALLOWED_FIELDS[exp_type]
+                for field in raw_exposure:
+                    if field != "type" and field not in allowed:
+                        fp = f"spec.exposure.{field}"
+                        errors.append(make_error(fp, "forbidden", f"field '{fp}' is not allowed for exposure type '{exp_type}'"))
+
+                exposure_out = {"type": exp_type}
+                if exp_type == "Gateway":
+                    if raw_exposure.get("hostname") is not None:
+                        exposure_out["hostname"] = raw_exposure["hostname"]
+                    if isinstance(raw_exposure.get("annotations"), dict):
+                        exposure_out["annotations"] = raw_exposure["annotations"]
+                elif exp_type == "DirectPort":
+                    if raw_exposure.get("port") is not None:
+                        exposure_out["port"] = raw_exposure["port"]
+                    if raw_exposure.get("directPort") is not None:
+                        exposure_out["directPort"] = raw_exposure["directPort"]
+                elif exp_type == "Balancer":
+                    if raw_exposure.get("port") is not None:
+                        exposure_out["port"] = raw_exposure["port"]
+
+    # spec.management.enabled (default false, immutable after create)
+    raw_management = spec.get("management")
+    management_enabled = False
+    if isinstance(raw_management, dict) and "enabled" in raw_management:
+        management_enabled = bool(raw_management["enabled"])
+
     if errors:
         return None, errors, []
 
@@ -722,6 +802,7 @@ def validate_and_build(doc, is_update=False):
         "resources": {"memory": memory},
         "access": access_out,
         "migration": {"strategy": strategy},
+        "management": {"enabled": management_enabled},
         "network": {
             "storage": storage,
             "replicationFactor": rf,
@@ -731,6 +812,8 @@ def validate_and_build(doc, is_update=False):
         out_spec["runtime"] = runtime
     if has_cpu:
         out_spec["resources"]["cpu"] = cpu
+    if exposure_out is not None:
+        out_spec["exposure"] = exposure_out
 
     return {"metadata": {"name": name}, "spec": out_spec}, [], warnings
 
@@ -754,13 +837,19 @@ def check_immutable(stored_spec, merged_spec):
     """Return immutable errors for fields that changed after creation."""
     errors = []
     stored_size = (stored_spec.get("network") or {}).get("storage", {}).get("size")
-    if stored_size is None:
-        return errors
-    merged_size = (merged_spec.get("network") or {}).get("storage", {}).get("size")
-    if merged_size != stored_size:
+    if stored_size is not None:
+        merged_size = (merged_spec.get("network") or {}).get("storage", {}).get("size")
+        if merged_size != stored_size:
+            errors.append(make_error(
+                "spec.network.storage.size", "immutable",
+                "field 'spec.network.storage.size' is immutable after creation",
+            ))
+    stored_mgmt = (stored_spec.get("management") or {}).get("enabled", False)
+    merged_mgmt = (merged_spec.get("management") or {}).get("enabled", False)
+    if stored_mgmt != merged_mgmt:
         errors.append(make_error(
-            "spec.network.storage.size", "immutable",
-            "field 'spec.network.storage.size' is immutable after creation",
+            "spec.management.enabled", "immutable",
+            "field 'spec.management.enabled' is immutable after creation",
         ))
     return errors
 
@@ -1990,6 +2079,19 @@ def recovery_cmd_run(args):
     print_json(format_op_output(resource))
 
 
+def cmd_shell(args):
+    store = load_store()
+    name = args.name
+    if name not in store:
+        error_out([make_error("metadata.name", "not_found", f"mesh '{name}' not found")])
+        return
+    exposure = store[name].get("spec", {}).get("exposure")
+    if not exposure:
+        error_out([make_error("spec.exposure", "invalid", f"mesh '{name}' has no exposure configured")])
+        return
+    print_json(compute_connection_details(name, exposure))
+
+
 # --- CLI entry point (tasks 5.1, 5.2) ---
 
 def main():
@@ -2018,6 +2120,9 @@ def main():
 
     rollback_p = mesh_sub.add_parser("rollback")
     rollback_p.add_argument("name")
+
+    shell_p = mesh_sub.add_parser("shell")
+    shell_p.add_argument("name")
 
     vault_p = top_sub.add_parser("vault")
     vault_sub = vault_p.add_subparsers(dest="operation")
@@ -2092,6 +2197,7 @@ def main():
             "update": cmd_update,
             "migrate": cmd_migrate,
             "rollback": cmd_rollback,
+            "shell": cmd_shell,
         }[args.operation](args)
     elif args.command == "vault":
         if not args.operation:
