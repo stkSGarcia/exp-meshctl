@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "problem_name": "meshctl",
+  "problem_version": 2,
+  "checkpoint_name": "checkpoint_8",
+  "checkpoint_version": 2,
+  "duration": 25.230680227279663,
+  "entrypoint": "uv run meshctl.py",
+  "tests": {
+    "checkpoint_8-Error": {
+      "passed": [],
+      "failed": [
+        "test_accumulated_errors",
+        "test_config_bundle_null_on_create",
+        "test_container_fields_must_be_objects[discovery-not-object]",
+        "test_container_fields_must_be_objects[encryption-not-object]",
+        "test_container_fields_must_be_objects[placement-affinity-not-object]",
+        "test_container_fields_must_be_objects[placement-not-object]",
+        "test_extension_both_url_and_artifact",
+        "test_extension_no_url_or_artifact",
+        "test_gateway_keystore_required_on_update_after_expose_change",
+        "test_gateway_no_keystore",
+        "test_heartbeat_interval_ge_timeout",
+        "test_invalid_discovery_type",
+        "test_invalid_placement_field[scope]",
+        "test_invalid_placement_field[type]",
+        "test_keystore_missing_filename",
+        "test_livemigration_with_regions",
+        "test_max_relay_nodes_null",
+        "test_optional_keystore_missing_filename[relayKeyStore]",
+        "test_optional_keystore_missing_filename[trustStore]",
+        "test_regions_requires_local",
+        "test_remote_optional_fields_must_be_strings[clusterRef]",
+        "test_remote_optional_fields_must_be_strings[credentialRef]",
+        "test_remote_optional_fields_must_be_strings[namespace]",
+        "test_remotes_must_be_array"
+      ],
+      "skipped": []
+    },
+    "checkpoint_8-Functionality": {
+      "passed": [
+        "test_add_regions_on_update_synthesizes_defaults",
+        "test_conditions_sorted_alphabetically",
+        "test_config_bundle_change_transient",
+        "test_config_bundle_omitted_keeps_value",
+        "test_config_bundle_remove_null_current",
+        "test_config_bundle_unchanged",
+        "test_empty_remotes_preserved",
+        "test_encryption_omitted_when_absent",
+        "test_expose_additional_types[Balancer]",
+        "test_expose_additional_types[Internal]",
+        "test_extensions_valid",
+        "test_max_relay_nodes_preserved",
+        "test_placement_custom",
+        "test_region_conditions_stable",
+        "test_regression_conditions_no_region_on_simple_mesh",
+        "test_regression_deep_merge_and_stop_resume",
+        "test_regression_exposure_and_shell",
+        "test_remote_optional_fields_omitted",
+        "test_remotes_order_preserved",
+        "test_single_region_no_conditions",
+        "test_trust_store_warning"
+      ],
+      "failed": [
+        "test_config_bundle_add_null_previous",
+        "test_config_bundle_non_string_on_create",
+        "test_describe_defaults",
+        "test_duplicate_remote_name",
+        "test_extension_error_at_second_index",
+        "test_heartbeat_interval_equals_timeout",
+        "test_invalid_encryption_protocol",
+        "test_invalid_expose_type",
+        "test_keystore_missing_alias[relayKeyStore]",
+        "test_keystore_missing_alias[transportKeyStore]",
+        "test_keystore_missing_alias[trustStore]",
+        "test_keystore_missing_secret_ref[relayKeyStore]",
+        "test_keystore_missing_secret_ref[transportKeyStore]",
+        "test_keystore_missing_secret_ref[trustStore]",
+        "test_livemigration_added_to_existing_regions",
+        "test_livemigration_regions_on_update",
+        "test_local_name_empty_string",
+        "test_local_name_missing",
+        "test_max_relay_nodes_non_positive[negative]",
+        "test_max_relay_nodes_non_positive[zero]",
+        "test_probe_target_labels_order",
+        "test_regression_migration_and_error_sort",
+        "test_regression_vault_and_task_lifecycle",
+        "test_remote_missing_name",
+        "test_remote_missing_url",
+        "test_tags_mapping_preserved",
+        "test_telemetry_disabled",
+        "test_telemetry_labels",
+        "test_telemetry_multi_labels",
+        "test_telemetry_off_suppresses_labels"
+      ],
+      "skipped": []
+    },
+    "checkpoint_8-Core": {
+      "passed": [
+        "test_multiregion_defaults"
+      ],
+      "failed": [
+        "test_placement_defaults",
+        "test_telemetry_default_on"
+      ],
+      "skipped": []
+    }
+  },
+  "pass_counts": {
+    "Core": 1,
+    "Functionality": 21,
+    "Regression": 0,
+    "Error": 0
+  },
+  "total_counts": {
+    "Core": 3,
+    "Functionality": 51,
+    "Regression": 0,
+    "Error": 24
+  },
+  "pytest_exit_code": 1,
+  "pytest_collected": 78,
+  "test_collection_hash": "2ea4c17322964f0c629e9477ab43fe27796650678f885b2b4d99ad4a4a568356",
+  "infrastructure_failure": false
+}

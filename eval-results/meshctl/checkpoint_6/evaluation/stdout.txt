@@ -1,0 +1,1226 @@
+
+
+============================= test session starts ==============================
+platform linux -- Python 3.12.13, pytest-9.0.3, pluggy-1.6.0 -- /tmp/uv-cache/archive-v0/Q_cCIA_2yHq4aoHv/bin/python
+cachedir: .pytest_cache
+metadata: {'Python': '3.12.13', 'Platform': 'Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.41', 'Packages': {'pytest': '9.0.3', 'pluggy': '1.6.0'}, 'Plugins': {'timeout': '2.4.0', 'metadata': '3.1.1', 'json-report': '1.5.0', 'json-ctrf': '0.5.0'}}
+rootdir: /workspace
+configfile: pytest.ini
+plugins: timeout-2.4.0, metadata-3.1.1, json-report-1.5.0, json-ctrf-0.5.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collecting ... collected 40 items
+
+.evaluation_tests/test_checkpoint_6.py::test_fullstop_lifecycle PASSED   [  2%]
+.evaluation_tests/test_checkpoint_6.py::test_deprecated_runtime_warning PASSED [  5%]
+.evaluation_tests/test_checkpoint_6.py::test_initial_version_no_migration PASSED [  7%]
+.evaluation_tests/test_checkpoint_6.py::test_skipped_runtime_rejected FAILED [ 10%]
+.evaluation_tests/test_checkpoint_6.py::test_version_downgrade_forbidden FAILED [ 12%]
+.evaluation_tests/test_checkpoint_6.py::test_change_during_migration[runtime-change] FAILED [ 15%]
+.evaluation_tests/test_checkpoint_6.py::test_change_during_migration[strategy-change] FAILED [ 17%]
+.evaluation_tests/test_checkpoint_6.py::test_supported_catalog_versions[3.1.1] PASSED [ 20%]
+.evaluation_tests/test_checkpoint_6.py::test_supported_catalog_versions[4.0.0] PASSED [ 22%]
+.evaluation_tests/test_checkpoint_6.py::test_unknown_runtime_version FAILED [ 25%]
+.evaluation_tests/test_checkpoint_6.py::test_warnings_not_with_errors FAILED [ 27%]
+.evaluation_tests/test_checkpoint_6.py::test_no_warnings_supported_runtime PASSED [ 30%]
+.evaluation_tests/test_checkpoint_6.py::test_deprecated_runtime_update_warning FAILED [ 32%]
+.evaluation_tests/test_checkpoint_6.py::test_same_runtime_no_migration PASSED [ 35%]
+.evaluation_tests/test_checkpoint_6.py::test_skipped_runtime_update_rejected FAILED [ 37%]
+.evaluation_tests/test_checkpoint_6.py::test_invalid_strategy_rejected FAILED [ 40%]
+.evaluation_tests/test_checkpoint_6.py::test_rollingpatch_cross_minor_rejected FAILED [ 42%]
+.evaluation_tests/test_checkpoint_6.py::test_rollingpatch_major_below_4_rejected FAILED [ 45%]
+.evaluation_tests/test_checkpoint_6.py::test_rollingpatch_multiple_errors FAILED [ 47%]
+.evaluation_tests/test_checkpoint_6.py::test_livemigration_records_migration PASSED [ 50%]
+.evaluation_tests/test_checkpoint_6.py::test_runtime_updates_on_trigger PASSED [ 52%]
+.evaluation_tests/test_checkpoint_6.py::test_migration_runtime_conflict FAILED [ 55%]
+.evaluation_tests/test_checkpoint_6.py::test_livemigration_advances_stage PASSED [ 57%]
+.evaluation_tests/test_checkpoint_6.py::test_livemigration_rollback FAILED [ 60%]
+.evaluation_tests/test_checkpoint_6.py::test_fullstop_no_rollback FAILED [ 62%]
+.evaluation_tests/test_checkpoint_6.py::test_migrate_no_active_migration FAILED [ 65%]
+.evaluation_tests/test_checkpoint_6.py::test_migrate_mesh_not_found FAILED [ 67%]
+.evaluation_tests/test_checkpoint_6.py::test_migration_affects_stability PASSED [ 70%]
+.evaluation_tests/test_checkpoint_6.py::test_non_runtime_update_during_migration PASSED [ 72%]
+.evaluation_tests/test_checkpoint_6.py::test_multiple_runtime_errors_reported FAILED [ 75%]
+.evaluation_tests/test_checkpoint_6.py::test_livemigration_regions_rejected FAILED [ 77%]
+.evaluation_tests/test_checkpoint_6.py::test_rollingpatch_downgrade_combined_errors FAILED [ 80%]
+.evaluation_tests/test_checkpoint_6.py::test_livemigration_full_lifecycle PASSED [ 82%]
+.evaluation_tests/test_checkpoint_6.py::test_first_runtime_update_no_migration FAILED [ 85%]
+.evaluation_tests/test_checkpoint_6.py::test_migration_condition_empty_message PASSED [ 87%]
+.evaluation_tests/test_checkpoint_6.py::test_regression_vault_crud_and_mesh_protection FAILED [ 90%]
+.evaluation_tests/test_checkpoint_6.py::test_regression_conditions_and_stability_without_migration PASSED [ 92%]
+.evaluation_tests/test_checkpoint_6.py::test_regression_task_snapshot_recovery_lifecycle FAILED [ 95%]
+.evaluation_tests/test_checkpoint_6.py::test_regression_deep_merge_preserves_existing_fields PASSED [ 97%]
+.evaluation_tests/test_checkpoint_6.py::test_regression_stop_resume_and_scaling PASSED [100%]
+
+=================================== FAILURES ===================================
+________________________ test_skipped_runtime_rejected _________________________
+
+run_cli = <function run_cli.<locals>._run at 0x7ab81cec47c0>
+
+    @pytest.mark.error
+    def test_skipped_runtime_rejected(run_cli) -> None:
+        """Skipped catalog runtime versions are rejected on mesh create."""
+        result = run_cli(
+            ["mesh", "create"],
+            input_yaml={
+                "metadata": {"name": "bad-mesh"},
+                "spec": {"runtime": "3.1.0"},
+            },
+        )
+>       assert_error_contains(
+            result,
+            field="spec.runtime",
+            error_type="invalid",
+            message_contains="skipped",
+        )
+
+.evaluation_tests/test_checkpoint_6.py:94: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.evaluation_tests/conftest.py:323: in assert_error_contains
+    assert_error(result)
+.evaluation_tests/conftest.py:298: in assert_error
+    assert_exit_code(result, 1)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+result = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "runtime version \'3.1.0\' is sk...{'field': 'spec.runtime', 'type': 'invalid', 'message': "runtime version '3.1.0' is skipped and cannot be targeted"}]})
+expected = 1
+
+    def assert_exit_code(result: CLIResult, expected: int) -> None:
+>       assert result.returncode == expected, (
+            f"Expected exit code {expected}, got {result.returncode}.\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+E       AssertionError: Expected exit code 1, got 0.
+E         stdout:
+E         {"errors": [{"field": "spec.runtime", "type": "invalid", "message": "runtime version '3.1.0' is skipped and cannot be targeted"}]}
+E         
+E         stderr:
+E         
+E       assert 0 == 1
+E        +  where 0 = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "runtime version \'3.1.0\' is skipped and cannot be targeted"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.runtime', 'type': 'invalid', 'message': "runtime version '3.1.0' is skipped and cannot be targeted"}]}).returncode
+
+.evaluation_tests/conftest.py:287: AssertionError
+_______________________ test_version_downgrade_forbidden _______________________
+
+run_cli = <function run_cli.<locals>._run at 0x7ab81cec4d60>
+
+    @pytest.mark.error
+    def test_version_downgrade_forbidden(run_cli) -> None:
+        """Runtime downgrades are rejected when no active migration allows them."""
+        create_mesh(run_cli, "my-mesh", spec={"runtime": "4.0.0"})
+    
+        result = run_cli(
+            ["mesh", "update"],
+            input_yaml={
+                "metadata": {"name": "my-mesh"},
+                "spec": {"runtime": "3.1.1"},
+            },
+        )
+>       assert_error_contains(
+            result,
+            field="spec.runtime",
+            error_type="invalid",
+            message_contains="downgrade",
+        )
+
+.evaluation_tests/test_checkpoint_6.py:114: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.evaluation_tests/conftest.py:323: in assert_error_contains
+    assert_error(result)
+.evaluation_tests/conftest.py:298: in assert_error
+    assert_exit_code(result, 1)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+result = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "version downgrade from \'4.0.0\...[{'field': 'spec.runtime', 'type': 'invalid', 'message': "version downgrade from '4.0.0' to '3.1.1' is not allowed"}]})
+expected = 1
+
+    def assert_exit_code(result: CLIResult, expected: int) -> None:
+>       assert result.returncode == expected, (
+            f"Expected exit code {expected}, got {result.returncode}.\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+E       AssertionError: Expected exit code 1, got 0.
+E         stdout:
+E         {"errors": [{"field": "spec.runtime", "type": "invalid", "message": "version downgrade from '4.0.0' to '3.1.1' is not allowed"}]}
+E         
+E         stderr:
+E         
+E       assert 0 == 1
+E        +  where 0 = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "version downgrade from \'4.0.0\' to \'3.1.1\' is not allowed"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.runtime', 'type': 'invalid', 'message': "version downgrade from '4.0.0' to '3.1.1' is not allowed"}]}).returncode
+
+.evaluation_tests/conftest.py:287: AssertionError
+_________________ test_change_during_migration[runtime-change] _________________
+
+run_cli = <function run_cli.<locals>._run at 0x7ab81cec5080>
+update_spec = {'runtime': '3.0.0'}, field = 'spec.runtime'
+
+    @pytest.mark.error
+    @pytest.mark.parametrize(
+        ("update_spec", "field"),
+        [
+            ({"runtime": "3.0.0"}, "spec.runtime"),
+            ({"migration": {"strategy": "LiveMigration"}}, "spec.migration.strategy"),
+        ],
+        ids=["runtime-change", "strategy-change"],
+    )
+    def test_change_during_migration(run_cli, update_spec, field) -> None:
+        """Runtime or migration strategy changes are rejected while a migration is active."""
+        create_mesh(run_cli, "my-mesh", spec={"runtime": "3.1.1"})
+        run_cli(
+            ["mesh", "update"],
+            input_yaml={
+                "metadata": {"name": "my-mesh"},
+                "spec": {"runtime": "4.0.0"},
+            },
+        )
+    
+        result = run_cli(
+            ["mesh", "update"],
+            input_yaml={
+                "metadata": {"name": "my-mesh"},
+                "spec": update_spec,
+            },
+        )
+>       assert_error_contains(
+            result,
+            field=field,
+            error_type="invalid",
+        )
+
+.evaluation_tests/test_checkpoint_6.py:149: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.evaluation_tests/conftest.py:323: in assert_error_contains
+    assert_error(result)
+.evaluation_tests/conftest.py:298: in assert_error
+    assert_exit_code(result, 1)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+result = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "cannot change runtime version w...ld': 'spec.runtime', 'type': 'invalid', 'message': 'cannot change runtime version while a migration is in progress'}]})
+expected = 1
+
+    def assert_exit_code(result: CLIResult, expected: int) -> None:
+>       assert result.returncode == expected, (
+            f"Expected exit code {expected}, got {result.returncode}.\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+E       AssertionError: Expected exit code 1, got 0.
+E         stdout:
+E         {"errors": [{"field": "spec.runtime", "type": "invalid", "message": "cannot change runtime version while a migration is in progress"}]}
+E         
+E         stderr:
+E         
+E       assert 0 == 1
+E        +  where 0 = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "cannot change runtime version while a migration is in progress"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.runtime', 'type': 'invalid', 'message': 'cannot change runtime version while a migration is in progress'}]}).returncode
+
+.evaluation_tests/conftest.py:287: AssertionError
+________________ test_change_during_migration[strategy-change] _________________
+
+run_cli = <function run_cli.<locals>._run at 0x7ab81cec5440>
+update_spec = {'migration': {'strategy': 'LiveMigration'}}
+field = 'spec.migration.strategy'
+
+    @pytest.mark.error
+    @pytest.mark.parametrize(
+        ("update_spec", "field"),
+        [
+            ({"runtime": "3.0.0"}, "spec.runtime"),
+            ({"migration": {"strategy": "LiveMigration"}}, "spec.migration.strategy"),
+        ],
+        ids=["runtime-change", "strategy-change"],
+    )
+    def test_change_during_migration(run_cli, update_spec, field) -> None:
+        """Runtime or migration strategy changes are rejected while a migration is active."""
+        create_mesh(run_cli, "my-mesh", spec={"runtime": "3.1.1"})
+        run_cli(
+            ["mesh", "update"],
+            input_yaml={
+                "metadata": {"name": "my-mesh"},
+                "spec": {"runtime": "4.0.0"},
+            },
+        )
+    
+        result = run_cli(
+            ["mesh", "update"],
+            input_yaml={
+                "metadata": {"name": "my-mesh"},
+                "spec": update_spec,
+            },
+        )
+>       assert_error_contains(
+            result,
+            field=field,
+            error_type="invalid",
+        )
+
+.evaluation_tests/test_checkpoint_6.py:149: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.evaluation_tests/conftest.py:323: in assert_error_contains
+    assert_error(result)
+.evaluation_tests/conftest.py:298: in assert_error
+    assert_exit_code(result, 1)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+result = CLIResult(stdout='{"errors": [{"field": "spec.migration.strategy", "type": "invalid", "message": "cannot change migrat...ration.strategy', 'type': 'invalid', 'message': 'cannot change migration strategy while a migration is in progress'}]})
+expected = 1
+
+    def assert_exit_code(result: CLIResult, expected: int) -> None:
+>       assert result.returncode == expected, (
+            f"Expected exit code {expected}, got {result.returncode}.\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+E       AssertionError: Expected exit code 1, got 0.
+E         stdout:
+E         {"errors": [{"field": "spec.migration.strategy", "type": "invalid", "message": "cannot change migration strategy while a migration is in progress"}]}
+E         
+E         stderr:
+E         
+E       assert 0 == 1
+E        +  where 0 = CLIResult(stdout='{"errors": [{"field": "spec.migration.strategy", "type": "invalid", "message": "cannot change migration strategy while a migration is in progress"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.migration.strategy', 'type': 'invalid', 'message': 'cannot change migration strategy while a migration is in progress'}]}).returncode
+
+.evaluation_tests/conftest.py:287: AssertionError
+_________________________ test_unknown_runtime_version _________________________
+
+run_cli = <function run_cli.<locals>._run at 0x7ab81cec5c60>
+
+    @pytest.mark.error
+    def test_unknown_runtime_version(run_cli) -> None:
+        """Unknown runtimes outside the catalog are rejected as invalid runtime versions."""
+        result = run_cli(
+            ["mesh", "create"],
+            input_yaml={
+                "metadata": {"name": "my-mesh"},
+                "spec": {"runtime": "5.0.0"},
+            },
+        )
+>       assert_error_contains(
+            result,
+            field="spec.runtime",
+            error_type="invalid",
+        )
+
+.evaluation_tests/test_checkpoint_6.py:184: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.evaluation_tests/conftest.py:323: in assert_error_contains
+    assert_error(result)
+.evaluation_tests/conftest.py:298: in assert_error
+    assert_exit_code(result, 1)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+result = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "runtime version \'5.0.0\' is no... [{'field': 'spec.runtime', 'type': 'invalid', 'message': "runtime version '5.0.0' is not in the supported catalog"}]})
+expected = 1
+
+    def assert_exit_code(result: CLIResult, expected: int) -> None:
+>       assert result.returncode == expected, (
+            f"Expected exit code {expected}, got {result.returncode}.\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+E       AssertionError: Expected exit code 1, got 0.
+E         stdout:
+E         {"errors": [{"field": "spec.runtime", "type": "invalid", "message": "runtime version '5.0.0' is not in the supported catalog"}]}
+E         
+E         stderr:
+E         
+E       assert 0 == 1
+E        +  where 0 = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "runtime version \'5.0.0\' is not in the supported catalog"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.runtime', 'type': 'invalid', 'message': "runtime version '5.0.0' is not in the supported catalog"}]}).returncode
+
+.evaluation_tests/conftest.py:287: AssertionError
+________________________ test_warnings_not_with_errors _________________________
+
+run_cli = <function run_cli.<locals>._run at 0x7ab81cec4e00>
+
+    @pytest.mark.error
+    def test_warnings_not_with_errors(run_cli) -> None:
+        """Operations that return errors must not include warnings."""
+        result = run_cli(
+            ["mesh", "create"],
+            input_yaml={
+                "metadata": {"name": "BAD"},
+                "spec": {"runtime": "3.0.0"},
+            },
+        )
+>       assert_error(result)
+
+.evaluation_tests/test_checkpoint_6.py:201: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.evaluation_tests/conftest.py:298: in assert_error
+    assert_exit_code(result, 1)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+result = CLIResult(stdout='{"errors": [{"field": "metadata.name", "type": "invalid", "message": "name must be lowercase alphanu...type': 'invalid', 'message': 'name must be lowercase alphanumeric with interior hyphens only, minimum 2 characters'}]})
+expected = 1
+
+    def assert_exit_code(result: CLIResult, expected: int) -> None:
+>       assert result.returncode == expected, (
+            f"Expected exit code {expected}, got {result.returncode}.\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+E       AssertionError: Expected exit code 1, got 0.
+E         stdout:
+E         {"errors": [{"field": "metadata.name", "type": "invalid", "message": "name must be lowercase alphanumeric with interior hyphens only, minimum 2 characters"}]}
+E         
+E         stderr:
+E         
+E       assert 0 == 1
+E        +  where 0 = CLIResult(stdout='{"errors": [{"field": "metadata.name", "type": "invalid", "message": "name must be lowercase alphanumeric with interior hyphens only, minimum 2 characters"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'metadata.name', 'type': 'invalid', 'message': 'name must be lowercase alphanumeric with interior hyphens only, minimum 2 characters'}]}).returncode
+
+.evaluation_tests/conftest.py:287: AssertionError
+____________________ test_deprecated_runtime_update_warning ____________________
+
+run_cli = <function run_cli.<locals>._run at 0x7ab81cec5d00>
+
+    @pytest.mark.functionality
+    def test_deprecated_runtime_update_warning(run_cli) -> None:
+        """Assigning a deprecated runtime on update succeeds and emits a deprecation warning."""
+        create_mesh(run_cli, "my-mesh")
+    
+        result = run_cli(
+            ["mesh", "update"],
+            input_yaml={
+                "metadata": {"name": "my-mesh"},
+                "spec": {"runtime": "3.0.0"},
+            },
+        )
+        assert_success(result)
+>       assert result.json["spec"]["runtime"] == "3.0.0"
+               ^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'spec'
+
+.evaluation_tests/test_checkpoint_6.py:224: KeyError
+_____________________ test_skipped_runtime_update_rejected _____________________
+
+run_cli = <function run_cli.<locals>._run at 0x7ab81cec6020>
+
+    @pytest.mark.error
+    def test_skipped_runtime_update_rejected(run_cli) -> None:
+        """Skipped runtimes are rejected when assigned during update."""
+        create_mesh(run_cli, "my-mesh")
+    
+        result = run_cli(
+            ["mesh", "update"],
+            input_yaml={
+                "metadata": {"name": "my-mesh"},
+                "spec": {"runtime": "3.1.0"},
+            },
+        )
+>       assert_error_contains(
+            result,
+            field="spec.runtime",
+            error_type="invalid",
+            message_contains="skipped",
+        )
+
+.evaluation_tests/test_checkpoint_6.py:266: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.evaluation_tests/conftest.py:323: in assert_error_contains
+    assert_error(result)
+.evaluation_tests/conftest.py:298: in assert_error
+    assert_exit_code(result, 1)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+result = CLIResult(stdout='{"errors": [{"field": "metadata.name", "type": "not_found", "message": "mesh \'my-mesh\' not found"}...eturncode=0, json={'errors': [{'field': 'metadata.name', 'type': 'not_found', 'message': "mesh 'my-mesh' not found"}]})
+expected = 1
+
+    def assert_exit_code(result: CLIResult, expected: int) -> None:
+>       assert result.returncode == expected, (
+            f"Expected exit code {expected}, got {result.returncode}.\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+E       AssertionError: Expected exit code 1, got 0.
+E         stdout:
+E         {"errors": [{"field": "metadata.name", "type": "not_found", "message": "mesh 'my-mesh' not found"}]}
+E         
+E         stderr:
+E         
+E       assert 0 == 1
+E        +  where 0 = CLIResult(stdout='{"errors": [{"field": "metadata.name", "type": "not_found", "message": "mesh \'my-mesh\' not found"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'metadata.name', 'type': 'not_found', 'message': "mesh 'my-mesh' not found"}]}).returncode
+
+.evaluation_tests/conftest.py:287: AssertionError
+________________________ test_invalid_strategy_rejected ________________________
+
+run_cli = <function run_cli.<locals>._run at 0x7ab81cec6520>
+
+    @pytest.mark.error
+    def test_invalid_strategy_rejected(run_cli) -> None:
+        """Only FullStop, LiveMigration, and RollingPatch strategies are accepted."""
+        result = run_cli(
+            ["mesh", "create"],
+            input_yaml={
+                "metadata": {"name": "my-mesh"},
+                "spec": {"migration": {"strategy": "BlueGreen"}},
+            },
+        )
+>       assert_error_contains(
+            result,
+            field="spec.migration.strategy",
+            error_type="invalid",
+        )
+
+.evaluation_tests/test_checkpoint_6.py:284: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.evaluation_tests/conftest.py:323: in assert_error_contains
+    assert_error(result)
+.evaluation_tests/conftest.py:298: in assert_error
+    assert_exit_code(result, 1)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+result = CLIResult(stdout='{"errors": [{"field": "spec.migration.strategy", "type": "invalid", "message": "migration.strategy m...': 'invalid', 'message': "migration.strategy must be one of FullStop, LiveMigration, RollingPatch, got 'BlueGreen'"}]})
+expected = 1
+
+    def assert_exit_code(result: CLIResult, expected: int) -> None:
+>       assert result.returncode == expected, (
+            f"Expected exit code {expected}, got {result.returncode}.\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+E       AssertionError: Expected exit code 1, got 0.
+E         stdout:
+E         {"errors": [{"field": "spec.migration.strategy", "type": "invalid", "message": "migration.strategy must be one of FullStop, LiveMigration, RollingPatch, got 'BlueGreen'"}]}
+E         
+E         stderr:
+E         
+E       assert 0 == 1
+E        +  where 0 = CLIResult(stdout='{"errors": [{"field": "spec.migration.strategy", "type": "invalid", "message": "migration.strategy must be one of FullStop, LiveMigration, RollingPatch, got \'BlueGreen\'"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.migration.strategy', 'type': 'invalid', 'message': "migration.strategy must be one of FullStop, LiveMigration, RollingPatch, got 'BlueGreen'"}]}).returncode
+
+.evaluation_tests/conftest.py:287: AssertionError
+____________________ test_rollingpatch_cross_minor_rejected ____________________
+
+run_cli = <function run_cli.<locals>._run at 0x7ab81cec67a0>
+
+    @pytest.mark.error
+    def test_rollingpatch_cross_minor_rejected(run_cli) -> None:
+        """RollingPatch rejects runtime changes that do not keep major and minor aligned."""
+        create_mesh(
+            run_cli,
+            "my-mesh",
+            spec={
+                "runtime": "3.1.1",
+                "migration": {"strategy": "RollingPatch"},
+            },
+        )
+    
+        result = run_cli(
+            ["mesh", "update"],
+            input_yaml={
+                "metadata": {"name": "my-mesh"},
+                "spec": {"runtime": "4.0.0"},
+            },
+        )
+>       assert_error_contains(result, field="spec.runtime", error_type="invalid")
+
+.evaluation_tests/test_checkpoint_6.py:310: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.evaluation_tests/conftest.py:323: in assert_error_contains
+    assert_error(result)
+.evaluation_tests/conftest.py:298: in assert_error
+    assert_exit_code(result, 1)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+result = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires source an..., 'type': 'invalid', 'message': 'RollingPatch requires source and target to share the same major and minor version'}]})
+expected = 1
+
+    def assert_exit_code(result: CLIResult, expected: int) -> None:
+>       assert result.returncode == expected, (
+            f"Expected exit code {expected}, got {result.returncode}.\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+E       AssertionError: Expected exit code 1, got 0.
+E         stdout:
+E         {"errors": [{"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires source and target to share the same major and minor version"}]}
+E         
+E         stderr:
+E         
+E       assert 0 == 1
+E        +  where 0 = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires source and target to share the same major and minor version"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.runtime', 'type': 'invalid', 'message': 'RollingPatch requires source and target to share the same major and minor version'}]}).returncode
+
+.evaluation_tests/conftest.py:287: AssertionError
+___________________ test_rollingpatch_major_below_4_rejected ___________________
+
+run_cli = <function run_cli.<locals>._run at 0x7ab81cec6ac0>
+
+    @pytest.mark.error
+    def test_rollingpatch_major_below_4_rejected(run_cli) -> None:
+        """RollingPatch requires target runtime major version to be at least 4."""
+        create_mesh(
+            run_cli,
+            "my-mesh",
+            spec={
+                "runtime": "3.0.0",
+                "migration": {"strategy": "RollingPatch"},
+            },
+        )
+    
+        result = run_cli(
+            ["mesh", "update"],
+            input_yaml={
+                "metadata": {"name": "my-mesh"},
+                "spec": {"runtime": "3.1.1"},
+            },
+        )
+>       assert_error_contains(
+            result,
+            field="spec.runtime",
+            error_type="invalid",
+        )
+
+.evaluation_tests/test_checkpoint_6.py:332: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.evaluation_tests/conftest.py:323: in assert_error_contains
+    assert_error(result)
+.evaluation_tests/conftest.py:298: in assert_error
+    assert_exit_code(result, 1)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+result = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires source an...field': 'spec.runtime', 'type': 'invalid', 'message': 'RollingPatch requires target major version to be at least 4'}]})
+expected = 1
+
+    def assert_exit_code(result: CLIResult, expected: int) -> None:
+>       assert result.returncode == expected, (
+            f"Expected exit code {expected}, got {result.returncode}.\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+E       AssertionError: Expected exit code 1, got 0.
+E         stdout:
+E         {"errors": [{"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires source and target to share the same major and minor version"}, {"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires target major version to be at least 4"}]}
+E         
+E         stderr:
+E         
+E       assert 0 == 1
+E        +  where 0 = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires source and target to share the same major and minor version"}, {"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires target major version to be at least 4"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.runtime', 'type': 'invalid', 'message': 'RollingPatch requires source and target to share the same major and minor version'}, {'field': 'spec.runtime', 'type': 'invalid', 'message': 'RollingPatch requires target major version to be at least 4'}]}).returncode
+
+.evaluation_tests/conftest.py:287: AssertionError
+______________________ test_rollingpatch_multiple_errors _______________________
+
+run_cli = <function run_cli.<locals>._run at 0x7ab81cec67a0>
+
+    @pytest.mark.error
+    def test_rollingpatch_multiple_errors(run_cli) -> None:
+        """RollingPatch can report multiple runtime version-change errors for one update."""
+        create_mesh(
+            run_cli,
+            "my-mesh",
+            spec={
+                "runtime": "3.0.0",
+                "migration": {"strategy": "RollingPatch"},
+            },
+        )
+    
+        result = run_cli(
+            ["mesh", "update"],
+            input_yaml={
+                "metadata": {"name": "my-mesh"},
+                "spec": {"runtime": "3.1.1"},
+            },
+        )
+>       assert_error(result)
+
+.evaluation_tests/test_checkpoint_6.py:358: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.evaluation_tests/conftest.py:298: in assert_error
+    assert_exit_code(result, 1)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+result = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires source an...field': 'spec.runtime', 'type': 'invalid', 'message': 'RollingPatch requires target major version to be at least 4'}]})
+expected = 1
+
+    def assert_exit_code(result: CLIResult, expected: int) -> None:
+>       assert result.returncode == expected, (
+            f"Expected exit code {expected}, got {result.returncode}.\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+E       AssertionError: Expected exit code 1, got 0.
+E         stdout:
+E         {"errors": [{"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires source and target to share the same major and minor version"}, {"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires target major version to be at least 4"}]}
+E         
+E         stderr:
+E         
+E       assert 0 == 1
+E        +  where 0 = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires source and target to share the same major and minor version"}, {"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires target major version to be at least 4"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.runtime', 'type': 'invalid', 'message': 'RollingPatch requires source and target to share the same major and minor version'}, {'field': 'spec.runtime', 'type': 'invalid', 'message': 'RollingPatch requires target major version to be at least 4'}]}).returncode
+
+.evaluation_tests/conftest.py:287: AssertionError
+_______________________ test_migration_runtime_conflict ________________________
+
+run_cli = <function run_cli.<locals>._run at 0x7ab81cec6b60>
+
+    @pytest.mark.error
+    def test_migration_runtime_conflict(run_cli) -> None:
+        """Runtime changes during an active migration are rejected with in-progress migration error."""
+        create_mesh(run_cli, "my-mesh", spec={"runtime": "3.1.1"})
+        run_cli(
+            ["mesh", "update"],
+            input_yaml={
+                "metadata": {"name": "my-mesh"},
+                "spec": {"runtime": "4.0.0"},
+            },
+        )
+        result = run_cli(
+            ["mesh", "update"],
+            input_yaml={
+                "metadata": {"name": "my-mesh"},
+                "spec": {"runtime": "3.0.0"},
+            },
+        )
+>       assert_error(result)
+
+.evaluation_tests/test_checkpoint_6.py:430: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.evaluation_tests/conftest.py:298: in assert_error
+    assert_exit_code(result, 1)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+result = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "cannot change runtime version w...ld': 'spec.runtime', 'type': 'invalid', 'message': 'cannot change runtime version while a migration is in progress'}]})
+expected = 1
+
+    def assert_exit_code(result: CLIResult, expected: int) -> None:
+>       assert result.returncode == expected, (
+            f"Expected exit code {expected}, got {result.returncode}.\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+E       AssertionError: Expected exit code 1, got 0.
+E         stdout:
+E         {"errors": [{"field": "spec.runtime", "type": "invalid", "message": "cannot change runtime version while a migration is in progress"}]}
+E         
+E         stderr:
+E         
+E       assert 0 == 1
+E        +  where 0 = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "cannot change runtime version while a migration is in progress"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.runtime', 'type': 'invalid', 'message': 'cannot change runtime version while a migration is in progress'}]}).returncode
+
+.evaluation_tests/conftest.py:287: AssertionError
+_________________________ test_livemigration_rollback __________________________
+
+run_cli = <function run_cli.<locals>._run at 0x7ab81cec72e0>
+
+    @pytest.mark.functionality
+    def test_livemigration_rollback(run_cli) -> None:
+        """LiveMigration rollback by restoring source runtime removes migration state."""
+        create_mesh(
+            run_cli,
+            "my-mesh",
+            spec={
+                "runtime": "3.1.1",
+                "migration": {"strategy": "LiveMigration"},
+            },
+        )
+    
+        # Trigger migration
+        run_cli(
+            ["mesh", "update"],
+            input_yaml={
+                "metadata": {"name": "my-mesh"},
+                "spec": {"runtime": "4.0.0"},
+            },
+        )
+    
+        # Rollback by setting runtime to source version
+        result = run_cli(
+            ["mesh", "update"],
+            input_yaml={
+                "metadata": {"name": "my-mesh"},
+                "spec": {"runtime": "3.1.1"},
+            },
+        )
+        assert_success(result)
+>       assert result.json["spec"]["runtime"] == "3.1.1"
+               ^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'spec'
+
+.evaluation_tests/test_checkpoint_6.py:497: KeyError
+__________________________ test_fullstop_no_rollback ___________________________
+
+run_cli = <function run_cli.<locals>._run at 0x7ab81cec7740>
+
+    @pytest.mark.error
+    def test_fullstop_no_rollback(run_cli) -> None:
+        """FullStop does not allow rollback by restoring source runtime during active migration."""
+        create_mesh(run_cli, "my-mesh", spec={"runtime": "3.1.1"})
+    
+        # Trigger FullStop migration
+        run_cli(
+            ["mesh", "update"],
+            input_yaml={
+                "metadata": {"name": "my-mesh"},
+                "spec": {"runtime": "4.0.0"},
+            },
+        )
+    
+        # Try rollback
+        result = run_cli(
+            ["mesh", "update"],
+            input_yaml={
+                "metadata": {"name": "my-mesh"},
+                "spec": {"runtime": "3.1.1"},
+            },
+        )
+>       assert_error_contains(
+            result,
+            field="spec.runtime",
+            error_type="invalid",
+        )
+
+.evaluation_tests/test_checkpoint_6.py:525: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.evaluation_tests/conftest.py:323: in assert_error_contains
+    assert_error(result)
+.evaluation_tests/conftest.py:298: in assert_error
+    assert_exit_code(result, 1)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+result = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "cannot change runtime version w...ld': 'spec.runtime', 'type': 'invalid', 'message': 'cannot change runtime version while a migration is in progress'}]})
+expected = 1
+
+    def assert_exit_code(result: CLIResult, expected: int) -> None:
+>       assert result.returncode == expected, (
+            f"Expected exit code {expected}, got {result.returncode}.\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+E       AssertionError: Expected exit code 1, got 0.
+E         stdout:
+E         {"errors": [{"field": "spec.runtime", "type": "invalid", "message": "cannot change runtime version while a migration is in progress"}]}
+E         
+E         stderr:
+E         
+E       assert 0 == 1
+E        +  where 0 = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "cannot change runtime version while a migration is in progress"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.runtime', 'type': 'invalid', 'message': 'cannot change runtime version while a migration is in progress'}]}).returncode
+
+.evaluation_tests/conftest.py:287: AssertionError
+_______________________ test_migrate_no_active_migration _______________________
+
+run_cli = <function run_cli.<locals>._run at 0x7ab81cec79c0>
+
+    @pytest.mark.error
+    def test_migrate_no_active_migration(run_cli) -> None:
+        """`mesh migrate` reports invalid when no active migration exists."""
+        create_mesh(run_cli, "my-mesh")
+    
+        result = run_cli(["mesh", "migrate", "my-mesh"])
+>       assert_error_contains(
+            result,
+            field="status.migration",
+            error_type="invalid",
+            message_contains="no active migration",
+        )
+
+.evaluation_tests/test_checkpoint_6.py:538: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.evaluation_tests/conftest.py:323: in assert_error_contains
+    assert_error(result)
+.evaluation_tests/conftest.py:298: in assert_error
+    assert_exit_code(result, 1)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+result = CLIResult(stdout='{"errors": [{"field": "metadata.name", "type": "not_found", "message": "mesh \'my-mesh\' not found"}...eturncode=0, json={'errors': [{'field': 'metadata.name', 'type': 'not_found', 'message': "mesh 'my-mesh' not found"}]})
+expected = 1
+
+    def assert_exit_code(result: CLIResult, expected: int) -> None:
+>       assert result.returncode == expected, (
+            f"Expected exit code {expected}, got {result.returncode}.\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+E       AssertionError: Expected exit code 1, got 0.
+E         stdout:
+E         {"errors": [{"field": "metadata.name", "type": "not_found", "message": "mesh 'my-mesh' not found"}]}
+E         
+E         stderr:
+E         
+E       assert 0 == 1
+E        +  where 0 = CLIResult(stdout='{"errors": [{"field": "metadata.name", "type": "not_found", "message": "mesh \'my-mesh\' not found"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'metadata.name', 'type': 'not_found', 'message': "mesh 'my-mesh' not found"}]}).returncode
+
+.evaluation_tests/conftest.py:287: AssertionError
+_________________________ test_migrate_mesh_not_found __________________________
+
+run_cli = <function run_cli.<locals>._run at 0x7ab81cec7ce0>
+
+    @pytest.mark.error
+    def test_migrate_mesh_not_found(run_cli) -> None:
+        """`mesh migrate` returns a not_found error for missing mesh metadata.name."""
+        result = run_cli(["mesh", "migrate", "nonexistent"])
+>       assert_error_contains(
+            result,
+            field="metadata.name",
+            error_type="not_found",
+        )
+
+.evaluation_tests/test_checkpoint_6.py:550: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.evaluation_tests/conftest.py:323: in assert_error_contains
+    assert_error(result)
+.evaluation_tests/conftest.py:298: in assert_error
+    assert_exit_code(result, 1)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+result = CLIResult(stdout='{"errors": [{"field": "metadata.name", "type": "not_found", "message": "mesh \'nonexistent\' not fou...ncode=0, json={'errors': [{'field': 'metadata.name', 'type': 'not_found', 'message': "mesh 'nonexistent' not found"}]})
+expected = 1
+
+    def assert_exit_code(result: CLIResult, expected: int) -> None:
+>       assert result.returncode == expected, (
+            f"Expected exit code {expected}, got {result.returncode}.\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+E       AssertionError: Expected exit code 1, got 0.
+E         stdout:
+E         {"errors": [{"field": "metadata.name", "type": "not_found", "message": "mesh 'nonexistent' not found"}]}
+E         
+E         stderr:
+E         
+E       assert 0 == 1
+E        +  where 0 = CLIResult(stdout='{"errors": [{"field": "metadata.name", "type": "not_found", "message": "mesh \'nonexistent\' not found"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'metadata.name', 'type': 'not_found', 'message': "mesh 'nonexistent' not found"}]}).returncode
+
+.evaluation_tests/conftest.py:287: AssertionError
+____________________ test_multiple_runtime_errors_reported _____________________
+
+run_cli = <function run_cli.<locals>._run at 0x7ab81ce98360>
+
+    @pytest.mark.error
+    def test_multiple_runtime_errors_reported(run_cli) -> None:
+        """RollingPatch applies both version-change constraints and returns multiple runtime errors."""
+        # RollingPatch with both constraints violated produces two errors on same field+type
+        create_mesh(
+            run_cli,
+            "my-mesh",
+            spec={
+                "runtime": "3.0.0",
+                "migration": {"strategy": "RollingPatch"},
+            },
+        )
+    
+        result = run_cli(
+            ["mesh", "update"],
+            input_yaml={
+                "metadata": {"name": "my-mesh"},
+                "spec": {"runtime": "3.1.1"},
+            },
+        )
+>       assert_error(result)
+
+.evaluation_tests/test_checkpoint_6.py:627: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.evaluation_tests/conftest.py:298: in assert_error
+    assert_exit_code(result, 1)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+result = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires source an...field': 'spec.runtime', 'type': 'invalid', 'message': 'RollingPatch requires target major version to be at least 4'}]})
+expected = 1
+
+    def assert_exit_code(result: CLIResult, expected: int) -> None:
+>       assert result.returncode == expected, (
+            f"Expected exit code {expected}, got {result.returncode}.\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+E       AssertionError: Expected exit code 1, got 0.
+E         stdout:
+E         {"errors": [{"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires source and target to share the same major and minor version"}, {"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires target major version to be at least 4"}]}
+E         
+E         stderr:
+E         
+E       assert 0 == 1
+E        +  where 0 = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires source and target to share the same major and minor version"}, {"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires target major version to be at least 4"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.runtime', 'type': 'invalid', 'message': 'RollingPatch requires source and target to share the same major and minor version'}, {'field': 'spec.runtime', 'type': 'invalid', 'message': 'RollingPatch requires target major version to be at least 4'}]}).returncode
+
+.evaluation_tests/conftest.py:287: AssertionError
+_____________________ test_livemigration_regions_rejected ______________________
+
+run_cli = <function run_cli.<locals>._run at 0x7ab81cf399e0>
+
+    @pytest.mark.functionality
+    def test_livemigration_regions_rejected(run_cli) -> None:
+        """LiveMigration strategy is rejected when spec.regions is configured."""
+        result = run_cli(
+            ["mesh", "create"],
+            input_yaml={
+                "metadata": {"name": "my-mesh"},
+                "spec": {
+                    "regions": ["us-east", "eu-west"],
+                    "migration": {"strategy": "LiveMigration"},
+                },
+            },
+        )
+>       assert_error_contains(
+            result,
+            field="spec.migration.strategy",
+            error_type="invalid",
+            message_contains="multi-region topology",
+        )
+
+.evaluation_tests/test_checkpoint_6.py:652: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.evaluation_tests/conftest.py:323: in assert_error_contains
+    assert_error(result)
+.evaluation_tests/conftest.py:298: in assert_error
+    assert_exit_code(result, 1)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+result = CLIResult(stdout='{"errors": [{"field": "spec.migration.strategy", "type": "invalid", "message": "LiveMigration strate...ation.strategy', 'type': 'invalid', 'message': 'LiveMigration strategy is not supported with multi-region topology'}]})
+expected = 1
+
+    def assert_exit_code(result: CLIResult, expected: int) -> None:
+>       assert result.returncode == expected, (
+            f"Expected exit code {expected}, got {result.returncode}.\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+E       AssertionError: Expected exit code 1, got 0.
+E         stdout:
+E         {"errors": [{"field": "spec.migration.strategy", "type": "invalid", "message": "LiveMigration strategy is not supported with multi-region topology"}]}
+E         
+E         stderr:
+E         
+E       assert 0 == 1
+E        +  where 0 = CLIResult(stdout='{"errors": [{"field": "spec.migration.strategy", "type": "invalid", "message": "LiveMigration strategy is not supported with multi-region topology"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.migration.strategy', 'type': 'invalid', 'message': 'LiveMigration strategy is not supported with multi-region topology'}]}).returncode
+
+.evaluation_tests/conftest.py:287: AssertionError
+_________________ test_rollingpatch_downgrade_combined_errors __________________
+
+run_cli = <function run_cli.<locals>._run at 0x7ab81cec7ce0>
+
+    @pytest.mark.functionality
+    def test_rollingpatch_downgrade_combined_errors(run_cli) -> None:
+        """Downgrade under RollingPatch produces both downgrade and constraint errors."""
+        create_mesh(
+            run_cli,
+            "my-mesh",
+            spec={
+                "runtime": "4.0.0",
+                "migration": {"strategy": "RollingPatch"},
+            },
+        )
+    
+        result = run_cli(
+            ["mesh", "update"],
+            input_yaml={
+                "metadata": {"name": "my-mesh"},
+                "spec": {"runtime": "3.1.1"},
+            },
+        )
+>       assert_error(result)
+
+.evaluation_tests/test_checkpoint_6.py:679: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.evaluation_tests/conftest.py:298: in assert_error
+    assert_exit_code(result, 1)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+result = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "version downgrade from \'4.0.0\...field': 'spec.runtime', 'type': 'invalid', 'message': 'RollingPatch requires target major version to be at least 4'}]})
+expected = 1
+
+    def assert_exit_code(result: CLIResult, expected: int) -> None:
+>       assert result.returncode == expected, (
+            f"Expected exit code {expected}, got {result.returncode}.\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+E       AssertionError: Expected exit code 1, got 0.
+E         stdout:
+E         {"errors": [{"field": "spec.runtime", "type": "invalid", "message": "version downgrade from '4.0.0' to '3.1.1' is not allowed"}, {"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires source and target to share the same major and minor version"}, {"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires target major version to be at least 4"}]}
+E         
+E         stderr:
+E         
+E       assert 0 == 1
+E        +  where 0 = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "version downgrade from \'4.0.0\' to \'3.1.1\' is not allowed"}, {"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires source and target to share the same major and minor version"}, {"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires target major version to be at least 4"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.runtime', 'type': 'invalid', 'message': "version downgrade from '4.0.0' to '3.1.1' is not allowed"}, {'field': 'spec.runtime', 'type': 'invalid', 'message': 'RollingPatch requires source and target to share the same major and minor version'}, {'field': 'spec.runtime', 'type': 'invalid', 'message': 'RollingPatch requires target major version to be at least 4'}]}).returncode
+
+.evaluation_tests/conftest.py:287: AssertionError
+____________________ test_first_runtime_update_no_migration ____________________
+
+run_cli = <function run_cli.<locals>._run at 0x7ab81cec79c0>
+
+    @pytest.mark.functionality
+    def test_first_runtime_update_no_migration(run_cli) -> None:
+        """First runtime assignment via update stores the version without starting a migration."""
+        create_mesh(run_cli, "my-mesh")
+    
+        result = run_cli(
+            ["mesh", "update"],
+            input_yaml={
+                "metadata": {"name": "my-mesh"},
+                "spec": {"runtime": "4.0.0"},
+            },
+        )
+        assert_success(result)
+>       assert result.json["spec"]["runtime"] == "4.0.0"
+               ^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'spec'
+
+.evaluation_tests/test_checkpoint_6.py:736: KeyError
+________________ test_regression_vault_crud_and_mesh_protection ________________
+
+run_cli = <function run_cli.<locals>._run at 0x7ab81cec6340>
+
+    @pytest.mark.functionality
+    def test_regression_vault_crud_and_mesh_protection(run_cli) -> None:
+        """Regression(CP3): Vault CRUD works and mesh delete is blocked by referencing vaults."""
+        create_mesh(run_cli, "reg-mesh")
+        create_vault(run_cli, "reg-vault", "reg-mesh")
+    
+        # Vault describe works
+        desc = run_cli(["vault", "describe", "reg-vault"])
+        assert_success(desc)
+>       assert desc.json["spec"]["meshRef"] == "reg-mesh"
+               ^^^^^^^^^^^^^^^^^
+E       KeyError: 'spec'
+
+.evaluation_tests/test_checkpoint_6.py:773: KeyError
+_______________ test_regression_task_snapshot_recovery_lifecycle _______________
+
+run_cli = <function run_cli.<locals>._run at 0x7ab81ce98180>
+
+    @pytest.mark.functionality
+    def test_regression_task_snapshot_recovery_lifecycle(run_cli) -> None:
+        """Regression(CP5): Task, snapshot, and recovery run commands complete successfully."""
+        create_mesh(run_cli, "reg-mesh")
+    
+        create_task(run_cli, "reg-task", "reg-mesh", spec={"inline": "work"})
+        task_run = run_cli(["task", "run", "reg-task"])
+        assert_success(task_run)
+>       assert task_run.json["status"]["state"] == "Succeeded"
+               ^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'status'
+
+.evaluation_tests/test_checkpoint_6.py:810: KeyError
+--------------------------------- JSON report ----------------------------------
+report saved to: .scbench/pytest-report.json
+=========================== short test summary info ============================
+FAILED .evaluation_tests/test_checkpoint_6.py::test_skipped_runtime_rejected - AssertionError: Expected exit code 1, got 0.
+  stdout:
+  {"errors": [{"field": "spec.runtime", "type": "invalid", "message": "runtime version '3.1.0' is skipped and cannot be targeted"}]}
+  
+  stderr:
+  
+assert 0 == 1
+ +  where 0 = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "runtime version \'3.1.0\' is skipped and cannot be targeted"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.runtime', 'type': 'invalid', 'message': "runtime version '3.1.0' is skipped and cannot be targeted"}]}).returncode
+FAILED .evaluation_tests/test_checkpoint_6.py::test_version_downgrade_forbidden - AssertionError: Expected exit code 1, got 0.
+  stdout:
+  {"errors": [{"field": "spec.runtime", "type": "invalid", "message": "version downgrade from '4.0.0' to '3.1.1' is not allowed"}]}
+  
+  stderr:
+  
+assert 0 == 1
+ +  where 0 = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "version downgrade from \'4.0.0\' to \'3.1.1\' is not allowed"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.runtime', 'type': 'invalid', 'message': "version downgrade from '4.0.0' to '3.1.1' is not allowed"}]}).returncode
+FAILED .evaluation_tests/test_checkpoint_6.py::test_change_during_migration[runtime-change] - AssertionError: Expected exit code 1, got 0.
+  stdout:
+  {"errors": [{"field": "spec.runtime", "type": "invalid", "message": "cannot change runtime version while a migration is in progress"}]}
+  
+  stderr:
+  
+assert 0 == 1
+ +  where 0 = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "cannot change runtime version while a migration is in progress"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.runtime', 'type': 'invalid', 'message': 'cannot change runtime version while a migration is in progress'}]}).returncode
+FAILED .evaluation_tests/test_checkpoint_6.py::test_change_during_migration[strategy-change] - AssertionError: Expected exit code 1, got 0.
+  stdout:
+  {"errors": [{"field": "spec.migration.strategy", "type": "invalid", "message": "cannot change migration strategy while a migration is in progress"}]}
+  
+  stderr:
+  
+assert 0 == 1
+ +  where 0 = CLIResult(stdout='{"errors": [{"field": "spec.migration.strategy", "type": "invalid", "message": "cannot change migration strategy while a migration is in progress"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.migration.strategy', 'type': 'invalid', 'message': 'cannot change migration strategy while a migration is in progress'}]}).returncode
+FAILED .evaluation_tests/test_checkpoint_6.py::test_unknown_runtime_version - AssertionError: Expected exit code 1, got 0.
+  stdout:
+  {"errors": [{"field": "spec.runtime", "type": "invalid", "message": "runtime version '5.0.0' is not in the supported catalog"}]}
+  
+  stderr:
+  
+assert 0 == 1
+ +  where 0 = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "runtime version \'5.0.0\' is not in the supported catalog"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.runtime', 'type': 'invalid', 'message': "runtime version '5.0.0' is not in the supported catalog"}]}).returncode
+FAILED .evaluation_tests/test_checkpoint_6.py::test_warnings_not_with_errors - AssertionError: Expected exit code 1, got 0.
+  stdout:
+  {"errors": [{"field": "metadata.name", "type": "invalid", "message": "name must be lowercase alphanumeric with interior hyphens only, minimum 2 characters"}]}
+  
+  stderr:
+  
+assert 0 == 1
+ +  where 0 = CLIResult(stdout='{"errors": [{"field": "metadata.name", "type": "invalid", "message": "name must be lowercase alphanumeric with interior hyphens only, minimum 2 characters"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'metadata.name', 'type': 'invalid', 'message': 'name must be lowercase alphanumeric with interior hyphens only, minimum 2 characters'}]}).returncode
+FAILED .evaluation_tests/test_checkpoint_6.py::test_deprecated_runtime_update_warning - KeyError: 'spec'
+FAILED .evaluation_tests/test_checkpoint_6.py::test_skipped_runtime_update_rejected - AssertionError: Expected exit code 1, got 0.
+  stdout:
+  {"errors": [{"field": "metadata.name", "type": "not_found", "message": "mesh 'my-mesh' not found"}]}
+  
+  stderr:
+  
+assert 0 == 1
+ +  where 0 = CLIResult(stdout='{"errors": [{"field": "metadata.name", "type": "not_found", "message": "mesh \'my-mesh\' not found"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'metadata.name', 'type': 'not_found', 'message': "mesh 'my-mesh' not found"}]}).returncode
+FAILED .evaluation_tests/test_checkpoint_6.py::test_invalid_strategy_rejected - AssertionError: Expected exit code 1, got 0.
+  stdout:
+  {"errors": [{"field": "spec.migration.strategy", "type": "invalid", "message": "migration.strategy must be one of FullStop, LiveMigration, RollingPatch, got 'BlueGreen'"}]}
+  
+  stderr:
+  
+assert 0 == 1
+ +  where 0 = CLIResult(stdout='{"errors": [{"field": "spec.migration.strategy", "type": "invalid", "message": "migration.strategy must be one of FullStop, LiveMigration, RollingPatch, got \'BlueGreen\'"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.migration.strategy', 'type': 'invalid', 'message': "migration.strategy must be one of FullStop, LiveMigration, RollingPatch, got 'BlueGreen'"}]}).returncode
+FAILED .evaluation_tests/test_checkpoint_6.py::test_rollingpatch_cross_minor_rejected - AssertionError: Expected exit code 1, got 0.
+  stdout:
+  {"errors": [{"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires source and target to share the same major and minor version"}]}
+  
+  stderr:
+  
+assert 0 == 1
+ +  where 0 = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires source and target to share the same major and minor version"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.runtime', 'type': 'invalid', 'message': 'RollingPatch requires source and target to share the same major and minor version'}]}).returncode
+FAILED .evaluation_tests/test_checkpoint_6.py::test_rollingpatch_major_below_4_rejected - AssertionError: Expected exit code 1, got 0.
+  stdout:
+  {"errors": [{"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires source and target to share the same major and minor version"}, {"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires target major version to be at least 4"}]}
+  
+  stderr:
+  
+assert 0 == 1
+ +  where 0 = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires source and target to share the same major and minor version"}, {"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires target major version to be at least 4"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.runtime', 'type': 'invalid', 'message': 'RollingPatch requires source and target to share the same major and minor version'}, {'field': 'spec.runtime', 'type': 'invalid', 'message': 'RollingPatch requires target major version to be at least 4'}]}).returncode
+FAILED .evaluation_tests/test_checkpoint_6.py::test_rollingpatch_multiple_errors - AssertionError: Expected exit code 1, got 0.
+  stdout:
+  {"errors": [{"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires source and target to share the same major and minor version"}, {"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires target major version to be at least 4"}]}
+  
+  stderr:
+  
+assert 0 == 1
+ +  where 0 = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires source and target to share the same major and minor version"}, {"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires target major version to be at least 4"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.runtime', 'type': 'invalid', 'message': 'RollingPatch requires source and target to share the same major and minor version'}, {'field': 'spec.runtime', 'type': 'invalid', 'message': 'RollingPatch requires target major version to be at least 4'}]}).returncode
+FAILED .evaluation_tests/test_checkpoint_6.py::test_migration_runtime_conflict - AssertionError: Expected exit code 1, got 0.
+  stdout:
+  {"errors": [{"field": "spec.runtime", "type": "invalid", "message": "cannot change runtime version while a migration is in progress"}]}
+  
+  stderr:
+  
+assert 0 == 1
+ +  where 0 = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "cannot change runtime version while a migration is in progress"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.runtime', 'type': 'invalid', 'message': 'cannot change runtime version while a migration is in progress'}]}).returncode
+FAILED .evaluation_tests/test_checkpoint_6.py::test_livemigration_rollback - KeyError: 'spec'
+FAILED .evaluation_tests/test_checkpoint_6.py::test_fullstop_no_rollback - AssertionError: Expected exit code 1, got 0.
+  stdout:
+  {"errors": [{"field": "spec.runtime", "type": "invalid", "message": "cannot change runtime version while a migration is in progress"}]}
+  
+  stderr:
+  
+assert 0 == 1
+ +  where 0 = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "cannot change runtime version while a migration is in progress"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.runtime', 'type': 'invalid', 'message': 'cannot change runtime version while a migration is in progress'}]}).returncode
+FAILED .evaluation_tests/test_checkpoint_6.py::test_migrate_no_active_migration - AssertionError: Expected exit code 1, got 0.
+  stdout:
+  {"errors": [{"field": "metadata.name", "type": "not_found", "message": "mesh 'my-mesh' not found"}]}
+  
+  stderr:
+  
+assert 0 == 1
+ +  where 0 = CLIResult(stdout='{"errors": [{"field": "metadata.name", "type": "not_found", "message": "mesh \'my-mesh\' not found"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'metadata.name', 'type': 'not_found', 'message': "mesh 'my-mesh' not found"}]}).returncode
+FAILED .evaluation_tests/test_checkpoint_6.py::test_migrate_mesh_not_found - AssertionError: Expected exit code 1, got 0.
+  stdout:
+  {"errors": [{"field": "metadata.name", "type": "not_found", "message": "mesh 'nonexistent' not found"}]}
+  
+  stderr:
+  
+assert 0 == 1
+ +  where 0 = CLIResult(stdout='{"errors": [{"field": "metadata.name", "type": "not_found", "message": "mesh \'nonexistent\' not found"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'metadata.name', 'type': 'not_found', 'message': "mesh 'nonexistent' not found"}]}).returncode
+FAILED .evaluation_tests/test_checkpoint_6.py::test_multiple_runtime_errors_reported - AssertionError: Expected exit code 1, got 0.
+  stdout:
+  {"errors": [{"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires source and target to share the same major and minor version"}, {"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires target major version to be at least 4"}]}
+  
+  stderr:
+  
+assert 0 == 1
+ +  where 0 = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires source and target to share the same major and minor version"}, {"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires target major version to be at least 4"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.runtime', 'type': 'invalid', 'message': 'RollingPatch requires source and target to share the same major and minor version'}, {'field': 'spec.runtime', 'type': 'invalid', 'message': 'RollingPatch requires target major version to be at least 4'}]}).returncode
+FAILED .evaluation_tests/test_checkpoint_6.py::test_livemigration_regions_rejected - AssertionError: Expected exit code 1, got 0.
+  stdout:
+  {"errors": [{"field": "spec.migration.strategy", "type": "invalid", "message": "LiveMigration strategy is not supported with multi-region topology"}]}
+  
+  stderr:
+  
+assert 0 == 1
+ +  where 0 = CLIResult(stdout='{"errors": [{"field": "spec.migration.strategy", "type": "invalid", "message": "LiveMigration strategy is not supported with multi-region topology"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.migration.strategy', 'type': 'invalid', 'message': 'LiveMigration strategy is not supported with multi-region topology'}]}).returncode
+FAILED .evaluation_tests/test_checkpoint_6.py::test_rollingpatch_downgrade_combined_errors - AssertionError: Expected exit code 1, got 0.
+  stdout:
+  {"errors": [{"field": "spec.runtime", "type": "invalid", "message": "version downgrade from '4.0.0' to '3.1.1' is not allowed"}, {"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires source and target to share the same major and minor version"}, {"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires target major version to be at least 4"}]}
+  
+  stderr:
+  
+assert 0 == 1
+ +  where 0 = CLIResult(stdout='{"errors": [{"field": "spec.runtime", "type": "invalid", "message": "version downgrade from \'4.0.0\' to \'3.1.1\' is not allowed"}, {"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires source and target to share the same major and minor version"}, {"field": "spec.runtime", "type": "invalid", "message": "RollingPatch requires target major version to be at least 4"}]}\n', stderr='', returncode=0, json={'errors': [{'field': 'spec.runtime', 'type': 'invalid', 'message': "version downgrade from '4.0.0' to '3.1.1' is not allowed"}, {'field': 'spec.runtime', 'type': 'invalid', 'message': 'RollingPatch requires source and target to share the same major and minor version'}, {'field': 'spec.runtime', 'type': 'invalid', 'message': 'RollingPatch requires target major version to be at least 4'}]}).returncode
+FAILED .evaluation_tests/test_checkpoint_6.py::test_first_runtime_update_no_migration - KeyError: 'spec'
+FAILED .evaluation_tests/test_checkpoint_6.py::test_regression_vault_crud_and_mesh_protection - KeyError: 'spec'
+FAILED .evaluation_tests/test_checkpoint_6.py::test_regression_task_snapshot_recovery_lifecycle - KeyError: 'status'
+======================== 23 failed, 17 passed in 15.43s ========================

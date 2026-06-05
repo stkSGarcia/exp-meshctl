@@ -1,0 +1,129 @@
+{
+  "ast_grep": {
+    "category_counts": {},
+    "category_weighted": {},
+    "counts": {},
+    "rules_checked": 355,
+    "violation_lines": 0,
+    "violations": 0,
+    "weighted": 0
+  },
+  "classes": {
+    "attribute_counts_mean": 0.0,
+    "attribute_counts_sum": 0,
+    "count": 0,
+    "method_counts_mean": 0.0,
+    "method_counts_sum": 0
+  },
+  "complexity": {
+    "cc_max": 120,
+    "cc_ratings": {
+      "A": 67,
+      "B": 12,
+      "C": 5,
+      "D": 2,
+      "E": 1,
+      "F": 1
+    },
+    "cc_sum": 504,
+    "mi_min": 0.0,
+    "mi_ratings": {
+      "A": 0,
+      "B": 0,
+      "C": 1
+    },
+    "mi_sum": 0.0,
+    "num_complex": 9
+  },
+  "file_count": 1,
+  "functions": {
+    "cc_concentration": 0.5842574472711459,
+    "cc_extreme_count": 2,
+    "cc_high_count": 9,
+    "cc_max": 120,
+    "cc_mean": 6.904109589041096,
+    "cc_normalized": 0.06245133727359256,
+    "cc_std": 14.741442323110762,
+    "cc_sum": 504,
+    "cc_top20": 0.6349206349206349,
+    "count": 73,
+    "depth_max": 6,
+    "extreme_cc_mean": 80.0,
+    "high_cc_mean": 30.22222222222222,
+    "lines_mean": 26.15068493150685,
+    "lines_sum": 1909
+  },
+  "graph": {
+    "cyclic_dependency_mass": 0.0,
+    "dependency_entropy": 0.45714561645125,
+    "edge_count": 229,
+    "node_count": 73,
+    "propagation_cost": 0.053843226788432265
+  },
+  "lines": {
+    "comments": 65,
+    "loc": 1700,
+    "multi_comment": 0,
+    "single_comment": 66,
+    "total_lines": 2149
+  },
+  "lint": {
+    "counts": {
+      "C901": 6,
+      "DOC201": 4,
+      "FBT002": 1,
+      "FURB118": 11,
+      "PERF401": 1,
+      "PLC1901": 6,
+      "PLR0911": 1,
+      "PLR0912": 4,
+      "PLR0914": 3,
+      "PLR0915": 4,
+      "PLR1702": 6,
+      "PLR2004": 1,
+      "PLR5501": 1,
+      "PLR6201": 2,
+      "PLW1514": 4,
+      "PTH100": 5,
+      "PTH105": 3,
+      "PTH108": 3,
+      "PTH110": 3,
+      "PTH118": 5,
+      "PTH120": 8,
+      "PTH123": 4,
+      "SIM102": 1,
+      "SIM103": 1,
+      "SIM105": 3,
+      "SIM114": 3
+    },
+    "errors": 94,
+    "fixable": 17
+  },
+  "redundancy": {
+    "clone_lines": 602,
+    "clone_ratio_sum": 0.3376470588235294,
+    "cloned_sloc_lines": 574,
+    "files_with_clones": 1
+  },
+  "source_files": [],
+  "symbols": {
+    "classes": 0,
+    "expressions": 1964,
+    "expressions_top_level": 94,
+    "functions": 73,
+    "globals": 15,
+    "imports": 8,
+    "max_imports": 8,
+    "methods": 0,
+    "statements": 441,
+    "total": 88,
+    "type_aliases": 0,
+    "variables": 15
+  },
+  "verbosity_flagged_sloc_lines": 574,
+  "waste": {
+    "single_use_functions": 40,
+    "trivial_wrappers": 5,
+    "unused_variables": 15
+  }
+}
