@@ -90,6 +90,111 @@ def count_tool_results(records):
     return total
 
 
+def build_read_params_map(records):
+    """Map tool_use_id → (offset, limit) for partial Read calls only."""
+    params = {}
+    for r in records:
+        if r.get("type") != "assistant":
+            continue
+        for block in r.get("message", {}).get("content", []):
+            if not isinstance(block, dict) or block.get("type") != "tool_use":
+                continue
+            if block.get("name") != "Read":
+                continue
+            inp = block.get("input", {})
+            offset = inp.get("offset")
+            limit = inp.get("limit")
+            if offset is not None or limit is not None:
+                params[block["id"]] = (offset, limit)
+    return params
+
+
+def extract_tool_result_fields(r):
+    """Return (text, file_path, tool_use_id) from a user record with tool_result."""
+    content = r.get("message", {}).get("content", [])
+    if not isinstance(content, list):
+        return "", None, None
+    for block in content:
+        if not isinstance(block, dict) or block.get("type") != "tool_result":
+            continue
+        inner = block.get("content", "")
+        text = inner if isinstance(inner, str) else json.dumps(inner)
+        tool_use_id = block.get("tool_use_id")
+        tool_result = r.get("toolUseResult", {})
+        file_path = None
+        if isinstance(tool_result, dict) and tool_result.get("file"):
+            file_path = tool_result["file"].get("filePath", "")
+        return text, file_path, tool_use_id
+    return "", None, None
+
+
+PROJECT_ROOTS = [
+    "/home/stk/projects/exp-meshctl/",
+    "/Users/samuel/Projects/exp-meshctl/",
+]
+
+def shorten_path(path):
+    for root in PROJECT_ROOTS:
+        if path.startswith(root):
+            return path[len(root):]
+    return path
+
+
+def compute_text_content(window_records, read_params):
+    """
+    Compute actively-loaded external text content for user records in a time window.
+    Returns dict with char counts and file list.
+    """
+    skill_instruction = 0
+    file_read = 0
+    bash_output = 0
+    other_tool_result = 0
+    files = []  # (short_path, chars, offset, limit)
+
+    for r in window_records:
+        if r.get("type") != "user":
+            continue
+
+        is_meta = r.get("isMeta", False)
+        tool_result = r.get("toolUseResult", {})
+        content = r.get("message", {}).get("content", "")
+
+        if is_meta:
+            text = " ".join(c.get("text", "") for c in content if isinstance(c, dict)) \
+                if isinstance(content, list) else (content or "")
+            skill_instruction += len(text)
+
+        elif isinstance(tool_result, dict) and tool_result.get("file"):
+            text, file_path, tool_use_id = extract_tool_result_fields(r)
+            file_read += len(text)
+            if file_path:
+                offset, limit = read_params.get(tool_use_id, (None, None))
+                files.append((shorten_path(file_path), len(text), offset, limit))
+
+        elif isinstance(tool_result, dict) and "stdout" in tool_result:
+            stdout = tool_result.get("stdout", "") or ""
+            stderr = tool_result.get("stderr", "") or ""
+            bash_output += len(stdout) + len(stderr)
+
+        else:
+            if isinstance(tool_result, str):
+                other_tool_result += len(tool_result)
+            else:
+                text, _, _ = extract_tool_result_fields(r)
+                if text:
+                    other_tool_result += len(text)
+
+    total = skill_instruction + file_read + bash_output + other_tool_result
+    return {
+        "text_skill_instr": skill_instruction,
+        "text_file_read": file_read,
+        "text_bash": bash_output,
+        "text_other": other_tool_result,
+        "text_total": total,
+        "text_files": files,
+    }
+
+
 def compute_metrics(calls, all_records, window_start, window_end):
     """
     Given a list of deduplicated LLM call records and all records in the window,
@@ -252,6 +357,9 @@ def main():
         all_records = records + sub_records
         all_calls = main_calls + sub_calls
 
+        # read params map for partial-read annotation
+        read_params = build_read_params_map(all_records)
+
         # timestamps for window bounds
         INF = datetime(9999, 1, 1, tzinfo=timezone.utc)
 
@@ -260,6 +368,13 @@ def main():
             q_end = parse_ts(queries[i + 1]["timestamp"]) if i + 1 < len(queries) else INF
 
             metrics = compute_metrics(all_calls, all_records, q_start, q_end)
+
+            # text content for this window
+            window_records = [
+                r for r in all_records
+                if (ts := parse_ts(r.get("timestamp"))) and q_start <= ts < q_end
+            ]
+            text = compute_text_content(window_records, read_params)
 
             # wall-clock: last assistant record in window
             last_ts = None
@@ -279,6 +394,7 @@ def main():
                 "start": q["timestamp"],
                 "duration_s": duration_s,
                 **metrics,
+                **text,
             })
 
     # sort by checkpoint then command order
@@ -304,12 +420,24 @@ def main():
                 parts.append("---")
         return "| " + " | ".join(parts) + " |"
 
-    # ── Table 1: tokens + timing
+    # ── Table 1: tokens + timing + text content
     p("## Table 1: Tokens & Timing")
     p("")
+    p("**Columns:** CP = checkpoint number · Duration = wall-clock time from command start to last assistant response · "
+      "LLM Calls = deduplicated API calls (streaming chunks merged) · "
+      "Input = fresh (non-cached) input tokens · CC-1h / CC-5m = tokens written to 1-hour / 5-minute cache · "
+      "Cache Read = tokens served from cache · Output = generated tokens · Total = all of the above summed · "
+      "Skill instr = chars of skill instruction text injected at invocation · "
+      "File reads = chars of file content loaded via Read tool · "
+      "Bash out = chars of bash stdout/stderr · "
+      "Other = chars of other tool results (e.g. openspec CLI output) · "
+      "Text total = sum of the four text columns (actively loaded external content only)")
+    p("")
     p(md_row("CP", "Command", "Start (UTC)", "Duration", "LLM Calls",
-             "Input", "CC-1h", "CC-5m", "Cache Read", "Output", "Total"))
-    p(md_sep("r", "l", "l", "r", "r", "r", "r", "r", "r", "r", "r"))
+             "Input", "CC-1h", "CC-5m", "Cache Read", "Output", "Total",
+             "Skill instr", "File reads", "Bash out", "Other", "Text total"))
+    p(md_sep("r", "l", "l", "r", "r", "r", "r", "r", "r", "r", "r",
+             "r", "r", "r", "r", "r"))
 
     session_totals = defaultdict(lambda: defaultdict(int))
     for r in rows:
@@ -319,27 +447,39 @@ def main():
             fmt_duration(r["duration_s"]), r["llm_calls"],
             r["input_tokens"], r["cache_create_1h"], r["cache_create_5m"],
             r["cache_read"], r["output_tokens"], r["total_tokens"],
+            r["text_skill_instr"], r["text_file_read"], r["text_bash"],
+            r["text_other"], r["text_total"],
         ))
         for k in ("llm_calls", "input_tokens", "cache_create_1h", "cache_create_5m",
-                  "cache_read", "output_tokens", "total_tokens"):
+                  "cache_read", "output_tokens", "total_tokens",
+                  "text_skill_instr", "text_file_read", "text_bash",
+                  "text_other", "text_total"):
             session_totals[cp][k] += r[k]
 
     p("")
     p("**Per-checkpoint totals:**")
     p("")
-    p(md_row("CP", "LLM Calls", "Input", "CC-1h", "CC-5m", "Cache Read", "Output", "Total"))
-    p(md_sep("r", "r", "r", "r", "r", "r", "r", "r"))
+    p(md_row("CP", "LLM Calls", "Input", "CC-1h", "CC-5m", "Cache Read", "Output", "Total",
+             "Skill instr", "File reads", "Bash out", "Other", "Text total"))
+    p(md_sep("r", "r", "r", "r", "r", "r", "r", "r", "r", "r", "r", "r", "r"))
     for cp in sorted(session_totals.keys()):
         t = session_totals[cp]
         p(md_row(
             f"**{cp}**", t["llm_calls"], t["input_tokens"],
             t["cache_create_1h"], t["cache_create_5m"],
             t["cache_read"], t["output_tokens"], t["total_tokens"],
+            t["text_skill_instr"], t["text_file_read"], t["text_bash"],
+            t["text_other"], t["text_total"],
         ))
 
     # ── Table 2: LLM call breakdown + latency
     p("")
     p("## Table 2: LLM Call Breakdown & Latency")
+    p("")
+    p("**Columns:** Tool-use stops = calls that ended because the model invoked a tool · "
+      "End-turn stops = calls that ended naturally (model finished responding) · "
+      "Thinking calls = calls where extended thinking was active · "
+      "Avg Latency = average time between a user turn and the next assistant response")
     p("")
     p(md_row("CP", "Command", "LLM Calls", "Tool-use stops", "End-turn stops", "Thinking calls", "Avg Latency"))
     p(md_sep("r", "l", "r", "r", "r", "r", "r"))
@@ -354,6 +494,10 @@ def main():
     p("")
     p("## Table 3: Skill Attribution")
     p("")
+    p("**Columns:** `<skill> calls` = number of LLM calls attributed to that skill within this command's time window · "
+      "`<skill> output` = total output tokens produced by that skill · "
+      "A command typically shows calls only for its own skill; non-zero values in other skills indicate subagent or overlap.")
+    p("")
     all_skills = sorted({s for r in rows for s in r["skill_calls"].keys()})
     skill_hdrs = [f"{s} calls" for s in all_skills] + [f"{s} output" for s in all_skills]
     p(md_row("CP", "Command", *skill_hdrs))
@@ -367,6 +511,10 @@ def main():
     p("")
     p("## Table 4: Tool Executions")
     p("")
+    p("**Columns:** Tool Results = total number of tool result messages returned to the model · "
+      "Bash / Edit / Write / Read / TodoWrite / Agent = number of times each tool was invoked · "
+      "Other = invocations of any tool not in the fixed list above (e.g. AskUserQuestion, WebFetch)")
+    p("")
     tool_order = ["Bash", "Edit", "Write", "Read", "TodoWrite", "Agent"]
     p(md_row("CP", "Command", "Tool Results", *tool_order, "Other"))
     p(md_sep("r", "l", *["r"] * (len(tool_order) + 2)))
@@ -378,6 +526,35 @@ def main():
             *[tn.get(t, 0) for t in tool_order],
             other,
         ))
+
+    # ── Table 5: Files read per query
+    p("")
+    p("## Table 5: Files Read")
+    p("")
+    p("**Columns:** File = path relative to project root · "
+      "Chars = total characters loaded from this file across all reads within the command · "
+      "Notes = present only for partial reads, showing the offset and limit passed to the Read tool")
+    p("")
+    p(md_row("CP", "Command", "File", "Chars", "Notes"))
+    p(md_sep("r", "l", "l", "r", "l"))
+    for r in rows:
+        files = r.get("text_files", [])
+        # Aggregate by path within this row
+        seen = {}
+        for path, chars, offset, limit in files:
+            if path not in seen:
+                seen[path] = {"chars": 0, "reads": []}
+            seen[path]["chars"] += chars
+            if offset is not None or limit is not None:
+                seen[path]["reads"].append((offset, limit))
+        if not seen:
+            p(md_row(r["checkpoint"], r["command"], "—", "", ""))
+        else:
+            for path, info in sorted(seen.items()):
+                reads = info["reads"]
+                note = ("partial: " + ", ".join(f"offset={o} limit={l}" for o, l in reads)) \
+                    if reads else ""
+                p(md_row(r["checkpoint"], r["command"], f"`{path}`", info["chars"], note))
 
     p("")
     p(f"*{len(rows)} queries across {len(session_totals)} checkpoints*")
