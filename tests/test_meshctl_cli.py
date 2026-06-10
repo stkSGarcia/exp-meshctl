@@ -1,0 +1,263 @@
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import textwrap
+import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+MESHCTL = ROOT / "meshctl.py"
+
+
+class MeshCtlCliTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp_dir.name)
+        self.store = self.root / "store.json"
+
+    def tearDown(self) -> None:
+        self.temp_dir.cleanup()
+
+    def run_meshctl(self, *args: str) -> subprocess.CompletedProcess[str]:
+        env = os.environ.copy()
+        env["MESHCTL_STORE"] = str(self.store)
+        return subprocess.run(
+            [sys.executable, str(MESHCTL), *args],
+            cwd=ROOT,
+            env=env,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+
+    def write_yaml(self, content: str) -> Path:
+        path = self.root / "mesh.yaml"
+        path.write_text(textwrap.dedent(content).strip() + "\n", encoding="utf-8")
+        return path
+
+    def assert_json_stdout(self, result: subprocess.CompletedProcess[str]):
+        self.assertEqual("", result.stderr)
+        self.assertEqual(0, result.returncode)
+        return json.loads(result.stdout)
+
+    def test_create_describe_list_and_delete(self) -> None:
+        alpha = self.write_yaml(
+            """
+            metadata:
+              name: alpha
+            spec:
+              instances: 2
+              runtime: 1.2.3
+              resources:
+                memory:
+                  limit: 2Gi
+                  request: 1Gi
+                cpu:
+                  limit: 1000m
+                  request: 500m
+              access:
+                authentication:
+                  enabled: false
+              migration:
+                strategy: FullStop
+            """
+        )
+
+        created = self.assert_json_stdout(
+            self.run_meshctl("mesh", "create", "-f", str(alpha))
+        )
+        self.assertEqual("alpha", created["metadata"]["name"])
+        self.assertEqual("Running", created["status"]["state"])
+        self.assertEqual(False, created["spec"]["access"]["authentication"]["enabled"])
+
+        beta = self.write_yaml(
+            """
+            metadata:
+              name: beta
+            spec:
+              instances: 1
+            """
+        )
+        self.assert_json_stdout(self.run_meshctl("mesh", "create", "-f", str(beta)))
+
+        described = self.assert_json_stdout(
+            self.run_meshctl("mesh", "describe", "alpha")
+        )
+        self.assertEqual(created, described)
+
+        listed = self.assert_json_stdout(self.run_meshctl("mesh", "list"))
+        self.assertEqual(
+            [
+                {"name": "alpha", "status": {"state": "Running"}},
+                {"name": "beta", "status": {"state": "Running"}},
+            ],
+            listed,
+        )
+
+        deleted = self.assert_json_stdout(self.run_meshctl("mesh", "delete", "alpha"))
+        self.assertEqual({"name": "alpha"}, deleted["metadata"])
+        self.assertTrue(deleted["message"])
+        listed_after_delete = self.assert_json_stdout(self.run_meshctl("mesh", "list"))
+        self.assertEqual(["beta"], [item["name"] for item in listed_after_delete])
+
+    def test_defaults_and_absent_optional_fields(self) -> None:
+        path = self.write_yaml(
+            """
+            metadata:
+              name: minimal
+            spec:
+            """
+        )
+
+        created = self.assert_json_stdout(
+            self.run_meshctl("mesh", "create", "-f", str(path))
+        )
+
+        self.assertEqual(1, created["spec"]["instances"])
+        self.assertEqual(
+            {"limit": "1Gi", "request": "1Gi"},
+            created["spec"]["resources"]["memory"],
+        )
+        self.assertEqual(True, created["spec"]["access"]["authentication"]["enabled"])
+        self.assertEqual("FullStop", created["spec"]["migration"]["strategy"])
+        self.assertNotIn("runtime", created["spec"])
+        self.assertNotIn("cpu", created["spec"]["resources"])
+
+    def test_validation_errors_and_no_stderr(self) -> None:
+        path = self.write_yaml(
+            """
+            metadata:
+              name: Bad_Name
+            spec:
+              instances: 0
+              runtime: 1.2
+              resources:
+                memory:
+                  limit: 1Gi
+                  request: 2Gi
+                cpu:
+                  limit: 100m
+                  request: 1
+              migration:
+                strategy: Rolling
+            """
+        )
+
+        payload = self.assert_json_stdout(
+            self.run_meshctl("mesh", "create", "-f", str(path))
+        )
+        errors = {(item["field"], item["type"]) for item in payload["errors"]}
+        self.assertIn(("metadata.name", "invalid"), errors)
+        self.assertIn(("spec.instances", "invalid"), errors)
+        self.assertIn(("spec.runtime", "invalid"), errors)
+        self.assertIn(("spec.resources.memory.request", "invalid"), errors)
+        self.assertIn(("spec.resources.cpu.request", "invalid"), errors)
+        self.assertIn(("spec.migration.strategy", "invalid"), errors)
+        self.assertFalse(self.store.exists())
+
+    def test_required_limits_and_name(self) -> None:
+        path = self.write_yaml(
+            """
+            metadata:
+              name:
+            spec:
+              resources:
+                memory:
+                  request: 1Gi
+                cpu:
+                  request: 100m
+            """
+        )
+
+        payload = self.assert_json_stdout(
+            self.run_meshctl("mesh", "create", "-f", str(path))
+        )
+        errors = {(item["field"], item["type"]) for item in payload["errors"]}
+        self.assertIn(("metadata.name", "required"), errors)
+        self.assertIn(("spec.resources.memory.limit", "required"), errors)
+        self.assertIn(("spec.resources.cpu.limit", "required"), errors)
+
+    def test_duplicate_does_not_overwrite(self) -> None:
+        first = self.write_yaml(
+            """
+            metadata:
+              name: duplicate
+            spec:
+              instances: 1
+            """
+        )
+        self.assert_json_stdout(self.run_meshctl("mesh", "create", "-f", str(first)))
+
+        second = self.write_yaml(
+            """
+            metadata:
+              name: duplicate
+            spec:
+              instances: 3
+            """
+        )
+        payload = self.assert_json_stdout(
+            self.run_meshctl("mesh", "create", "-f", str(second))
+        )
+        self.assertEqual(
+            {("metadata.name", "duplicate")},
+            {(item["field"], item["type"]) for item in payload["errors"]},
+        )
+        described = self.assert_json_stdout(
+            self.run_meshctl("mesh", "describe", "duplicate")
+        )
+        self.assertEqual(1, described["spec"]["instances"])
+
+    def test_parse_not_found_and_forbidden_autoscaling_errors(self) -> None:
+        missing = self.assert_json_stdout(
+            self.run_meshctl("mesh", "describe", "missing")
+        )
+        self.assertEqual(
+            {("metadata.name", "not_found")},
+            {(item["field"], item["type"]) for item in missing["errors"]},
+        )
+
+        invalid_yaml = self.root / "invalid.yaml"
+        invalid_yaml.write_text("metadata\n  name: nope\n", encoding="utf-8")
+        parse_error = self.assert_json_stdout(
+            self.run_meshctl("mesh", "create", "-f", str(invalid_yaml))
+        )
+        self.assertEqual(
+            {("", "parse")},
+            {(item["field"], item["type"]) for item in parse_error["errors"]},
+        )
+
+        autoscaling = self.write_yaml(
+            """
+            metadata:
+              name: forbidden
+            spec:
+              nested:
+                autoScaling:
+                  enabled: true
+            """
+        )
+        forbidden = self.assert_json_stdout(
+            self.run_meshctl("mesh", "create", "-f", str(autoscaling))
+        )
+        self.assertIn(
+            ("spec.nested.autoScaling", "forbidden"),
+            {(item["field"], item["type"]) for item in forbidden["errors"]},
+        )
+
+    def test_delete_not_found_error(self) -> None:
+        payload = self.assert_json_stdout(self.run_meshctl("mesh", "delete", "gone"))
+        self.assertEqual(
+            {("metadata.name", "not_found")},
+            {(item["field"], item["type"]) for item in payload["errors"]},
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()
