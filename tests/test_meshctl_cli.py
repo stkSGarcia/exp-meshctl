@@ -72,7 +72,7 @@ class MeshCtlCliTests(unittest.TestCase):
               name: alpha
             spec:
               instances: 2
-              runtime: 1.2.3
+              runtime: 3.1.1
               resources:
                 memory:
                   limit: 2Gi
@@ -1086,6 +1086,504 @@ class MeshCtlCliTests(unittest.TestCase):
             )
         )
         self.assertEqual({"ready": 0, "starting": 3, "stopped": 0}, explicit_resume["status"]["instances"])
+
+    def test_runtime_catalog_validation_and_warnings(self) -> None:
+        supported = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: supported-runtime
+                        spec:
+                          runtime: 3.1.1
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual("3.1.1", supported["spec"]["runtime"])
+        self.assertNotIn("warnings", supported)
+
+        deprecated = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: deprecated-runtime
+                        spec:
+                          runtime: 3.0.0
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            [
+                {
+                    "field": "spec.runtime",
+                    "message": "runtime version '3.0.0' is deprecated",
+                }
+            ],
+            deprecated["warnings"],
+        )
+
+        skipped = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: skipped-runtime
+                        spec:
+                          runtime: 3.1.0
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertIn(
+            {
+                "field": "spec.runtime",
+                "message": "runtime version '3.1.0' is skipped and cannot be targeted",
+                "type": "invalid",
+            },
+            skipped["errors"],
+        )
+        self.assertNotIn("warnings", skipped)
+
+        unknown = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: unknown-runtime
+                        spec:
+                          runtime: 9.9.9
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertIn(
+            ("spec.runtime", "invalid"),
+            {(item["field"], item["type"]) for item in unknown["errors"]},
+        )
+
+        omitted = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: omitted-runtime
+                        spec:
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertNotIn("runtime", omitted["spec"])
+
+        duplicate_deprecated = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: deprecated-runtime
+                        spec:
+                          runtime: 3.0.0
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertIn(
+            ("metadata.name", "duplicate"),
+            {(item["field"], item["type"]) for item in duplicate_deprecated["errors"]},
+        )
+        self.assertNotIn("warnings", duplicate_deprecated)
+
+    def test_migration_strategy_and_version_change_rules(self) -> None:
+        for name, strategy in (
+            ("fullstop-strategy", "FullStop"),
+            ("live-strategy", "LiveMigration"),
+            ("rolling-strategy", "RollingPatch"),
+        ):
+            created = self.assert_json_stdout(
+                self.run_meshctl(
+                    "mesh",
+                    "create",
+                    "-f",
+                    str(
+                        self.write_yaml(
+                            f"""
+                            metadata:
+                              name: {name}
+                            spec:
+                              runtime: 3.1.1
+                              migration:
+                                strategy: {strategy}
+                            """
+                        )
+                    ),
+                )
+            )
+            self.assertEqual(strategy, created["spec"]["migration"]["strategy"])
+
+        invalid_strategy = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: invalid-strategy
+                        spec:
+                          migration:
+                            strategy: BlueGreen
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertIn(
+            ("spec.migration.strategy", "invalid"),
+            {(item["field"], item["type"]) for item in invalid_strategy["errors"]},
+        )
+
+        downgrade = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: fullstop-strategy
+                        spec:
+                          runtime: 3.0.0
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertIn(
+            {
+                "field": "spec.runtime",
+                "message": "version downgrade from '3.1.1' to '3.0.0' is not allowed",
+                "type": "invalid",
+            },
+            downgrade["errors"],
+        )
+
+        rolling_source = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: rolling-source
+                        spec:
+                          runtime: 3.0.0
+                          migration:
+                            strategy: RollingPatch
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertIn("warnings", rolling_source)
+
+        rolling_errors = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: rolling-source
+                        spec:
+                          runtime: 3.1.1
+                        """
+                    )
+                ),
+            )
+        )
+        runtime_errors = [
+            item for item in rolling_errors["errors"]
+            if item["field"] == "spec.runtime" and item["type"] == "invalid"
+        ]
+        self.assertEqual(2, len(runtime_errors))
+
+        multi_region_live = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: multi-region-live
+                        spec:
+                          runtime: 3.1.1
+                          regions: [us-east, us-west]
+                          migration:
+                            strategy: LiveMigration
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertIn(
+            {
+                "field": "spec.migration.strategy",
+                "message": "LiveMigration strategy is not supported with multi-region topology",
+                "type": "invalid",
+            },
+            multi_region_live["errors"],
+        )
+
+    def test_runtime_assignment_migration_lifecycle_and_migrate_command(self) -> None:
+        self.create_mesh("runtime-flow")
+
+        assigned = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: runtime-flow
+                        spec:
+                          runtime: 3.1.1
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual("3.1.1", assigned["spec"]["runtime"])
+        self.assertNotIn("migration", assigned["status"])
+        self.assertNotIn("Migration", [item["type"] for item in assigned["status"]["conditions"]])
+
+        started = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: runtime-flow
+                        spec:
+                          runtime: 4.0.0
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {
+                "sourceRuntime": "3.1.1",
+                "stage": "Migrate",
+                "targetRuntime": "4.0.0",
+            },
+            started["status"]["migration"],
+        )
+        self.assertEqual(False, started["status"]["stable"])
+        self.assertIn("Migration", [item["type"] for item in started["status"]["conditions"]])
+
+        completed = self.assert_json_stdout(self.run_meshctl("mesh", "migrate", "runtime-flow"))
+        self.assertNotIn("migration", completed["status"])
+        self.assertNotIn("Migration", [item["type"] for item in completed["status"]["conditions"]])
+        self.assertEqual(True, completed["status"]["stable"])
+
+        missing = self.assert_json_stdout(self.run_meshctl("mesh", "migrate", "missing"))
+        self.assertEqual(
+            {("metadata.name", "not_found")},
+            {(item["field"], item["type"]) for item in missing["errors"]},
+        )
+
+        no_active = self.assert_json_stdout(self.run_meshctl("mesh", "migrate", "runtime-flow"))
+        self.assertEqual(
+            {
+                ("status.migration", "invalid", "no active migration for mesh 'runtime-flow'"),
+            },
+            {(item["field"], item["type"], item["message"]) for item in no_active["errors"]},
+        )
+
+    def test_live_migration_active_updates_and_rollback(self) -> None:
+        self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: live-flow
+                        spec:
+                          runtime: 3.1.1
+                          migration:
+                            strategy: LiveMigration
+                        """
+                    )
+                ),
+            )
+        )
+
+        started = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: live-flow
+                        spec:
+                          runtime: 4.0.0
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual("Prepare", started["status"]["migration"]["stage"])
+
+        advanced = self.assert_json_stdout(self.run_meshctl("mesh", "migrate", "live-flow"))
+        self.assertEqual("Transfer", advanced["status"]["migration"]["stage"])
+
+        unrelated = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: live-flow
+                        spec:
+                          network:
+                            storage:
+                              className: fast
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual("fast", unrelated["spec"]["network"]["storage"]["className"])
+        self.assertIn("migration", unrelated["status"])
+
+        runtime_change = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: live-flow
+                        spec:
+                          runtime: 3.1.1
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertIn(
+            {
+                "field": "spec.runtime",
+                "message": "cannot change runtime version while a migration is in progress",
+                "type": "invalid",
+            },
+            runtime_change["errors"],
+        )
+
+        strategy_change = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: live-flow
+                        spec:
+                          migration:
+                            strategy: FullStop
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertIn(
+            {
+                "field": "spec.migration.strategy",
+                "message": "cannot change migration strategy while a migration is in progress",
+                "type": "invalid",
+            },
+            strategy_change["errors"],
+        )
+
+        rolled_back = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: live-flow
+                        spec:
+                          migration:
+                            rollback: true
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertNotIn("migration", rolled_back["status"])
+        self.assertNotIn("Migration", [item["type"] for item in rolled_back["status"]["conditions"]])
+        self.assertNotIn("rollback", rolled_back["spec"]["migration"])
 
     def test_vault_create_describe_list_update_and_delete(self) -> None:
         self.assert_json_stdout(
