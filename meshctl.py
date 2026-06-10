@@ -24,6 +24,9 @@ MEMORY_UNITS = {
     "Gi": 1024**3,
     "Ti": 1024**4,
 }
+AUTH_DIGEST_ALGORITHMS = {"SHA-256", "SHA-384", "SHA-512"}
+ENCRYPTION_SOURCES = {"None", "Secret", "Service"}
+ENCRYPTION_CLIENT_MODES = {"None", "Authenticate", "Validate"}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -150,6 +153,7 @@ def mesh_update(input_path: str) -> int:
         print_errors(errors)
         return 0
 
+    canonicalize_resource_access(candidate)
     reconcile_update_status(stored, candidate, resume_without_count)
     meshes[name] = candidate
     save_store(store)
@@ -446,6 +450,11 @@ def parse_simple_yaml(text: str) -> tuple[Any, str | None]:
 
 
 def parse_scalar(value: str) -> Any:
+    if value.startswith(("[", "{")):
+        try:
+            return json.loads(value)
+        except json.JSONDecodeError:
+            pass
     if value in {"null", "Null", "NULL", "~"}:
         return None
     if value in {"true", "True", "TRUE"}:
@@ -481,7 +490,7 @@ def normalize_mesh_for_create(
     normalize_instances(spec, normalized_spec, errors, default=1)
     normalize_runtime(spec, normalized_spec, errors)
     normalize_resources(spec, normalized_spec, errors)
-    normalize_access(spec, normalized_spec)
+    normalize_access(spec, normalized_spec, errors)
     normalize_migration(spec, normalized_spec, errors)
     normalize_network(spec, normalized_spec, errors, apply_defaults=True)
 
@@ -492,6 +501,8 @@ def normalize_mesh_for_create(
     }
     initialize_status(resource)
     validate_merged_resource(resource, None, errors)
+    if not errors:
+        canonicalize_resource_access(resource)
     return resource, errors
 
 
@@ -673,8 +684,7 @@ def upgrade_stored_resource(resource: dict[str, Any]) -> dict[str, Any]:
         spec["instances"] = 1
     if "resources" not in spec:
         spec["resources"] = {"memory": {"limit": "1Gi", "request": "1Gi"}}
-    if "access" not in spec:
-        spec["access"] = {"authentication": {"enabled": True}}
+    spec["access"] = defaulted_access(spec.get("access"))
     if "migration" not in spec:
         spec["migration"] = {"strategy": "FullStop"}
     if "network" not in spec or not isinstance(spec.get("network"), dict):
@@ -847,14 +857,109 @@ def parse_quantity(value: Any, kind: str) -> int | None:
     return int(amount) if milli_suffix else int(amount) * 1000
 
 
-def normalize_access(spec: dict[str, Any], normalized_spec: dict[str, Any]) -> None:
-    enabled = True
+def normalize_access(
+    spec: dict[str, Any],
+    normalized_spec: dict[str, Any],
+    errors: list[dict[str, str]],
+) -> None:
     access = spec.get("access")
+    if access is not None and not isinstance(access, dict):
+        errors.append(error("spec.access", "Access must be an object", "invalid"))
+        access = None
     if isinstance(access, dict):
-        authentication = access.get("authentication")
-        if isinstance(authentication, dict) and "enabled" in authentication:
-            enabled = authentication.get("enabled")
-    normalized_spec["access"] = {"authentication": {"enabled": enabled}}
+        for field, label in (
+            ("authentication", "Authentication"),
+            ("permissions", "Permissions"),
+            ("encryption", "Encryption"),
+        ):
+            if field in access and access.get(field) is not None and not isinstance(access.get(field), dict):
+                errors.append(
+                    error(f"spec.access.{field}", f"{label} must be an object", "invalid")
+                )
+    normalized_spec["access"] = defaulted_access(access)
+
+
+def defaulted_access(value: Any) -> dict[str, Any]:
+    access = value if isinstance(value, dict) else {}
+    authentication = access.get("authentication")
+    if not isinstance(authentication, dict):
+        authentication = {}
+
+    enabled = authentication.get("enabled", True)
+    normalized_authentication: dict[str, Any] = {"enabled": enabled}
+    if "digestAlgorithm" in authentication or enabled is not False:
+        normalized_authentication["digestAlgorithm"] = authentication.get(
+            "digestAlgorithm",
+            "SHA-256",
+        )
+
+    normalized: dict[str, Any] = {"authentication": normalized_authentication}
+    if "credentialRef" in access:
+        normalized["credentialRef"] = access.get("credentialRef")
+
+    permissions = access.get("permissions")
+    if not isinstance(permissions, dict):
+        permissions = {}
+    normalized_permissions: dict[str, Any] = {
+        "enabled": permissions.get("enabled", False)
+    }
+    if "roles" in permissions:
+        normalized_permissions["roles"] = copy.deepcopy(permissions.get("roles"))
+    normalized["permissions"] = normalized_permissions
+
+    encryption = access.get("encryption")
+    if not isinstance(encryption, dict):
+        encryption = {}
+    normalized_encryption: dict[str, Any] = {
+        "source": encryption.get("source", "None"),
+        "clientMode": encryption.get("clientMode", "None"),
+    }
+    for field in ("certRef", "certServiceRef"):
+        if field in encryption:
+            normalized_encryption[field] = encryption.get(field)
+    normalized["encryption"] = normalized_encryption
+    return normalized
+
+
+def canonicalize_resource_access(resource: dict[str, Any]) -> None:
+    spec = resource.setdefault("spec", {})
+    if not isinstance(spec, dict):
+        return
+    spec["access"] = canonical_access(spec.get("access"))
+
+
+def canonical_access(value: Any) -> dict[str, Any]:
+    access = defaulted_access(value)
+
+    authentication = access["authentication"]
+    if authentication.get("enabled") is False:
+        access["authentication"] = {"enabled": False}
+        access.pop("credentialRef", None)
+    else:
+        if authentication.get("digestAlgorithm") is None:
+            authentication["digestAlgorithm"] = "SHA-256"
+        if access.get("credentialRef") is None:
+            access.pop("credentialRef", None)
+
+    permissions = access["permissions"]
+    if permissions.get("enabled") is True:
+        if "roles" in permissions:
+            permissions["roles"] = copy.deepcopy(permissions["roles"])
+    else:
+        access["permissions"] = {"enabled": permissions.get("enabled", False)}
+
+    encryption = access["encryption"]
+    source = encryption.get("source", "None")
+    canonical_encryption = {
+        "source": source,
+        "clientMode": encryption.get("clientMode", "None"),
+    }
+    if source == "Secret" and encryption.get("certRef") is not None:
+        canonical_encryption["certRef"] = encryption.get("certRef")
+    if source == "Service" and encryption.get("certServiceRef") is not None:
+        canonical_encryption["certServiceRef"] = encryption.get("certServiceRef")
+    access["encryption"] = canonical_encryption
+    return access
 
 
 def normalize_migration(
@@ -1027,9 +1132,222 @@ def validate_resources_object(value: Any, errors: list[dict[str, str]]) -> None:
 
 
 def validate_access_object(value: Any, errors: list[dict[str, str]]) -> None:
-    if value is None or isinstance(value, dict):
+    if value is None:
         return
-    errors.append(error("spec.access", "Access must be an object", "invalid"))
+    if not isinstance(value, dict):
+        errors.append(error("spec.access", "Access must be an object", "invalid"))
+        return
+    validate_access_authentication(value, errors)
+    validate_access_permissions(value, errors)
+    validate_access_encryption(value, errors)
+
+
+def validate_access_authentication(
+    access: dict[str, Any],
+    errors: list[dict[str, str]],
+) -> None:
+    authentication = access.get("authentication")
+    if authentication is None:
+        authentication = {}
+    if not isinstance(authentication, dict):
+        errors.append(
+            error("spec.access.authentication", "Authentication must be an object", "invalid")
+        )
+        return
+
+    enabled = authentication.get("enabled", True)
+    if not isinstance(enabled, bool):
+        errors.append(
+            error("spec.access.authentication.enabled", "Authentication enabled must be boolean", "invalid")
+        )
+
+    digest_algorithm = authentication.get("digestAlgorithm")
+    if enabled is False:
+        if digest_algorithm is not None:
+            errors.append(
+                error(
+                    "spec.access.authentication.digestAlgorithm",
+                    "Digest algorithm is forbidden when authentication is disabled",
+                    "forbidden",
+                )
+            )
+        if access.get("credentialRef") is not None:
+            errors.append(
+                error(
+                    "spec.access.credentialRef",
+                    "Credential reference is forbidden when authentication is disabled",
+                    "forbidden",
+                )
+            )
+        return
+
+    if digest_algorithm not in AUTH_DIGEST_ALGORITHMS:
+        errors.append(
+            error(
+                "spec.access.authentication.digestAlgorithm",
+                "Digest algorithm must be SHA-256, SHA-384, or SHA-512",
+                "invalid",
+            )
+        )
+
+
+def validate_access_permissions(
+    access: dict[str, Any],
+    errors: list[dict[str, str]],
+) -> None:
+    permissions = access.get("permissions")
+    if permissions is None:
+        return
+    if not isinstance(permissions, dict):
+        errors.append(error("spec.access.permissions", "Permissions must be an object", "invalid"))
+        return
+
+    enabled = permissions.get("enabled", False)
+    if not isinstance(enabled, bool):
+        errors.append(
+            error("spec.access.permissions.enabled", "Permissions enabled must be boolean", "invalid")
+        )
+        return
+    if enabled is not True:
+        return
+
+    roles = permissions.get("roles")
+    if roles is None or roles == []:
+        errors.append(error("spec.access.permissions.roles", "Permission roles are required", "required"))
+        return
+    if not isinstance(roles, list):
+        errors.append(error("spec.access.permissions.roles", "Permission roles must be an array", "invalid"))
+        return
+
+    seen_names: set[str] = set()
+    duplicate_found = False
+    for index, role in enumerate(roles):
+        if not isinstance(role, dict):
+            errors.append(
+                error(
+                    f"spec.access.permissions.roles[{index}].name",
+                    "Role name is required",
+                    "required",
+                )
+            )
+            errors.append(
+                error(
+                    f"spec.access.permissions.roles[{index}].permissions",
+                    "Role permissions are required",
+                    "required",
+                )
+            )
+            continue
+
+        name = role.get("name")
+        if not isinstance(name, str) or not name:
+            errors.append(
+                error(
+                    f"spec.access.permissions.roles[{index}].name",
+                    "Role name is required",
+                    "required",
+                )
+            )
+        elif name in seen_names:
+            duplicate_found = True
+        else:
+            seen_names.add(name)
+
+        role_permissions = role.get("permissions")
+        if not isinstance(role_permissions, list) or not role_permissions:
+            errors.append(
+                error(
+                    f"spec.access.permissions.roles[{index}].permissions",
+                    "Role permissions are required",
+                    "required",
+                )
+            )
+        elif any(not isinstance(permission, str) or not permission for permission in role_permissions):
+            errors.append(
+                error(
+                    f"spec.access.permissions.roles[{index}].permissions",
+                    "Role permissions must be non-empty strings",
+                    "invalid",
+                )
+            )
+
+    if duplicate_found:
+        errors.append(
+            error("spec.access.permissions.roles", "Role names must be unique", "duplicate")
+        )
+
+
+def validate_access_encryption(
+    access: dict[str, Any],
+    errors: list[dict[str, str]],
+) -> None:
+    encryption = access.get("encryption")
+    if encryption is None:
+        return
+    if not isinstance(encryption, dict):
+        errors.append(error("spec.access.encryption", "Encryption must be an object", "invalid"))
+        return
+
+    source = encryption.get("source", "None")
+    client_mode = encryption.get("clientMode", "None")
+    if source not in ENCRYPTION_SOURCES:
+        errors.append(
+            error("spec.access.encryption.source", "Encryption source is invalid", "invalid")
+        )
+    if client_mode not in ENCRYPTION_CLIENT_MODES:
+        errors.append(
+            error("spec.access.encryption.clientMode", "Encryption client mode is invalid", "invalid")
+        )
+
+    cert_ref = encryption.get("certRef")
+    cert_service_ref = encryption.get("certServiceRef")
+    if source == "None":
+        if cert_ref is not None:
+            errors.append(
+                error("spec.access.encryption.certRef", "Certificate reference is forbidden", "forbidden")
+            )
+        if cert_service_ref is not None:
+            errors.append(
+                error(
+                    "spec.access.encryption.certServiceRef",
+                    "Certificate service reference is forbidden",
+                    "forbidden",
+                )
+            )
+        if client_mode in {"Authenticate", "Validate"}:
+            errors.append(
+                error(
+                    "spec.access.encryption.clientMode",
+                    "Encryption client mode requires an encryption source",
+                    "invalid",
+                )
+            )
+    elif source == "Secret":
+        if cert_ref is None or cert_ref == "":
+            errors.append(
+                error("spec.access.encryption.certRef", "Certificate reference is required", "required")
+            )
+        if cert_service_ref is not None:
+            errors.append(
+                error(
+                    "spec.access.encryption.certServiceRef",
+                    "Certificate service reference is forbidden",
+                    "forbidden",
+                )
+            )
+    elif source == "Service":
+        if cert_service_ref is None or cert_service_ref == "":
+            errors.append(
+                error(
+                    "spec.access.encryption.certServiceRef",
+                    "Certificate service reference is required",
+                    "required",
+                )
+            )
+        if cert_ref is not None:
+            errors.append(
+                error("spec.access.encryption.certRef", "Certificate reference is forbidden", "forbidden")
+            )
 
 
 def validate_migration_object(value: Any, errors: list[dict[str, str]]) -> None:
@@ -1238,6 +1556,7 @@ def public_resource(resource: dict[str, Any]) -> dict[str, Any]:
     for key in list(public):
         if key.startswith("_"):
             del public[key]
+    canonicalize_resource_access(public)
 
     storage = get_path(public, ["spec", "network", "storage"])
     if isinstance(storage, dict) and storage.get("ephemeral") is True:
@@ -1360,7 +1679,7 @@ def print_json(value: Any) -> None:
 
 
 def print_errors(errors: list[dict[str, str]]) -> None:
-    print_json({"errors": errors})
+    print_json({"errors": sorted(errors, key=lambda item: (item["field"], item["type"]))})
 
 
 if __name__ == "__main__":

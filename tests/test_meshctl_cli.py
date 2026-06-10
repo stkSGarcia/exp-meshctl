@@ -124,7 +124,14 @@ class MeshCtlCliTests(unittest.TestCase):
             {"limit": "1Gi", "request": "1Gi"},
             created["spec"]["resources"]["memory"],
         )
-        self.assertEqual(True, created["spec"]["access"]["authentication"]["enabled"])
+        self.assertEqual(
+            {
+                "authentication": {"enabled": True, "digestAlgorithm": "SHA-256"},
+                "permissions": {"enabled": False},
+                "encryption": {"source": "None", "clientMode": "None"},
+            },
+            created["spec"]["access"],
+        )
         self.assertEqual("FullStop", created["spec"]["migration"]["strategy"])
         self.assertEqual(
             {"size": "1Gi", "ephemeral": False},
@@ -133,6 +140,368 @@ class MeshCtlCliTests(unittest.TestCase):
         self.assertEqual(1, created["spec"]["network"]["replicationFactor"])
         self.assertNotIn("runtime", created["spec"])
         self.assertNotIn("cpu", created["spec"]["resources"])
+
+        described = self.assert_json_stdout(self.run_meshctl("mesh", "describe", "minimal"))
+        self.assertEqual(created["spec"]["access"], described["spec"]["access"])
+
+    def test_access_authentication_validation_and_output(self) -> None:
+        credentialed = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: credentialed
+                        spec:
+                          access:
+                            credentialRef: mesh-secret
+                            authentication:
+                              digestAlgorithm: SHA-512
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {"enabled": True, "digestAlgorithm": "SHA-512"},
+            credentialed["spec"]["access"]["authentication"],
+        )
+        self.assertEqual("mesh-secret", credentialed["spec"]["access"]["credentialRef"])
+
+        invalid_digest = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: bad-digest
+                        spec:
+                          access:
+                            authentication:
+                              digestAlgorithm: MD5
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {("spec.access.authentication.digestAlgorithm", "invalid")},
+            {(item["field"], item["type"]) for item in invalid_digest["errors"]},
+        )
+
+        disabled = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: disabled-auth
+                        spec:
+                          access:
+                            authentication:
+                              enabled: false
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {"enabled": False},
+            disabled["spec"]["access"]["authentication"],
+        )
+        self.assertNotIn("credentialRef", disabled["spec"]["access"])
+
+        forbidden = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: forbidden-auth
+                        spec:
+                          access:
+                            credentialRef: mesh-secret
+                            authentication:
+                              enabled: false
+                              digestAlgorithm: SHA-256
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {
+                ("spec.access.authentication.digestAlgorithm", "forbidden"),
+                ("spec.access.credentialRef", "forbidden"),
+            },
+            {(item["field"], item["type"]) for item in forbidden["errors"]},
+        )
+
+    def test_access_permissions_validation_and_output(self) -> None:
+        role_based = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: role-based
+                        spec:
+                          access:
+                            permissions:
+                              enabled: true
+                              roles: [{"name": "admin", "permissions": ["read", "write"]}]
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {
+                "enabled": True,
+                "roles": [{"name": "admin", "permissions": ["read", "write"]}],
+            },
+            role_based["spec"]["access"]["permissions"],
+        )
+
+        missing_roles = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: no-roles
+                        spec:
+                          access:
+                            permissions:
+                              enabled: true
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {("spec.access.permissions.roles", "required")},
+            {(item["field"], item["type"]) for item in missing_roles["errors"]},
+        )
+
+        invalid_roles = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: invalid-roles
+                        spec:
+                          access:
+                            permissions:
+                              enabled: true
+                              roles: [{"name": "", "permissions": []}, {"name": "admin", "permissions": ["read"]}, {"name": "admin", "permissions": ["write"]}]
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {
+                ("spec.access.permissions.roles", "duplicate"),
+                ("spec.access.permissions.roles[0].name", "required"),
+                ("spec.access.permissions.roles[0].permissions", "required"),
+            },
+            {(item["field"], item["type"]) for item in invalid_roles["errors"]},
+        )
+
+    def test_access_encryption_validation_and_output(self) -> None:
+        secret = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: secret-encryption
+                        spec:
+                          access:
+                            encryption:
+                              source: Secret
+                              certRef: mesh-cert
+                              clientMode: Authenticate
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {"source": "Secret", "clientMode": "Authenticate", "certRef": "mesh-cert"},
+            secret["spec"]["access"]["encryption"],
+        )
+
+        service = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: service-encryption
+                        spec:
+                          access:
+                            encryption:
+                              source: Service
+                              certServiceRef: cert-service
+                              clientMode: Validate
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {
+                "source": "Service",
+                "clientMode": "Validate",
+                "certServiceRef": "cert-service",
+            },
+            service["spec"]["access"]["encryption"],
+        )
+
+        invalid = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: bad-encryption
+                        spec:
+                          access:
+                            encryption:
+                              source: None
+                              certRef: mesh-cert
+                              certServiceRef: cert-service
+                              clientMode: Authenticate
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {
+                ("spec.access.encryption.certRef", "forbidden"),
+                ("spec.access.encryption.certServiceRef", "forbidden"),
+                ("spec.access.encryption.clientMode", "invalid"),
+            },
+            {(item["field"], item["type"]) for item in invalid["errors"]},
+        )
+
+        missing_secret_ref = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: missing-cert
+                        spec:
+                          access:
+                            encryption:
+                              source: Secret
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {("spec.access.encryption.certRef", "required")},
+            {(item["field"], item["type"]) for item in missing_secret_ref["errors"]},
+        )
+
+    def test_access_update_validation_is_atomic_and_errors_are_sorted(self) -> None:
+        created = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: access-atomic
+                        spec:
+                          access:
+                            encryption:
+                              source: Secret
+                              certRef: original-cert
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual("Secret", created["spec"]["access"]["encryption"]["source"])
+
+        invalid_update = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: access-atomic
+                        spec:
+                          access:
+                            authentication:
+                              enabled: false
+                              digestAlgorithm: SHA-256
+                            encryption:
+                              source: None
+                              clientMode: Authenticate
+                        """
+                    )
+                ),
+            )
+        )
+        error_pairs = [(item["field"], item["type"]) for item in invalid_update["errors"]]
+        self.assertEqual(sorted(error_pairs), error_pairs)
+        self.assertIn(
+            ("spec.access.authentication.digestAlgorithm", "forbidden"),
+            error_pairs,
+        )
+        self.assertIn(("spec.access.encryption.certRef", "forbidden"), error_pairs)
+        self.assertIn(("spec.access.encryption.clientMode", "invalid"), error_pairs)
+
+        described = self.assert_json_stdout(
+            self.run_meshctl("mesh", "describe", "access-atomic")
+        )
+        self.assertEqual(created["spec"]["access"], described["spec"]["access"])
 
     def test_validation_errors_and_no_stderr(self) -> None:
         path = self.write_yaml(
