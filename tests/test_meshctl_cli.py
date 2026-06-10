@@ -126,6 +126,11 @@ class MeshCtlCliTests(unittest.TestCase):
         )
         self.assertEqual(True, created["spec"]["access"]["authentication"]["enabled"])
         self.assertEqual("FullStop", created["spec"]["migration"]["strategy"])
+        self.assertEqual(
+            {"size": "1Gi", "ephemeral": False},
+            created["spec"]["network"]["storage"],
+        )
+        self.assertEqual(1, created["spec"]["network"]["replicationFactor"])
         self.assertNotIn("runtime", created["spec"])
         self.assertNotIn("cpu", created["spec"]["resources"])
 
@@ -135,7 +140,7 @@ class MeshCtlCliTests(unittest.TestCase):
             metadata:
               name: Bad_Name
             spec:
-              instances: 0
+              instances: -1
               runtime: 1.2
               resources:
                 memory:
@@ -257,6 +262,422 @@ class MeshCtlCliTests(unittest.TestCase):
             {("metadata.name", "not_found")},
             {(item["field"], item["type"]) for item in payload["errors"]},
         )
+
+    def test_update_merges_nested_fields_and_preserves_omitted_values(self) -> None:
+        created = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: mergeable
+                        spec:
+                          instances: 2
+                          network:
+                            storage:
+                              size: 5Gi
+                              className: slow
+                            replicationFactor: 2
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual("5Gi", created["spec"]["network"]["storage"]["size"])
+
+        updated = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: mergeable
+                        spec:
+                          network:
+                            storage:
+                              className: fast
+                        """
+                    )
+                ),
+            )
+        )
+
+        self.assertEqual(2, updated["spec"]["instances"])
+        self.assertEqual("fast", updated["spec"]["network"]["storage"]["className"])
+        self.assertEqual("5Gi", updated["spec"]["network"]["storage"]["size"])
+        self.assertEqual(2, updated["spec"]["network"]["replicationFactor"])
+
+    def test_update_errors_are_atomic(self) -> None:
+        self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: atomic
+                        spec:
+                          instances: 2
+                          network:
+                            storage:
+                              size: 4Gi
+                        """
+                    )
+                ),
+            )
+        )
+
+        invalid_yaml = self.root / "invalid-update.yaml"
+        invalid_yaml.write_text("metadata\n  name: nope\n", encoding="utf-8")
+        parse_error = self.assert_json_stdout(
+            self.run_meshctl("mesh", "update", "-f", str(invalid_yaml))
+        )
+        self.assertEqual(
+            {("", "parse")},
+            {(item["field"], item["type"]) for item in parse_error["errors"]},
+        )
+
+        missing = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: missing
+                        spec:
+                          instances: 1
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {("metadata.name", "not_found")},
+            {(item["field"], item["type"]) for item in missing["errors"]},
+        )
+
+        immutable = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: atomic
+                        spec:
+                          instances: 1
+                          network:
+                            storage:
+                              size: 8Gi
+                        """
+                    )
+                ),
+            )
+        )
+        errors = immutable["errors"]
+        self.assertIn(
+            ("spec.network.storage.size", "immutable"),
+            {(item["field"], item["type"]) for item in errors},
+        )
+        self.assertIn("field 'spec.network.storage.size' is immutable after creation", [item["message"] for item in errors])
+
+        described = self.assert_json_stdout(self.run_meshctl("mesh", "describe", "atomic"))
+        self.assertEqual(2, described["spec"]["instances"])
+        self.assertEqual("4Gi", described["spec"]["network"]["storage"]["size"])
+
+    def test_storage_output_projection_and_canonical_size(self) -> None:
+        created = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: cache
+                        spec:
+                          instances: 1
+                          network:
+                            storage:
+                              size: 10Gi
+                              ephemeral: true
+                        """
+                    )
+                ),
+            )
+        )
+        storage = created["spec"]["network"]["storage"]
+        self.assertEqual({"ephemeral": True}, storage)
+
+        store = json.loads(self.store.read_text(encoding="utf-8"))
+        self.assertEqual("10Gi", store["cache"]["spec"]["network"]["storage"]["size"])
+
+        updated = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: cache
+                        spec:
+                          network:
+                            storage:
+                              className: local
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(True, updated["spec"]["network"]["storage"]["ephemeral"])
+        self.assertEqual("local", updated["spec"]["network"]["storage"]["className"])
+        self.assertNotIn("size", updated["spec"]["network"]["storage"])
+        store = json.loads(self.store.read_text(encoding="utf-8"))
+        self.assertEqual("10Gi", store["cache"]["spec"]["network"]["storage"]["size"])
+
+    def test_replication_factor_defaults_and_validation(self) -> None:
+        created = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: replicas
+                        spec:
+                          instances: 2
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(2, created["spec"]["network"]["replicationFactor"])
+
+        invalid_create = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: invalid-replicas
+                        spec:
+                          instances: 2
+                          network:
+                            replicationFactor: 0
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertIn(
+            ("spec.network.replicationFactor", "invalid"),
+            {(item["field"], item["type"]) for item in invalid_create["errors"]},
+        )
+
+        invalid_update = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: replicas
+                        spec:
+                          network:
+                            replicationFactor: 3
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertIn(
+            ("spec.network.replicationFactor", "invalid"),
+            {(item["field"], item["type"]) for item in invalid_update["errors"]},
+        )
+        self.assertIn("3", invalid_update["errors"][0]["message"])
+        self.assertIn("2", invalid_update["errors"][0]["message"])
+
+    def test_status_conditions_and_lifecycle_transitions(self) -> None:
+        created = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: lifecycle
+                        spec:
+                          instances: 2
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual("Running", created["status"]["state"])
+        self.assertEqual(True, created["status"]["stable"])
+        self.assertEqual({"ready": 2, "starting": 0, "stopped": 0}, created["status"]["instances"])
+        self.assertEqual(["Healthy", "PrechecksPassed"], [item["type"] for item in created["status"]["conditions"]])
+
+        scaled_up = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: lifecycle
+                        spec:
+                          instances: 4
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(False, scaled_up["status"]["stable"])
+        self.assertEqual({"ready": 2, "starting": 2, "stopped": 0}, scaled_up["status"]["instances"])
+        self.assertIn("Scaling", [item["type"] for item in scaled_up["status"]["conditions"]])
+
+        described_after_scale = self.assert_json_stdout(self.run_meshctl("mesh", "describe", "lifecycle"))
+        self.assertEqual(True, described_after_scale["status"]["stable"])
+        self.assertEqual({"ready": 4, "starting": 0, "stopped": 0}, described_after_scale["status"]["instances"])
+        self.assertNotIn("Scaling", [item["type"] for item in described_after_scale["status"]["conditions"]])
+
+        scaled_down = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: lifecycle
+                        spec:
+                          instances: 2
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertIn("Scaling", [item["type"] for item in scaled_down["status"]["conditions"]])
+        described_after_scale_down = self.assert_json_stdout(self.run_meshctl("mesh", "describe", "lifecycle"))
+        self.assertNotIn("Scaling", [item["type"] for item in described_after_scale_down["status"]["conditions"]])
+
+        stopped = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: lifecycle
+                        spec:
+                          instances: 0
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual("Stopped", stopped["status"]["state"])
+        self.assertEqual(2, stopped["status"]["desiredInstancesOnResume"])
+        self.assertEqual({"ready": 0, "starting": 0, "stopped": 2}, stopped["status"]["instances"])
+        self.assertIn("GracefulShutdown", [item["type"] for item in stopped["status"]["conditions"]])
+
+        described_stopped = self.assert_json_stdout(self.run_meshctl("mesh", "describe", "lifecycle"))
+        self.assertEqual(2, described_stopped["status"]["desiredInstancesOnResume"])
+        self.assertIn("GracefulShutdown", [item["type"] for item in described_stopped["status"]["conditions"]])
+
+        resumed = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: lifecycle
+                        spec:
+                          network:
+                            storage:
+                              className: warm
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual("Running", resumed["status"]["state"])
+        self.assertEqual({"ready": 0, "starting": 2, "stopped": 0}, resumed["status"]["instances"])
+        self.assertNotIn("desiredInstancesOnResume", resumed["status"])
+        self.assertNotIn("GracefulShutdown", [item["type"] for item in resumed["status"]["conditions"]])
+
+        described_resumed = self.assert_json_stdout(self.run_meshctl("mesh", "describe", "lifecycle"))
+        self.assertEqual({"ready": 2, "starting": 0, "stopped": 0}, described_resumed["status"]["instances"])
+
+        self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: lifecycle
+                        spec:
+                          instances: 0
+                        """
+                    )
+                ),
+            )
+        )
+        explicit_resume = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: lifecycle
+                        spec:
+                          instances: 3
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual({"ready": 0, "starting": 3, "stopped": 0}, explicit_resume["status"]["instances"])
 
 
 if __name__ == "__main__":
