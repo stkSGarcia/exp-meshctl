@@ -1936,6 +1936,573 @@ class MeshCtlCliTests(unittest.TestCase):
         self.assertNotIn("Migration", [item["type"] for item in rolled_back["status"]["conditions"]])
         self.assertNotIn("rollback", rolled_back["spec"]["migration"])
 
+    def test_metadata_tags_telemetry_probe_and_placement_defaults(self) -> None:
+        created = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: tagged
+                          tags:
+                            mesh.io/telemetry: "true"
+                            mesh.io/targetLabels: region,env
+                            mesh.io/probeTargetLabels: probe
+                            mesh.io/instanceLabels: node,ordinal
+                            owner: platform
+                        spec:
+                          placement:
+                            affinity:
+                              scope: zone
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual("platform", created["metadata"]["tags"]["owner"])
+        self.assertEqual(
+            {"type": "preferred", "scope": "zone"},
+            created["spec"]["placement"]["affinity"],
+        )
+        self.assertEqual(
+            {
+                "enabled": True,
+                "labels": {
+                    "targetLabels": ["region", "env"],
+                    "probeTargetLabels": ["probe"],
+                    "instanceLabels": ["node", "ordinal"],
+                },
+            },
+            created["status"]["telemetryProbe"],
+        )
+
+        disabled = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: tagged
+                          tags:
+                            mesh.io/telemetry: "false"
+                            mesh.io/targetLabels: ignored
+                        spec:
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual({"enabled": False}, disabled["status"]["telemetryProbe"])
+
+        minimal = self.create_mesh("telemetry-default")
+        self.assertEqual({"enabled": True}, minimal["status"]["telemetryProbe"])
+        self.assertEqual(
+            {"type": "preferred", "scope": "node"},
+            minimal["spec"]["placement"]["affinity"],
+        )
+
+    def test_placement_validation_errors(self) -> None:
+        invalid = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: invalid-placement
+                        spec:
+                          placement:
+                            affinity:
+                              type: best
+                              scope: rack
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {
+                ("spec.placement.affinity.type", "invalid"),
+                ("spec.placement.affinity.scope", "invalid"),
+            },
+            {(item["field"], item["type"]) for item in invalid["errors"]},
+        )
+
+        invalid_shape = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: invalid-placement-shape
+                        spec:
+                          placement:
+                            affinity: required
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {("spec.placement.affinity", "invalid")},
+            {(item["field"], item["type"]) for item in invalid_shape["errors"]},
+        )
+
+    def test_multi_region_defaults_remotes_conditions_and_stability(self) -> None:
+        created = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: regioned
+                        spec:
+                          regions:
+                            local:
+                              name: us-east
+                              expose:
+                                type: Internal
+                              maxRelayNodes: 2
+                            remotes: [{"name": "eu", "url": "https://eu.example.test", "credentialRef": "eu-secret"}, {"name": "ap", "url": "https://ap.example.test", "namespace": "mesh-ap", "clusterRef": "cluster-ap"}]
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {
+                "enabled": True,
+                "interval": 10000,
+                "timeout": 30000,
+            },
+            created["spec"]["regions"]["local"]["discovery"]["heartbeat"],
+        )
+        self.assertEqual(
+            ["eu", "ap"],
+            [remote["name"] for remote in created["spec"]["regions"]["remotes"]],
+        )
+        condition_types = [item["type"] for item in created["status"]["conditions"]]
+        self.assertEqual(sorted(condition_types), condition_types)
+        self.assertIn("DiscoveryRelayReady", condition_types)
+        self.assertIn("RegionViewFormed", condition_types)
+        self.assertTrue(created["status"]["stable"])
+
+        single = self.create_mesh("single-region")
+        single_conditions = [item["type"] for item in single["status"]["conditions"]]
+        self.assertNotIn("DiscoveryRelayReady", single_conditions)
+        self.assertNotIn("RegionViewFormed", single_conditions)
+
+        duplicate = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: duplicate-remote
+                        spec:
+                          regions:
+                            local:
+                              name: us
+                              expose:
+                                type: Internal
+                            remotes: [{"name": "eu", "url": "https://one.example.test"}, {"name": "eu", "url": "https://two.example.test"}]
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertIn(
+            ("spec.regions.remotes[1].name", "duplicate"),
+            {(item["field"], item["type"]) for item in duplicate["errors"]},
+        )
+
+    def test_multi_region_validation_discovery_encryption_and_warnings(self) -> None:
+        missing_local = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: missing-local
+                        spec:
+                          regions: {}
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertIn(
+            ("spec.regions.local", "required"),
+            {(item["field"], item["type"]) for item in missing_local["errors"]},
+        )
+
+        invalid = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: invalid-region
+                        spec:
+                          regions:
+                            local:
+                              name: ""
+                              expose:
+                                type: Tunnel
+                              maxRelayNodes:
+                              discovery:
+                                type: dns
+                                heartbeat:
+                                  interval: 30000
+                                  timeout: 30000
+                              encryption:
+                                protocol: TLSv1.1
+                        """
+                    )
+                ),
+            )
+        )
+        errors = {(item["field"], item["type"]) for item in invalid["errors"]}
+        self.assertIn(("spec.regions.local.name", "required"), errors)
+        self.assertIn(("spec.regions.local.expose.type", "invalid"), errors)
+        self.assertIn(("spec.regions.local.maxRelayNodes", "invalid"), errors)
+        self.assertIn(("spec.regions.local.discovery.type", "invalid"), errors)
+        self.assertIn(("spec.regions.local.discovery.heartbeat", "invalid"), errors)
+        self.assertIn(("spec.regions.local.encryption.protocol", "invalid"), errors)
+        self.assertNotIn("warnings", invalid)
+
+        encrypted = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: encrypted-region
+                        spec:
+                          regions:
+                            local:
+                              name: us
+                              expose:
+                                type: Gateway
+                              encryption:
+                                transportKeyStore:
+                                  secretRef: transport-secret
+                                  alias: transport
+                                  filename: transport.p12
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            "TLSv1.3",
+            encrypted["spec"]["regions"]["local"]["encryption"]["protocol"],
+        )
+        self.assertEqual(
+            [
+                {
+                    "field": "spec.regions.local.encryption.trustStore",
+                    "message": "trustStore is recommended for region encryption",
+                }
+            ],
+            encrypted["warnings"],
+        )
+
+        missing_transport = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: missing-transport
+                        spec:
+                          regions:
+                            local:
+                              name: us
+                              expose:
+                                type: Gateway
+                              encryption: {}
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertIn(
+            ("spec.regions.local.encryption.transportKeyStore", "required"),
+            {(item["field"], item["type"]) for item in missing_transport["errors"]},
+        )
+
+    def test_live_migration_rejected_with_regions_on_create_and_update(self) -> None:
+        create_error = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: live-region-create
+                        spec:
+                          migration:
+                            strategy: LiveMigration
+                          regions:
+                            local:
+                              name: us
+                              expose:
+                                type: Internal
+                        """
+                    )
+                ),
+            )
+        )
+        expected = {
+            "field": "spec.migration.strategy",
+            "message": "LiveMigration strategy is not supported with multi-region topology",
+            "type": "invalid",
+        }
+        self.assertIn(expected, create_error["errors"])
+
+        self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: live-region-update
+                        spec:
+                          migration:
+                            strategy: LiveMigration
+                        """
+                    )
+                ),
+            )
+        )
+        update_error = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: live-region-update
+                        spec:
+                          regions:
+                            local:
+                              name: us
+                              expose:
+                                type: Internal
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertIn(expected, update_error["errors"])
+
+    def test_config_bundle_ref_update_refresh_is_transient(self) -> None:
+        invalid = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: invalid-config-ref
+                        spec:
+                          configBundleRef: 42
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {("spec.configBundleRef", "invalid")},
+            {(item["field"], item["type"]) for item in invalid["errors"]},
+        )
+
+        created = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: config-ref
+                        spec:
+                          configBundleRef: bundle-a
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual("bundle-a", created["spec"]["configBundleRef"])
+        self.assertNotIn("configRefresh", created["status"])
+
+        changed = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: config-ref
+                        spec:
+                          configBundleRef: bundle-b
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {"currentRef": "bundle-b", "pending": True, "previousRef": "bundle-a"},
+            changed["status"]["configRefresh"],
+        )
+        described = self.assert_json_stdout(self.run_meshctl("mesh", "describe", "config-ref"))
+        self.assertNotIn("configRefresh", described["status"])
+        self.assertEqual("bundle-b", described["spec"]["configBundleRef"])
+
+        omitted = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: config-ref
+                        spec:
+                          instances: 2
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual("bundle-b", omitted["spec"]["configBundleRef"])
+        self.assertNotIn("configRefresh", omitted["status"])
+
+        cleared = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: config-ref
+                        spec:
+                          configBundleRef:
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {"currentRef": None, "pending": True, "previousRef": "bundle-b"},
+            cleared["status"]["configRefresh"],
+        )
+        self.assertNotIn("configBundleRef", cleared["spec"])
+
+    def test_extensions_order_integrity_and_validation(self) -> None:
+        created = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: extended
+                        spec:
+                          extensions: [{"url": "https://example.test/ext.yaml", "integrity": "sha256-abc"}, {"artifact": "oci://registry.example.test/ext:1"}]
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            [
+                {"url": "https://example.test/ext.yaml", "integrity": "sha256-abc"},
+                {"artifact": "oci://registry.example.test/ext:1"},
+            ],
+            created["spec"]["extensions"],
+        )
+
+        invalid = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: invalid-extensions
+                        spec:
+                          extensions: [{"url": "https://example.test/ext.yaml", "artifact": "oci://registry.example.test/ext:1"}, {"integrity": "sha256-empty"}]
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {
+                (
+                    "spec.extensions[0]",
+                    "invalid",
+                    "exactly one of 'url' or 'artifact' must be set",
+                ),
+                (
+                    "spec.extensions[1]",
+                    "invalid",
+                    "exactly one of 'url' or 'artifact' must be set",
+                ),
+            },
+            {(item["field"], item["type"], item["message"]) for item in invalid["errors"]},
+        )
+
     def test_vault_create_describe_list_update_and_delete(self) -> None:
         self.assert_json_stdout(
             self.run_meshctl(
