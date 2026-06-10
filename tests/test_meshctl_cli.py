@@ -424,7 +424,7 @@ class MeshCtlCliTests(unittest.TestCase):
         self.assertEqual({"ephemeral": True}, storage)
 
         store = json.loads(self.store.read_text(encoding="utf-8"))
-        self.assertEqual("10Gi", store["cache"]["spec"]["network"]["storage"]["size"])
+        self.assertEqual("10Gi", store["meshes"]["cache"]["spec"]["network"]["storage"]["size"])
 
         updated = self.assert_json_stdout(
             self.run_meshctl(
@@ -449,7 +449,27 @@ class MeshCtlCliTests(unittest.TestCase):
         self.assertEqual("local", updated["spec"]["network"]["storage"]["className"])
         self.assertNotIn("size", updated["spec"]["network"]["storage"])
         store = json.loads(self.store.read_text(encoding="utf-8"))
-        self.assertEqual("10Gi", store["cache"]["spec"]["network"]["storage"]["size"])
+        self.assertEqual("10Gi", store["meshes"]["cache"]["spec"]["network"]["storage"]["size"])
+
+    def test_legacy_flat_store_shape_is_loaded_and_saved_as_collections(self) -> None:
+        self.store.write_text(
+            json.dumps(
+                {
+                    "legacy": {
+                        "metadata": {"name": "legacy"},
+                        "spec": {"instances": 1},
+                        "status": {},
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        described = self.assert_json_stdout(self.run_meshctl("mesh", "describe", "legacy"))
+        self.assertEqual("legacy", described["metadata"]["name"])
+        persisted = json.loads(self.store.read_text(encoding="utf-8"))
+        self.assertIn("legacy", persisted["meshes"])
+        self.assertEqual({}, persisted["vaults"])
 
     def test_replication_factor_defaults_and_validation(self) -> None:
         created = self.assert_json_stdout(
@@ -678,6 +698,498 @@ class MeshCtlCliTests(unittest.TestCase):
             )
         )
         self.assertEqual({"ready": 0, "starting": 3, "stopped": 0}, explicit_resume["status"]["instances"])
+
+    def test_vault_create_describe_list_update_and_delete(self) -> None:
+        self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: alpha
+                        spec:
+                          instances: 1
+                        """
+                    )
+                ),
+            )
+        )
+
+        beta = self.assert_json_stdout(
+            self.run_meshctl(
+                "vault",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: beta
+                        spec:
+                          meshRef: alpha
+                          templateRef: ref-a
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual("beta", beta["metadata"]["name"])
+        self.assertEqual("alpha", beta["spec"]["meshRef"])
+        self.assertEqual("beta", beta["spec"]["vaultName"])
+        self.assertEqual("retain", beta["spec"]["updatePolicy"])
+        self.assertEqual("Ready", beta["status"]["state"])
+        self.assertEqual(
+            [{"message": "", "status": "True", "type": "Ready"}],
+            beta["status"]["conditions"],
+        )
+
+        alpha_vault = self.assert_json_stdout(
+            self.run_meshctl(
+                "vault",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: alpha-vault
+                        spec:
+                          meshRef: alpha
+                          vaultName: logical-a
+                          updatePolicy: recreate
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual("logical-a", alpha_vault["spec"]["vaultName"])
+
+        described = self.assert_json_stdout(self.run_meshctl("vault", "describe", "beta"))
+        self.assertEqual(beta, described)
+
+        listed = self.assert_json_stdout(self.run_meshctl("vault", "list"))
+        self.assertEqual(
+            [
+                {
+                    "name": "alpha-vault",
+                    "meshRef": "alpha",
+                    "vaultName": "logical-a",
+                    "status": {"state": "Ready"},
+                },
+                {
+                    "name": "beta",
+                    "meshRef": "alpha",
+                    "vaultName": "beta",
+                    "status": {"state": "Ready"},
+                },
+            ],
+            listed,
+        )
+
+        updated = self.assert_json_stdout(
+            self.run_meshctl(
+                "vault",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: beta
+                        spec:
+                          updatePolicy: recreate
+                          templateRef: ref-b
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual("recreate", updated["spec"]["updatePolicy"])
+        self.assertEqual("ref-b", updated["spec"]["templateRef"])
+        self.assertEqual("alpha", updated["spec"]["meshRef"])
+        self.assertEqual("beta", updated["spec"]["vaultName"])
+
+        deleted = self.assert_json_stdout(self.run_meshctl("vault", "delete", "beta"))
+        self.assertEqual({"name": "beta"}, deleted["metadata"])
+        self.assertTrue(deleted["message"])
+        listed_after_delete = self.assert_json_stdout(self.run_meshctl("vault", "list"))
+        self.assertEqual(["alpha-vault"], [item["name"] for item in listed_after_delete])
+
+    def test_vault_parse_invalid_input_and_not_found_errors(self) -> None:
+        missing_describe = self.assert_json_stdout(
+            self.run_meshctl("vault", "describe", "missing")
+        )
+        self.assertEqual(
+            {("metadata.name", "not_found")},
+            {(item["field"], item["type"]) for item in missing_describe["errors"]},
+        )
+
+        missing_delete = self.assert_json_stdout(self.run_meshctl("vault", "delete", "missing"))
+        self.assertEqual(
+            {("metadata.name", "not_found")},
+            {(item["field"], item["type"]) for item in missing_delete["errors"]},
+        )
+
+        missing_update = self.assert_json_stdout(
+            self.run_meshctl(
+                "vault",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: missing
+                        spec:
+                          updatePolicy: recreate
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {("metadata.name", "not_found")},
+            {(item["field"], item["type"]) for item in missing_update["errors"]},
+        )
+
+        invalid_yaml = self.root / "invalid-vault.yaml"
+        invalid_yaml.write_text("metadata\n  name: nope\n", encoding="utf-8")
+        parse_error = self.assert_json_stdout(
+            self.run_meshctl("vault", "create", "-f", str(invalid_yaml))
+        )
+        self.assertEqual(
+            {("", "parse")},
+            {(item["field"], item["type"]) for item in parse_error["errors"]},
+        )
+
+        non_mapping = self.root / "vault-list.yaml"
+        non_mapping.write_text("- nope\n", encoding="utf-8")
+        invalid_root = self.assert_json_stdout(
+            self.run_meshctl("vault", "create", "-f", str(non_mapping))
+        )
+        self.assertEqual(
+            {("", "invalid")},
+            {(item["field"], item["type"]) for item in invalid_root["errors"]},
+        )
+
+    def test_vault_defaults_validation_and_parent_derived_status(self) -> None:
+        self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: parent
+                        spec:
+                          instances: 1
+                        """
+                    )
+                ),
+            )
+        )
+
+        missing_parent = self.assert_json_stdout(
+            self.run_meshctl(
+                "vault",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: missing-parent
+                        spec:
+                          meshRef: absent
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertIn(
+            ("spec.meshRef", "invalid"),
+            {(item["field"], item["type"]) for item in missing_parent["errors"]},
+        )
+        self.assertIn("absent", missing_parent["errors"][0]["message"])
+
+        invalid_policy = self.assert_json_stdout(
+            self.run_meshctl(
+                "vault",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: bad-policy
+                        spec:
+                          meshRef: parent
+                          updatePolicy: replace
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertIn(
+            ("spec.updatePolicy", "invalid"),
+            {(item["field"], item["type"]) for item in invalid_policy["errors"]},
+        )
+
+        both_templates = self.assert_json_stdout(
+            self.run_meshctl(
+                "vault",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: both-templates
+                        spec:
+                          meshRef: parent
+                          template: inline
+                          templateRef: external
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertIn(
+            ("spec.template", "invalid"),
+            {(item["field"], item["type"]) for item in both_templates["errors"]},
+        )
+
+        ready = self.assert_json_stdout(
+            self.run_meshctl(
+                "vault",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: follows-parent
+                        spec:
+                          meshRef: parent
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual("Ready", ready["status"]["state"])
+
+        self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: parent
+                        spec:
+                          instances: 2
+                        """
+                    )
+                ),
+            )
+        )
+        pending = self.assert_json_stdout(
+            self.run_meshctl("vault", "describe", "follows-parent")
+        )
+        self.assertEqual("Pending", pending["status"]["state"])
+        self.assertEqual("False", pending["status"]["conditions"][0]["status"])
+
+    def test_vault_duplicates_immutable_fields_and_atomic_update(self) -> None:
+        for mesh_name in ("alpha", "beta"):
+            self.assert_json_stdout(
+                self.run_meshctl(
+                    "mesh",
+                    "create",
+                    "-f",
+                    str(
+                        self.write_yaml(
+                            f"""
+                            metadata:
+                              name: {mesh_name}
+                            spec:
+                              instances: 1
+                            """
+                        )
+                    ),
+                )
+            )
+
+        self.assert_json_stdout(
+            self.run_meshctl(
+                "vault",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: locked
+                        spec:
+                          meshRef: alpha
+                          vaultName: shared
+                          updatePolicy: retain
+                        """
+                    )
+                ),
+            )
+        )
+
+        duplicate_name = self.assert_json_stdout(
+            self.run_meshctl(
+                "vault",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: locked
+                        spec:
+                          meshRef: alpha
+                          vaultName: other
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertIn(
+            ("metadata.name", "duplicate"),
+            {(item["field"], item["type"]) for item in duplicate_name["errors"]},
+        )
+
+        duplicate_pair = self.assert_json_stdout(
+            self.run_meshctl(
+                "vault",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: another
+                        spec:
+                          meshRef: alpha
+                          vaultName: shared
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertIn(
+            ("spec.vaultName", "duplicate"),
+            {(item["field"], item["type"]) for item in duplicate_pair["errors"]},
+        )
+
+        immutable_mesh = self.assert_json_stdout(
+            self.run_meshctl(
+                "vault",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: locked
+                        spec:
+                          meshRef: beta
+                          updatePolicy: recreate
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertIn(
+            ("spec.meshRef", "immutable"),
+            {(item["field"], item["type"]) for item in immutable_mesh["errors"]},
+        )
+
+        immutable_name = self.assert_json_stdout(
+            self.run_meshctl(
+                "vault",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: locked
+                        spec:
+                          vaultName: changed
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertIn(
+            ("spec.vaultName", "immutable"),
+            {(item["field"], item["type"]) for item in immutable_name["errors"]},
+        )
+
+        described = self.assert_json_stdout(self.run_meshctl("vault", "describe", "locked"))
+        self.assertEqual("retain", described["spec"]["updatePolicy"])
+        self.assertEqual("alpha", described["spec"]["meshRef"])
+        self.assertEqual("shared", described["spec"]["vaultName"])
+
+    def test_mesh_delete_conflicts_with_dependent_vaults(self) -> None:
+        self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: blocked
+                        spec:
+                          instances: 1
+                        """
+                    )
+                ),
+            )
+        )
+        self.assert_json_stdout(
+            self.run_meshctl(
+                "vault",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: dependent
+                        spec:
+                          meshRef: blocked
+                        """
+                    )
+                ),
+            )
+        )
+
+        blocked = self.assert_json_stdout(self.run_meshctl("mesh", "delete", "blocked"))
+        self.assertEqual(
+            {("metadata.name", "conflict")},
+            {(item["field"], item["type"]) for item in blocked["errors"]},
+        )
+        self.assertIn("dependent", blocked["errors"][0]["message"])
+        described = self.assert_json_stdout(self.run_meshctl("mesh", "describe", "blocked"))
+        self.assertEqual("blocked", described["metadata"]["name"])
+
+        self.assert_json_stdout(self.run_meshctl("vault", "delete", "dependent"))
+        deleted = self.assert_json_stdout(self.run_meshctl("mesh", "delete", "blocked"))
+        self.assertEqual({"name": "blocked"}, deleted["metadata"])
 
 
 if __name__ == "__main__":

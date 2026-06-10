@@ -40,6 +40,17 @@ def main(argv: list[str] | None = None) -> int:
             return mesh_delete(args.name)
         if args.mesh_operation == "update":
             return mesh_update(args.file)
+    if args.command == "vault":
+        if args.vault_operation == "create":
+            return vault_create(args.file)
+        if args.vault_operation == "list":
+            return vault_list()
+        if args.vault_operation == "describe":
+            return vault_describe(args.name)
+        if args.vault_operation == "delete":
+            return vault_delete(args.name)
+        if args.vault_operation == "update":
+            return vault_update(args.file)
     parser.print_help(sys.stderr)
     return 2
 
@@ -64,33 +75,51 @@ def build_parser() -> argparse.ArgumentParser:
 
     delete = mesh_operations.add_parser("delete")
     delete.add_argument("name")
+
+    vault = commands.add_parser("vault")
+    vault_operations = vault.add_subparsers(dest="vault_operation", required=True)
+
+    vault_create_parser = vault_operations.add_parser("create")
+    vault_create_parser.add_argument("-f", "--file", required=True)
+
+    vault_update_parser = vault_operations.add_parser("update")
+    vault_update_parser.add_argument("-f", "--file", required=True)
+
+    vault_operations.add_parser("list")
+
+    vault_describe_parser = vault_operations.add_parser("describe")
+    vault_describe_parser.add_argument("name")
+
+    vault_delete_parser = vault_operations.add_parser("delete")
+    vault_delete_parser.add_argument("name")
     return parser
 
 
 def mesh_create(input_path: str) -> int:
-    document, errors = load_mesh_input(input_path)
+    document, errors = load_resource_input(input_path)
     if errors:
         print_errors(errors)
         return 0
 
     store = load_store()
+    meshes = store["meshes"]
     resource, errors = normalize_mesh_for_create(document)
     name = resource.get("metadata", {}).get("name")
-    if isinstance(name, str) and name in store:
+    if isinstance(name, str) and name in meshes:
         errors.append(error("metadata.name", "Mesh already exists", "duplicate"))
 
     if errors:
         print_errors(errors)
         return 0
 
-    store[name] = resource
+    meshes[name] = resource
     save_store(store)
     print_json(public_resource(resource))
     return 0
 
 
 def mesh_update(input_path: str) -> int:
-    document, errors = load_mesh_input(input_path)
+    document, errors = load_resource_input(input_path)
     if errors:
         print_errors(errors)
         return 0
@@ -104,11 +133,12 @@ def mesh_update(input_path: str) -> int:
         return 0
 
     store = load_store()
-    if name not in store:
+    meshes = store["meshes"]
+    if name not in meshes:
         print_errors([error("metadata.name", "Mesh not found", "not_found")])
         return 0
 
-    stored = upgrade_stored_resource(store[name])
+    stored = upgrade_stored_resource(meshes[name])
     candidate = deep_merge(stored, update_patch(document))
     resume_without_count = should_resume_without_count(stored, document)
     if resume_without_count:
@@ -121,7 +151,7 @@ def mesh_update(input_path: str) -> int:
         return 0
 
     reconcile_update_status(stored, candidate, resume_without_count)
-    store[name] = candidate
+    meshes[name] = candidate
     save_store(store)
     print_json(public_resource(candidate))
     return 0
@@ -129,9 +159,10 @@ def mesh_update(input_path: str) -> int:
 
 def mesh_list() -> int:
     store = load_store()
+    meshes = store["meshes"]
     summaries = [
         {"name": name, "status": {"state": public_resource(resource)["status"]["state"]}}
-        for name, resource in sorted(store.items(), key=lambda item: item[0])
+        for name, resource in sorted(meshes.items(), key=lambda item: item[0])
     ]
     print_json(summaries)
     return 0
@@ -139,14 +170,15 @@ def mesh_list() -> int:
 
 def mesh_describe(name: str) -> int:
     store = load_store()
-    if name not in store:
+    meshes = store["meshes"]
+    if name not in meshes:
         print_errors([error("metadata.name", "Mesh not found", "not_found")])
         return 0
 
-    resource = upgrade_stored_resource(store[name])
+    resource = upgrade_stored_resource(meshes[name])
     completed = complete_pending_transition(resource)
-    if completed or resource != store[name]:
-        store[name] = resource
+    if completed or resource != meshes[name]:
+        meshes[name] = resource
         save_store(store)
     print_json(public_resource(resource))
     return 0
@@ -154,12 +186,127 @@ def mesh_describe(name: str) -> int:
 
 def mesh_delete(name: str) -> int:
     store = load_store()
-    if name not in store:
+    meshes = store["meshes"]
+    vaults = store["vaults"]
+    if name not in meshes:
         print_errors([error("metadata.name", "Mesh not found", "not_found")])
         return 0
-    del store[name]
+    dependents = sorted(
+        vault_name
+        for vault_name, vault in vaults.items()
+        if get_path(vault, ["spec", "meshRef"]) == name
+    )
+    if dependents:
+        print_errors(
+            [
+                error(
+                    "metadata.name",
+                    f"Mesh {name} is referenced by vaults: {', '.join(dependents)}",
+                    "conflict",
+                )
+            ]
+        )
+        return 0
+    del meshes[name]
     save_store(store)
     print_json({"message": f"Deleted mesh {name}", "metadata": {"name": name}})
+    return 0
+
+
+def vault_create(input_path: str) -> int:
+    document, errors = load_resource_input(input_path)
+    if errors:
+        print_errors(errors)
+        return 0
+
+    store = load_store()
+    vaults = store["vaults"]
+    resource, errors = normalize_vault_for_create(document)
+    name = resource.get("metadata", {}).get("name")
+    if isinstance(name, str) and name in vaults:
+        errors.append(error("metadata.name", "Vault already exists", "duplicate"))
+    validate_vault_resource(resource, store, None, errors)
+
+    if errors:
+        print_errors(errors)
+        return 0
+
+    vaults[name] = resource
+    save_store(store)
+    print_json(public_vault(resource, store["meshes"]))
+    return 0
+
+
+def vault_update(input_path: str) -> int:
+    document, errors = load_resource_input(input_path)
+    if errors:
+        print_errors(errors)
+        return 0
+
+    metadata = document.get("metadata")
+    name = metadata.get("name") if isinstance(metadata, dict) else None
+    errors = []
+    validate_name(name, errors)
+    if errors:
+        print_errors(errors)
+        return 0
+
+    store = load_store()
+    vaults = store["vaults"]
+    if name not in vaults:
+        print_errors([error("metadata.name", "Vault not found", "not_found")])
+        return 0
+
+    stored = upgrade_stored_vault(vaults[name])
+    candidate = deep_merge(stored, vault_update_patch(document))
+    validate_vault_resource(candidate, store, name, errors, stored)
+    if errors:
+        print_errors(errors)
+        return 0
+
+    vaults[name] = candidate
+    save_store(store)
+    print_json(public_vault(candidate, store["meshes"]))
+    return 0
+
+
+def vault_list() -> int:
+    store = load_store()
+    meshes = store["meshes"]
+    summaries = []
+    for name, vault in sorted(store["vaults"].items(), key=lambda item: item[0]):
+        public = public_vault(vault, meshes)
+        summaries.append(
+            {
+                "name": name,
+                "meshRef": public["spec"].get("meshRef"),
+                "vaultName": public["spec"].get("vaultName"),
+                "status": {"state": public["status"]["state"]},
+            }
+        )
+    print_json(summaries)
+    return 0
+
+
+def vault_describe(name: str) -> int:
+    store = load_store()
+    vaults = store["vaults"]
+    if name not in vaults:
+        print_errors([error("metadata.name", "Vault not found", "not_found")])
+        return 0
+    print_json(public_vault(vaults[name], store["meshes"]))
+    return 0
+
+
+def vault_delete(name: str) -> int:
+    store = load_store()
+    vaults = store["vaults"]
+    if name not in vaults:
+        print_errors([error("metadata.name", "Vault not found", "not_found")])
+        return 0
+    del vaults[name]
+    save_store(store)
+    print_json({"message": f"Deleted vault {name}", "metadata": {"name": name}})
     return 0
 
 
@@ -170,30 +317,45 @@ def store_path() -> Path:
     return Path.cwd() / ".meshctl_store.json"
 
 
-def load_store() -> dict[str, dict[str, Any]]:
-    path = store_path()
-    if not path.exists():
-        return {}
-    try:
-        content = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {}
-    if not isinstance(content, dict):
+def empty_store() -> dict[str, dict[str, dict[str, Any]]]:
+    return {"meshes": {}, "vaults": {}}
+
+
+def clean_resource_collection(value: Any) -> dict[str, dict[str, Any]]:
+    if not isinstance(value, dict):
         return {}
     return {
         str(name): resource
-        for name, resource in content.items()
+        for name, resource in value.items()
         if isinstance(resource, dict)
     }
 
 
-def save_store(store: dict[str, dict[str, Any]]) -> None:
+def load_store() -> dict[str, dict[str, dict[str, Any]]]:
+    path = store_path()
+    if not path.exists():
+        return empty_store()
+    try:
+        content = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return empty_store()
+    if not isinstance(content, dict):
+        return empty_store()
+    if "meshes" in content or "vaults" in content:
+        return {
+            "meshes": clean_resource_collection(content.get("meshes")),
+            "vaults": clean_resource_collection(content.get("vaults")),
+        }
+    return {"meshes": clean_resource_collection(content), "vaults": {}}
+
+
+def save_store(store: dict[str, dict[str, dict[str, Any]]]) -> None:
     path = store_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(store, sort_keys=True), encoding="utf-8")
 
 
-def load_mesh_input(input_path: str) -> tuple[dict[str, Any], list[dict[str, str]]]:
+def load_resource_input(input_path: str) -> tuple[dict[str, Any], list[dict[str, str]]]:
     document, parse_error = load_yaml_document(Path(input_path))
     if parse_error:
         return {}, [error("", parse_error, "parse")]
@@ -245,6 +407,13 @@ def parse_simple_yaml(text: str) -> tuple[Any, str | None]:
         return None, None
     if lines[0][0] != 0:
         return None, "Root mapping must start at indentation zero"
+    if lines[0][1].startswith("- "):
+        values: list[Any] = []
+        for indent, content in lines:
+            if indent != 0 or not content.startswith("- "):
+                return None, f"Invalid sequence line: {content}"
+            values.append(parse_scalar(content[2:].strip()))
+        return values, None
 
     root: dict[str, Any] = {}
     stack: list[tuple[int, dict[str, Any]]] = [(-1, root)]
@@ -324,6 +493,154 @@ def normalize_mesh_for_create(
     initialize_status(resource)
     validate_merged_resource(resource, None, errors)
     return resource, errors
+
+
+def normalize_vault_for_create(
+    document: dict[str, Any],
+) -> tuple[dict[str, Any], list[dict[str, str]]]:
+    errors: list[dict[str, str]] = []
+    metadata = document.get("metadata")
+    spec = document.get("spec")
+
+    if not isinstance(metadata, dict):
+        metadata = {}
+    if not isinstance(spec, dict):
+        spec = {}
+
+    name = metadata.get("name")
+    validate_name(name, errors)
+
+    normalized_spec: dict[str, Any] = {}
+    mesh_ref = spec.get("meshRef")
+    normalize_required_string(mesh_ref, "spec.meshRef", "Mesh reference is required", errors)
+    if isinstance(mesh_ref, str) and mesh_ref:
+        normalized_spec["meshRef"] = mesh_ref
+
+    vault_name = spec.get("vaultName", name)
+    if isinstance(vault_name, str) and vault_name:
+        normalized_spec["vaultName"] = vault_name
+    else:
+        errors.append(error("spec.vaultName", "Vault name must be a non-empty string", "invalid"))
+
+    update_policy = spec.get("updatePolicy", "retain")
+    normalized_spec["updatePolicy"] = update_policy
+    validate_vault_update_policy(update_policy, errors)
+
+    for field in ("template", "templateRef"):
+        if field in spec:
+            value = spec.get(field)
+            if value is not None and not isinstance(value, str):
+                errors.append(error(f"spec.{field}", f"{field} must be a string", "invalid"))
+            if value is not None:
+                normalized_spec[field] = value
+
+    validate_template_exclusivity(normalized_spec, errors)
+    return {"metadata": {"name": name}, "spec": normalized_spec, "status": {}}, errors
+
+
+def normalize_required_string(
+    value: Any,
+    field: str,
+    message: str,
+    errors: list[dict[str, str]],
+) -> None:
+    if value is None or value == "":
+        errors.append(error(field, message, "required"))
+    elif not isinstance(value, str):
+        errors.append(error(field, f"{field} must be a string", "invalid"))
+
+
+def vault_update_patch(document: dict[str, Any]) -> dict[str, Any]:
+    patch: dict[str, Any] = {}
+    if isinstance(document.get("metadata"), dict):
+        patch["metadata"] = {"name": document["metadata"].get("name")}
+    if isinstance(document.get("spec"), dict):
+        patch["spec"] = copy.deepcopy(document["spec"])
+    return patch
+
+
+def upgrade_stored_vault(resource: dict[str, Any]) -> dict[str, Any]:
+    upgraded = copy.deepcopy(resource)
+    metadata = upgraded.setdefault("metadata", {})
+    if not isinstance(metadata, dict):
+        metadata = {}
+        upgraded["metadata"] = metadata
+    spec = upgraded.setdefault("spec", {})
+    if not isinstance(spec, dict):
+        spec = {}
+        upgraded["spec"] = spec
+    if "vaultName" not in spec and isinstance(metadata.get("name"), str):
+        spec["vaultName"] = metadata["name"]
+    spec.setdefault("updatePolicy", "retain")
+    upgraded.setdefault("status", {})
+    return upgraded
+
+
+def validate_vault_resource(
+    resource: dict[str, Any],
+    store: dict[str, dict[str, dict[str, Any]]],
+    current_name: str | None,
+    errors: list[dict[str, str]],
+    stored: dict[str, Any] | None = None,
+) -> None:
+    resource = upgrade_stored_vault(resource)
+    metadata = resource.get("metadata")
+    spec = resource.get("spec")
+    if not isinstance(metadata, dict):
+        metadata = {}
+    if not isinstance(spec, dict):
+        spec = {}
+
+    name = metadata.get("name")
+    validate_name(name, errors)
+    mesh_ref = spec.get("meshRef")
+    normalize_required_string(mesh_ref, "spec.meshRef", "Mesh reference is required", errors)
+    if isinstance(mesh_ref, str) and mesh_ref and mesh_ref not in store["meshes"]:
+        errors.append(error("spec.meshRef", f"Mesh {mesh_ref} does not exist", "invalid"))
+
+    vault_name = spec.get("vaultName")
+    if not isinstance(vault_name, str) or not vault_name:
+        errors.append(error("spec.vaultName", "Vault name must be a non-empty string", "invalid"))
+
+    validate_vault_update_policy(spec.get("updatePolicy"), errors)
+    validate_template_exclusivity(spec, errors)
+
+    for field in ("template", "templateRef"):
+        if field in spec and spec.get(field) is not None and not isinstance(spec.get(field), str):
+            errors.append(error(f"spec.{field}", f"{field} must be a string", "invalid"))
+
+    if stored is not None:
+        for field in ("meshRef", "vaultName"):
+            if get_path(stored, ["spec", field]) != spec.get(field):
+                path = f"spec.{field}"
+                errors.append(error(path, f"field '{path}' is immutable after creation", "immutable"))
+
+    for other_name, other in store["vaults"].items():
+        if current_name is not None and other_name == current_name:
+            continue
+        other_spec = other.get("spec") if isinstance(other.get("spec"), dict) else {}
+        if other_spec.get("meshRef") == mesh_ref and other_spec.get("vaultName") == vault_name:
+            errors.append(
+                error(
+                    "spec.vaultName",
+                    f"Vault identity {mesh_ref}/{vault_name} conflicts with {other_name}",
+                    "duplicate",
+                )
+            )
+            break
+
+
+def validate_vault_update_policy(value: Any, errors: list[dict[str, str]]) -> None:
+    if value not in {"retain", "recreate"}:
+        errors.append(error("spec.updatePolicy", "Update policy must be retain or recreate", "invalid"))
+
+
+def validate_template_exclusivity(
+    spec: dict[str, Any],
+    errors: list[dict[str, str]],
+) -> None:
+    if spec.get("template") is not None and spec.get("templateRef") is not None:
+        errors.append(error("spec.template", "template and templateRef are mutually exclusive", "invalid"))
 
 
 def update_patch(document: dict[str, Any]) -> dict[str, Any]:
@@ -928,6 +1245,26 @@ def public_resource(resource: dict[str, Any]) -> dict[str, Any]:
     status = public.get("status")
     if isinstance(status, dict):
         sort_conditions(status)
+    return public
+
+
+def public_vault(
+    resource: dict[str, Any],
+    meshes: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    public = copy.deepcopy(upgrade_stored_vault(resource))
+    spec = public.get("spec") if isinstance(public.get("spec"), dict) else {}
+    mesh_ref = spec.get("meshRef")
+    parent = meshes.get(mesh_ref) if isinstance(mesh_ref, str) else None
+    stable = False
+    if isinstance(parent, dict):
+        stable = public_resource(upgrade_stored_resource(parent))["status"].get("stable") is True
+
+    ready = "True" if stable else "False"
+    public["status"] = {
+        "conditions": [{"message": "", "status": ready, "type": "Ready"}],
+        "state": "Ready" if ready == "True" else "Pending",
+    }
     return public
 
 
