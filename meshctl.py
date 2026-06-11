@@ -43,6 +43,14 @@ MIGRATION_STAGES = {
     "RollingPatch": ["Migrate"],
     "LiveMigration": ["Prepare", "Migrate", "Finalize"],
 }
+EXPOSURE_TYPES = {"Gateway", "DirectPort", "Balancer"}
+EXPOSURE_ALLOWED_FIELDS = {
+    "Gateway": {"hostname", "annotations"},
+    "DirectPort": {"port", "directPort"},
+    "Balancer": {"port"},
+}
+DEFAULT_EXPOSURE_PORT = 443
+MANAGEMENT_PORT = 9990
 OPERATION_COLLECTIONS = {
     "task": "tasks",
     "snapshot": "snapshots",
@@ -69,6 +77,8 @@ def main(argv: list[str] | None = None) -> int:
             return mesh_update(args.file)
         if args.mesh_operation == "migrate":
             return mesh_migrate(args.name)
+        if args.mesh_operation == "shell":
+            return mesh_shell(args.name)
     if args.command == "vault":
         if args.vault_operation == "create":
             return vault_create(args.file)
@@ -121,6 +131,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     migrate = mesh_operations.add_parser("migrate")
     migrate.add_argument("name")
+
+    shell = mesh_operations.add_parser("shell")
+    shell.add_argument("name")
 
     vault = commands.add_parser("vault")
     vault_operations = vault.add_subparsers(dest="vault_operation", required=True)
@@ -223,6 +236,7 @@ def mesh_update(input_path: str) -> int:
         return 0
 
     canonicalize_resource_access(candidate)
+    canonicalize_resource_connectivity(candidate)
     reconcile_update_status(stored, candidate, resume_without_count)
     if runtime_change_starts_migration(stored, candidate):
         start_migration(stored, candidate)
@@ -328,6 +342,37 @@ def mesh_migrate(name: str) -> int:
     meshes[name] = resource
     save_store(store)
     print_json(public_resource(resource))
+    return 0
+
+
+def mesh_shell(name: str) -> int:
+    store = load_store()
+    meshes = store["meshes"]
+    if name not in meshes:
+        print_errors([error("metadata.name", "Mesh not found", "not_found")])
+        return 0
+
+    resource = upgrade_stored_resource(meshes[name])
+    completed = complete_pending_transition(resource)
+    if completed or resource != meshes[name]:
+        meshes[name] = resource
+        save_store(store)
+
+    public = public_resource(resource)
+    connection_details = get_path(public, ["status", "connectionDetails"])
+    if not isinstance(connection_details, dict):
+        print_errors(
+            [
+                error(
+                    "spec.exposure",
+                    f"mesh '{name}' has no exposure configured",
+                    "invalid",
+                )
+            ]
+        )
+        return 0
+
+    print_json(connection_details)
     return 0
 
 
@@ -760,6 +805,8 @@ def normalize_mesh_for_create(
     normalize_resources(spec, normalized_spec, errors)
     normalize_access(spec, normalized_spec, errors)
     normalize_migration(spec, normalized_spec, errors)
+    normalize_management(spec, normalized_spec, errors)
+    normalize_exposure(spec, normalized_spec, errors)
     normalize_network(spec, normalized_spec, errors, apply_defaults=True)
 
     resource = {
@@ -771,6 +818,7 @@ def normalize_mesh_for_create(
     validate_merged_resource(resource, None, errors, warnings)
     if not errors:
         canonicalize_resource_access(resource)
+        canonicalize_resource_connectivity(resource)
     return resource, errors, warnings
 
 
@@ -1318,6 +1366,9 @@ def upgrade_stored_resource(resource: dict[str, Any]) -> dict[str, Any]:
     spec["access"] = defaulted_access(spec.get("access"))
     if "migration" not in spec:
         spec["migration"] = {"strategy": "FullStop"}
+    spec["management"] = defaulted_management(spec.get("management"))
+    if spec.get("exposure") is None:
+        spec.pop("exposure", None)
     if "network" not in spec or not isinstance(spec.get("network"), dict):
         spec["network"] = {}
     network = spec["network"]
@@ -1581,6 +1632,32 @@ def canonicalize_resource_access(resource: dict[str, Any]) -> None:
     spec["access"] = canonical_access(spec.get("access"))
 
 
+def canonicalize_resource_connectivity(resource: dict[str, Any]) -> None:
+    spec = resource.setdefault("spec", {})
+    if not isinstance(spec, dict):
+        return
+
+    spec["management"] = defaulted_management(spec.get("management"))
+
+    exposure = spec.get("exposure")
+    if exposure is None:
+        spec.pop("exposure", None)
+        return
+    if not isinstance(exposure, dict):
+        spec.pop("exposure", None)
+        return
+
+    exposure_type = exposure.get("type")
+    if exposure_type not in EXPOSURE_TYPES:
+        return
+
+    canonical_exposure: dict[str, Any] = {"type": exposure_type}
+    for field in sorted(EXPOSURE_ALLOWED_FIELDS[exposure_type]):
+        if field in exposure:
+            canonical_exposure[field] = copy.deepcopy(exposure.get(field))
+    spec["exposure"] = canonical_exposure
+
+
 def canonical_access(value: Any) -> dict[str, Any]:
     access = defaulted_access(value)
 
@@ -1637,6 +1714,39 @@ def validate_migration_strategy(strategy: Any, errors: list[dict[str, str]]) -> 
                 "invalid",
             )
         )
+
+
+def normalize_management(
+    spec: dict[str, Any],
+    normalized_spec: dict[str, Any],
+    errors: list[dict[str, str]],
+) -> None:
+    management = spec.get("management")
+    if management is not None and not isinstance(management, dict):
+        errors.append(error("spec.management", "Management must be an object", "invalid"))
+        management = None
+    normalized_spec["management"] = defaulted_management(management)
+
+
+def defaulted_management(value: Any) -> dict[str, Any]:
+    management = value if isinstance(value, dict) else {}
+    return {"enabled": management.get("enabled", False)}
+
+
+def normalize_exposure(
+    spec: dict[str, Any],
+    normalized_spec: dict[str, Any],
+    errors: list[dict[str, str]],
+) -> None:
+    if "exposure" not in spec:
+        return
+    exposure = spec.get("exposure")
+    if exposure is None:
+        return
+    if not isinstance(exposure, dict):
+        errors.append(error("spec.exposure", "Exposure must be an object", "invalid"))
+        return
+    normalized_spec["exposure"] = copy.deepcopy(exposure)
 
 
 def normalize_network(
@@ -1751,10 +1861,16 @@ def validate_merged_resource(
     validate_access_object(spec.get("access"), errors)
     validate_migration_object(spec.get("migration"), errors)
     validate_network_object(spec.get("network"), spec.get("instances"), errors)
+    validate_management_object(spec.get("management"), errors)
+    validate_exposure_object(spec.get("exposure"), errors)
     if stored is not None:
         validate_runtime_update(resource, stored, errors)
 
     if stored is not None:
+        if management_enabled(stored) != management_enabled(resource):
+            field = "spec.management.enabled"
+            errors.append(error(field, f"field '{field}' is immutable after creation", "immutable"))
+
         stored_size = get_path(stored, ["spec", "network", "storage", "size"])
         candidate_size = get_path(resource, ["spec", "network", "storage", "size"])
         if stored_size != candidate_size:
@@ -2184,6 +2300,62 @@ def validate_network_object(
         validate_replication_factor(value.get("replicationFactor"), instances, errors)
 
 
+def validate_management_object(value: Any, errors: list[dict[str, str]]) -> None:
+    if value is None:
+        return
+    if not isinstance(value, dict):
+        errors.append(error("spec.management", "Management must be an object", "invalid"))
+        return
+    if "enabled" in value and not isinstance(value.get("enabled"), bool):
+        errors.append(error("spec.management.enabled", "Management enabled must be boolean", "invalid"))
+
+
+def validate_exposure_object(value: Any, errors: list[dict[str, str]]) -> None:
+    if value is None:
+        return
+    if not isinstance(value, dict):
+        errors.append(error("spec.exposure", "Exposure must be an object", "invalid"))
+        return
+
+    exposure_type = value.get("type")
+    if exposure_type is None or exposure_type == "":
+        errors.append(error("spec.exposure.type", "Exposure type is required", "required"))
+        return
+    if exposure_type not in EXPOSURE_TYPES:
+        errors.append(error("spec.exposure.type", "Exposure type is invalid", "invalid"))
+        return
+
+    allowed = EXPOSURE_ALLOWED_FIELDS[exposure_type]
+    for field, field_value in value.items():
+        if field == "type":
+            continue
+        path = f"spec.exposure.{field}"
+        if field not in allowed:
+            errors.append(error(path, "Exposure field is forbidden for this type", "forbidden"))
+            continue
+        validate_exposure_field(field, field_value, path, errors)
+
+
+def validate_exposure_field(
+    field: str,
+    value: Any,
+    path: str,
+    errors: list[dict[str, str]],
+) -> None:
+    if field == "hostname":
+        if not isinstance(value, str):
+            errors.append(error(path, "Exposure hostname must be string", "invalid"))
+    elif field in {"port", "directPort"}:
+        if not isinstance(value, int) or isinstance(value, bool):
+            errors.append(error(path, "Exposure port must be integer", "invalid"))
+    elif field == "annotations":
+        if not isinstance(value, dict) or any(
+            not isinstance(key, str) or not isinstance(item, str)
+            for key, item in value.items()
+        ):
+            errors.append(error(path, "Exposure annotations must be a string map", "invalid"))
+
+
 def validate_replication_factor(
     replication_factor: Any,
     instances: Any,
@@ -2356,7 +2528,9 @@ def public_resource(
         if key.startswith("_"):
             del public[key]
     canonicalize_resource_access(public)
+    canonicalize_resource_connectivity(public)
     refresh_mesh_stability(public)
+    apply_connectivity_status(public)
 
     storage = get_path(public, ["spec", "network", "storage"])
     if isinstance(storage, dict) and storage.get("ephemeral") is True:
@@ -2368,6 +2542,72 @@ def public_resource(
     if sorted_warnings:
         public["warnings"] = sorted_warnings
     return public
+
+
+def apply_connectivity_status(resource: dict[str, Any]) -> None:
+    status = resource.setdefault("status", {})
+    if not isinstance(status, dict):
+        status = {}
+        resource["status"] = status
+
+    connection_details = mesh_connection_details(resource)
+    if connection_details is None:
+        status.pop("connectionDetails", None)
+    else:
+        status["connectionDetails"] = connection_details
+
+    management_details = mesh_management_connection_details(resource)
+    if management_details is None:
+        status.pop("managementConnectionDetails", None)
+    else:
+        status["managementConnectionDetails"] = management_details
+
+
+def mesh_connection_details(resource: dict[str, Any]) -> dict[str, Any] | None:
+    spec = resource.get("spec") if isinstance(resource.get("spec"), dict) else {}
+    metadata = resource.get("metadata") if isinstance(resource.get("metadata"), dict) else {}
+    name = metadata.get("name")
+    exposure = spec.get("exposure") if isinstance(spec, dict) else None
+    if not isinstance(name, str) or not isinstance(exposure, dict):
+        return None
+
+    exposure_type = exposure.get("type")
+    if exposure_type == "Gateway":
+        host = exposure.get("hostname")
+        if not isinstance(host, str) or not host:
+            host = default_gateway_host(name)
+        port = DEFAULT_EXPOSURE_PORT
+    elif exposure_type == "DirectPort":
+        host = name
+        direct_port = exposure.get("directPort")
+        port = direct_port if isinstance(direct_port, int) and not isinstance(direct_port, bool) else DEFAULT_EXPOSURE_PORT
+    elif exposure_type == "Balancer":
+        host = f"{name}-external"
+        exposure_port = exposure.get("port")
+        port = exposure_port if isinstance(exposure_port, int) and not isinstance(exposure_port, bool) else DEFAULT_EXPOSURE_PORT
+    else:
+        return None
+
+    return {"host": host, "port": port, "protocol": "https"}
+
+
+def default_gateway_host(name: str) -> str:
+    return f"{name}-gateway"
+
+
+def mesh_management_connection_details(resource: dict[str, Any]) -> dict[str, Any] | None:
+    if not management_enabled(resource):
+        return None
+    metadata = resource.get("metadata") if isinstance(resource.get("metadata"), dict) else {}
+    name = metadata.get("name")
+    if not isinstance(name, str):
+        return None
+    return {"host": f"{name}-admin", "port": MANAGEMENT_PORT, "protocol": "https"}
+
+
+def management_enabled(resource: dict[str, Any]) -> bool:
+    enabled = get_path(resource, ["spec", "management", "enabled"])
+    return enabled is True
 
 
 def public_vault(

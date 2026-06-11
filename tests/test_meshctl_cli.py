@@ -155,6 +155,7 @@ class MeshCtlCliTests(unittest.TestCase):
             created["spec"]["access"],
         )
         self.assertEqual("FullStop", created["spec"]["migration"]["strategy"])
+        self.assertEqual({"enabled": False}, created["spec"]["management"])
         self.assertEqual(
             {"size": "1Gi", "ephemeral": False},
             created["spec"]["network"]["storage"],
@@ -162,9 +163,370 @@ class MeshCtlCliTests(unittest.TestCase):
         self.assertEqual(1, created["spec"]["network"]["replicationFactor"])
         self.assertNotIn("runtime", created["spec"])
         self.assertNotIn("cpu", created["spec"]["resources"])
+        self.assertNotIn("exposure", created["spec"])
+        self.assertNotIn("connectionDetails", created["status"])
+        self.assertNotIn("managementConnectionDetails", created["status"])
 
         described = self.assert_json_stdout(self.run_meshctl("mesh", "describe", "minimal"))
         self.assertEqual(created["spec"]["access"], described["spec"]["access"])
+
+    def test_exposure_modes_and_connection_details(self) -> None:
+        gateway = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: gateway-mesh
+                        spec:
+                          exposure:
+                            type: Gateway
+                            hostname: mesh.example.test
+                            annotations:
+                              route: public
+                              owner: platform
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {
+                "type": "Gateway",
+                "hostname": "mesh.example.test",
+                "annotations": {"route": "public", "owner": "platform"},
+            },
+            gateway["spec"]["exposure"],
+        )
+        self.assertEqual(
+            {"host": "mesh.example.test", "port": 443, "protocol": "https"},
+            gateway["status"]["connectionDetails"],
+        )
+
+        gateway_default = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: gateway-default
+                        spec:
+                          exposure:
+                            type: Gateway
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {"host": "gateway-default-gateway", "port": 443, "protocol": "https"},
+            gateway_default["status"]["connectionDetails"],
+        )
+
+        direct = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: direct-mesh
+                        spec:
+                          exposure:
+                            type: DirectPort
+                            port: 8443
+                            directPort: 30443
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {"type": "DirectPort", "directPort": 30443, "port": 8443},
+            direct["spec"]["exposure"],
+        )
+        self.assertEqual(
+            {"host": "direct-mesh", "port": 30443, "protocol": "https"},
+            direct["status"]["connectionDetails"],
+        )
+
+        balancer = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: balancer-mesh
+                        spec:
+                          exposure:
+                            type: Balancer
+                            port: 9443
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual({"type": "Balancer", "port": 9443}, balancer["spec"]["exposure"])
+        self.assertEqual(
+            {"host": "balancer-mesh-external", "port": 9443, "protocol": "https"},
+            balancer["status"]["connectionDetails"],
+        )
+
+        balancer_default = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: balancer-default
+                        spec:
+                          exposure:
+                            type: Balancer
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {"host": "balancer-default-external", "port": 443, "protocol": "https"},
+            balancer_default["status"]["connectionDetails"],
+        )
+
+        described = self.assert_json_stdout(
+            self.run_meshctl("mesh", "describe", "direct-mesh")
+        )
+        self.assertEqual(direct["status"]["connectionDetails"], described["status"]["connectionDetails"])
+
+    def test_exposure_validation_errors(self) -> None:
+        missing_type = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: missing-exposure-type
+                        spec:
+                          exposure: {}
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {("spec.exposure.type", "required")},
+            {(item["field"], item["type"]) for item in missing_type["errors"]},
+        )
+
+        empty_type = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: empty-exposure-type
+                        spec:
+                          exposure:
+                            type: ""
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {("spec.exposure.type", "required")},
+            {(item["field"], item["type"]) for item in empty_type["errors"]},
+        )
+
+        invalid_type = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: invalid-exposure-type
+                        spec:
+                          exposure:
+                            type: Tunnel
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {("spec.exposure.type", "invalid")},
+            {(item["field"], item["type"]) for item in invalid_type["errors"]},
+        )
+
+        forbidden = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: forbidden-exposure
+                        spec:
+                          exposure:
+                            type: Balancer
+                            hostname: mesh.example.test
+                            annotations:
+                              route: public
+                            directPort: 30443
+                        """
+                    )
+                ),
+            )
+        )
+        error_pairs = [(item["field"], item["type"]) for item in forbidden["errors"]]
+        self.assertEqual(sorted(error_pairs), error_pairs)
+        self.assertEqual(
+            [
+                ("spec.exposure.annotations", "forbidden"),
+                ("spec.exposure.directPort", "forbidden"),
+                ("spec.exposure.hostname", "forbidden"),
+            ],
+            error_pairs,
+        )
+
+    def test_management_endpoint_defaults_output_validation_and_immutability(self) -> None:
+        managed = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: managed-mesh
+                        spec:
+                          management:
+                            enabled: true
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual({"enabled": True}, managed["spec"]["management"])
+        self.assertEqual(
+            {"host": "managed-mesh-admin", "port": 9990, "protocol": "https"},
+            managed["status"]["managementConnectionDetails"],
+        )
+
+        invalid = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: invalid-management
+                        spec:
+                          management:
+                            enabled: "yes"
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {("spec.management.enabled", "invalid")},
+            {(item["field"], item["type"]) for item in invalid["errors"]},
+        )
+
+        immutable = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: managed-mesh
+                        spec:
+                          management:
+                            enabled: false
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {
+                (
+                    "spec.management.enabled",
+                    "immutable",
+                    "field 'spec.management.enabled' is immutable after creation",
+                )
+            },
+            {(item["field"], item["type"], item["message"]) for item in immutable["errors"]},
+        )
+
+    def test_mesh_shell_connection_lookup(self) -> None:
+        exposed = self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: shell-mesh
+                        spec:
+                          exposure:
+                            type: DirectPort
+                            directPort: 31443
+                        """
+                    )
+                ),
+            )
+        )
+        shell = self.assert_json_stdout(self.run_meshctl("mesh", "shell", "shell-mesh"))
+        self.assertEqual(exposed["status"]["connectionDetails"], shell)
+        self.assertNotIn("metadata", shell)
+        self.assertNotIn("status", shell)
+
+        missing = self.assert_json_stdout(self.run_meshctl("mesh", "shell", "missing-mesh"))
+        self.assertEqual(
+            {("metadata.name", "not_found")},
+            {(item["field"], item["type"]) for item in missing["errors"]},
+        )
+
+        self.create_mesh("unexposed")
+        unexposed = self.assert_json_stdout(self.run_meshctl("mesh", "shell", "unexposed"))
+        self.assertEqual(
+            {("spec.exposure", "invalid", "mesh 'unexposed' has no exposure configured")},
+            {(item["field"], item["type"], item["message"]) for item in unexposed["errors"]},
+        )
 
     def test_access_authentication_validation_and_output(self) -> None:
         credentialed = self.assert_json_stdout(
