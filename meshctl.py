@@ -46,6 +46,22 @@ EXPOSURE_ALLOWED_FIELDS = {
     "DirectPort": {"type", "port", "directPort"},
     "Balancer": {"type", "port"},
 }
+REGION_EXPOSE_TYPES = {"Internal", "DirectPort", "Balancer", "Gateway"}
+REGION_ENCRYPTION_PROTOCOLS = {"TLSv1.2", "TLSv1.3"}
+REGION_KEY_STORES = ("transportKeyStore", "relayKeyStore", "trustStore")
+REGION_KEY_STORE_FIELDS = ("secretRef", "alias", "filename")
+DEFAULT_REGION_DISCOVERY = {
+    "type": "relay",
+    "heartbeat": {"enabled": True, "interval": 10000, "timeout": 30000},
+}
+PLACEMENT_AFFINITY_TYPES = {"preferred", "required"}
+PLACEMENT_AFFINITY_SCOPES = {"node", "zone"}
+TELEMETRY_LABEL_TAGS = {
+    "mesh.io/targetLabels": "targetLabels",
+    "mesh.io/probeTargetLabels": "probeTargetLabels",
+    "mesh.io/instanceLabels": "instanceLabels",
+}
+CONFIG_BUNDLE_UNSET = object()
 DEFAULT_EXPOSURE_PORT = 443
 ONE_SHOT_COLLECTIONS = {
     "task": "tasks",
@@ -228,12 +244,27 @@ def mesh_update(input_path: str) -> int:
         print_errors(errors)
         return 0
 
+    has_config_bundle_patch = (
+        isinstance(document.get("spec"), dict)
+        and "configBundleRef" in document["spec"]
+    )
+    previous_config_ref = get_path(stored, ["spec", "configBundleRef"])
     canonicalize_resource_access(candidate)
+    canonicalize_operational_fields(candidate)
     reconcile_update_status(stored, candidate, resume_without_count)
     start_runtime_migration_if_needed(stored, candidate)
     meshes[name] = candidate
     save_store(store)
-    print_resource_with_warnings(public_resource(candidate), runtime_warnings(candidate))
+    public = public_resource(candidate)
+    if has_config_bundle_patch:
+        current_config_ref = get_path(candidate, ["spec", "configBundleRef"])
+        if previous_config_ref != current_config_ref:
+            public.setdefault("status", {})["configRefresh"] = {
+                "currentRef": current_config_ref,
+                "pending": True,
+                "previousRef": previous_config_ref,
+            }
+    print_resource_with_warnings(public, runtime_warnings(candidate))
     return 0
 
 
@@ -771,6 +802,9 @@ def normalize_mesh_for_create(
     validate_forbidden_autoscaling(spec, "spec", errors)
     validate_live_migration_topology(spec, errors)
 
+    normalized_metadata: dict[str, Any] = {"name": name}
+    normalize_metadata_tags(metadata, normalized_metadata, errors)
+
     normalized_spec: dict[str, Any] = {}
     normalize_instances(spec, normalized_spec, errors, default=1)
     normalize_runtime(spec, normalized_spec, errors)
@@ -780,9 +814,13 @@ def normalize_mesh_for_create(
     normalize_network(spec, normalized_spec, errors, apply_defaults=True)
     normalize_exposure(spec, normalized_spec, errors)
     normalize_management(spec, normalized_spec, errors, apply_defaults=True)
+    normalize_placement(spec, normalized_spec, errors, apply_defaults=True)
+    normalize_regions(spec, normalized_spec, errors)
+    normalize_config_bundle_ref(spec, normalized_spec, errors)
+    normalize_extensions(spec, normalized_spec, errors)
 
     resource = {
-        "metadata": {"name": name},
+        "metadata": normalized_metadata,
         "spec": normalized_spec,
         "status": {},
     }
@@ -790,6 +828,7 @@ def normalize_mesh_for_create(
     validate_merged_resource(resource, None, errors)
     if not errors:
         canonicalize_resource_access(resource)
+        canonicalize_operational_fields(resource)
     return resource, errors
 
 
@@ -1277,6 +1316,8 @@ def update_patch(document: dict[str, Any]) -> dict[str, Any]:
     patch: dict[str, Any] = {}
     if isinstance(document.get("metadata"), dict):
         patch["metadata"] = {"name": document["metadata"].get("name")}
+        if "tags" in document["metadata"]:
+            patch["metadata"]["tags"] = copy.deepcopy(document["metadata"].get("tags"))
     if isinstance(document.get("spec"), dict):
         patch["spec"] = copy.deepcopy(document["spec"])
     return patch
@@ -1294,6 +1335,10 @@ def deep_merge(base: dict[str, Any], patch: dict[str, Any]) -> dict[str, Any]:
 
 def upgrade_stored_resource(resource: dict[str, Any]) -> dict[str, Any]:
     upgraded = copy.deepcopy(resource)
+    metadata = upgraded.setdefault("metadata", {})
+    if not isinstance(metadata, dict):
+        metadata = {}
+        upgraded["metadata"] = metadata
     spec = upgraded.setdefault("spec", {})
     if not isinstance(spec, dict):
         spec = {}
@@ -1317,6 +1362,9 @@ def upgrade_stored_resource(resource: dict[str, Any]) -> dict[str, Any]:
     storage.setdefault("ephemeral", False)
     if "replicationFactor" not in network:
         network["replicationFactor"] = computed_replication_factor(spec.get("instances"))
+    spec["placement"] = defaulted_placement(spec.get("placement"))
+    if "regions" in spec and isinstance(spec.get("regions"), dict):
+        default_region_discovery(spec["regions"])
 
     if "status" not in upgraded or not isinstance(upgraded.get("status"), dict):
         upgraded["status"] = {}
@@ -1330,6 +1378,180 @@ def validate_name(name: Any, errors: list[dict[str, str]]) -> None:
         return
     if not isinstance(name, str) or len(name) < 2 or not NAME_RE.fullmatch(name):
         errors.append(error("metadata.name", "Name format is invalid", "invalid"))
+
+
+def normalize_metadata_tags(
+    metadata: dict[str, Any],
+    normalized_metadata: dict[str, Any],
+    errors: list[dict[str, str]],
+) -> None:
+    if "tags" not in metadata:
+        return
+    tags = metadata.get("tags")
+    validate_metadata_tags(tags, errors)
+    if isinstance(tags, dict):
+        normalized_metadata["tags"] = copy.deepcopy(tags)
+
+
+def validate_metadata_tags(value: Any, errors: list[dict[str, str]]) -> None:
+    if value is None:
+        return
+    if not isinstance(value, dict) or any(
+        not isinstance(key, str) or not isinstance(child, str)
+        for key, child in value.items()
+    ):
+        errors.append(error("metadata.tags", "Tags must be a string map", "invalid"))
+
+
+def normalize_placement(
+    spec: dict[str, Any],
+    normalized_spec: dict[str, Any],
+    errors: list[dict[str, str]],
+    apply_defaults: bool,
+) -> None:
+    placement = spec.get("placement")
+    if placement is None:
+        if apply_defaults:
+            normalized_spec["placement"] = defaulted_placement(None)
+        return
+    validate_placement_object(placement, errors)
+    normalized_spec["placement"] = defaulted_placement(placement)
+
+
+def defaulted_placement(value: Any) -> dict[str, Any]:
+    placement = value if isinstance(value, dict) else {}
+    affinity = placement.get("affinity")
+    if not isinstance(affinity, dict):
+        affinity = {}
+    return {
+        "affinity": {
+            "type": affinity.get("type", "preferred"),
+            "scope": affinity.get("scope", "node"),
+        }
+    }
+
+
+def validate_placement_object(value: Any, errors: list[dict[str, str]]) -> None:
+    if value is None:
+        return
+    if not isinstance(value, dict):
+        errors.append(error("spec.placement", "Placement must be an object", "invalid"))
+        return
+    affinity = value.get("affinity")
+    if affinity is not None and not isinstance(affinity, dict):
+        errors.append(
+            error("spec.placement.affinity", "Placement affinity must be an object", "invalid")
+        )
+        return
+    if not isinstance(affinity, dict):
+        affinity = {}
+    affinity_type = affinity.get("type", "preferred")
+    if affinity_type not in PLACEMENT_AFFINITY_TYPES:
+        errors.append(error("spec.placement.affinity.type", "Placement affinity type is invalid", "invalid"))
+    affinity_scope = affinity.get("scope", "node")
+    if affinity_scope not in PLACEMENT_AFFINITY_SCOPES:
+        errors.append(error("spec.placement.affinity.scope", "Placement affinity scope is invalid", "invalid"))
+
+
+def normalize_regions(
+    spec: dict[str, Any],
+    normalized_spec: dict[str, Any],
+    errors: list[dict[str, str]],
+) -> None:
+    if "regions" not in spec:
+        return
+    regions = spec.get("regions")
+    if not isinstance(regions, dict):
+        normalized_spec["regions"] = copy.deepcopy(regions)
+        errors.append(error("spec.regions", "Regions must be an object", "invalid"))
+        return
+    normalized = copy.deepcopy(regions)
+    default_region_discovery(normalized)
+    default_region_encryption(normalized)
+    normalized_spec["regions"] = clean_regions(normalized)
+
+
+def clean_regions(regions: dict[str, Any]) -> dict[str, Any]:
+    cleaned = copy.deepcopy(regions)
+    local = cleaned.get("local")
+    if isinstance(local, dict):
+        if local.get("maxRelayNodes") is None:
+            local.pop("maxRelayNodes", None)
+        remotes = cleaned.get("remotes")
+        if isinstance(remotes, list):
+            cleaned["remotes"] = [clean_remote_region(remote) for remote in remotes]
+    return cleaned
+
+
+def clean_remote_region(remote: Any) -> Any:
+    if not isinstance(remote, dict):
+        return copy.deepcopy(remote)
+    cleaned: dict[str, Any] = {}
+    for field in ("name", "url", "credentialRef", "namespace", "clusterRef"):
+        if field in remote and remote.get(field) is not None:
+            cleaned[field] = copy.deepcopy(remote.get(field))
+    return cleaned
+
+
+def default_region_discovery(regions: dict[str, Any]) -> None:
+    local = regions.get("local")
+    if not isinstance(local, dict):
+        return
+    if "discovery" not in local or local.get("discovery") is None:
+        local["discovery"] = copy.deepcopy(DEFAULT_REGION_DISCOVERY)
+        return
+    discovery = local.get("discovery")
+    if not isinstance(discovery, dict):
+        return
+    if "heartbeat" not in discovery or discovery.get("heartbeat") is None:
+        discovery["heartbeat"] = copy.deepcopy(DEFAULT_REGION_DISCOVERY["heartbeat"])
+    heartbeat = discovery.get("heartbeat")
+    if isinstance(heartbeat, dict):
+        heartbeat.setdefault("enabled", True)
+
+
+def default_region_encryption(regions: dict[str, Any]) -> None:
+    encryption = get_path(regions, ["local", "encryption"])
+    if isinstance(encryption, dict):
+        encryption.setdefault("protocol", "TLSv1.3")
+
+
+def normalize_config_bundle_ref(
+    spec: dict[str, Any],
+    normalized_spec: dict[str, Any],
+    errors: list[dict[str, str]],
+) -> None:
+    if "configBundleRef" not in spec:
+        return
+    value = spec.get("configBundleRef")
+    if not isinstance(value, str):
+        errors.append(error("spec.configBundleRef", "Config bundle reference must be a string", "invalid"))
+        return
+    normalized_spec["configBundleRef"] = value
+
+
+def normalize_extensions(
+    spec: dict[str, Any],
+    normalized_spec: dict[str, Any],
+    errors: list[dict[str, str]],
+) -> None:
+    if "extensions" not in spec:
+        return
+    extensions = spec.get("extensions")
+    if not isinstance(extensions, list):
+        errors.append(error("spec.extensions", "Extensions must be an array", "invalid"))
+        return
+    normalized_spec["extensions"] = [clean_extension(entry) for entry in extensions]
+
+
+def clean_extension(entry: Any) -> Any:
+    if not isinstance(entry, dict):
+        return copy.deepcopy(entry)
+    cleaned: dict[str, Any] = {}
+    for field in ("url", "artifact", "integrity"):
+        if field in entry and entry.get(field) is not None:
+            cleaned[field] = copy.deepcopy(entry.get(field))
+    return cleaned
 
 
 def normalize_instances(
@@ -1383,15 +1605,24 @@ def validate_runtime(runtime: Any, errors: list[dict[str, str]]) -> None:
 
 
 def runtime_warnings(resource: dict[str, Any]) -> list[dict[str, str]]:
+    warnings: list[dict[str, str]] = []
     runtime = get_path(resource, ["spec", "runtime"])
     if isinstance(runtime, str) and RUNTIME_CATALOG.get(runtime) == "deprecated":
-        return [
+        warnings.append(
             {
                 "field": "spec.runtime",
                 "message": f"runtime version '{runtime}' is deprecated",
             }
-        ]
-    return []
+        )
+    encryption = get_path(resource, ["spec", "regions", "local", "encryption"])
+    if isinstance(encryption, dict) and "trustStore" not in encryption:
+        warnings.append(
+            {
+                "field": "spec.regions.local.encryption.trustStore",
+                "message": "trustStore is recommended for region encryption",
+            }
+        )
+    return warnings
 
 
 def sort_warnings(warnings: list[dict[str, str]]) -> list[dict[str, str]]:
@@ -1667,6 +1898,32 @@ def canonicalize_resource_access(resource: dict[str, Any]) -> None:
     spec["access"] = canonical_access(spec.get("access"))
 
 
+def canonicalize_operational_fields(resource: dict[str, Any]) -> None:
+    metadata = resource.setdefault("metadata", {})
+    if isinstance(metadata, dict):
+        tags = metadata.get("tags")
+        if tags is None:
+            metadata.pop("tags", None)
+        elif isinstance(tags, dict):
+            metadata["tags"] = copy.deepcopy(tags)
+
+    spec = resource.setdefault("spec", {})
+    if not isinstance(spec, dict):
+        return
+    spec["placement"] = defaulted_placement(spec.get("placement"))
+    if spec.get("regions") is None:
+        spec.pop("regions", None)
+    if "regions" in spec and isinstance(spec.get("regions"), dict):
+        regions = spec["regions"]
+        default_region_discovery(regions)
+        default_region_encryption(regions)
+        spec["regions"] = clean_regions(regions)
+    if spec.get("configBundleRef") is None:
+        spec.pop("configBundleRef", None)
+    if "extensions" in spec and isinstance(spec.get("extensions"), list):
+        spec["extensions"] = [clean_extension(entry) for entry in spec["extensions"]]
+
+
 def canonical_access(value: Any) -> dict[str, Any]:
     access = defaulted_access(value)
 
@@ -1912,6 +2169,172 @@ def validate_management_object(value: Any, errors: list[dict[str, str]]) -> None
         errors.append(error("spec.management.enabled", "Management enabled must be boolean", "invalid"))
 
 
+def validate_regions_object(
+    value: Any,
+    spec: dict[str, Any],
+    errors: list[dict[str, str]],
+) -> None:
+    if value is None:
+        return
+    if not isinstance(value, dict):
+        errors.append(error("spec.regions", "Regions must be an object", "invalid"))
+        return
+
+    local = value.get("local")
+    if not isinstance(local, dict):
+        errors.append(error("spec.regions.local", "Local region is required", "required"))
+        return
+
+    local_name = local.get("name")
+    if not isinstance(local_name, str) or local_name == "":
+        errors.append(error("spec.regions.local.name", "Local region name is required", "required"))
+
+    expose = local.get("expose")
+    expose_type = expose.get("type") if isinstance(expose, dict) else None
+    if expose_type is None or expose_type == "":
+        errors.append(error("spec.regions.local.expose.type", "Local region expose type is required", "required"))
+    elif expose_type not in REGION_EXPOSE_TYPES:
+        errors.append(error("spec.regions.local.expose.type", "Local region expose type is invalid", "invalid"))
+
+    if "maxRelayNodes" in local and not is_positive_int(local.get("maxRelayNodes")):
+        errors.append(error("spec.regions.local.maxRelayNodes", "Max relay nodes must be a positive integer", "invalid"))
+
+    validate_region_encryption(local.get("encryption"), expose_type, errors)
+    validate_region_discovery(local.get("discovery"), errors)
+    validate_remote_regions(value.get("remotes"), errors)
+
+
+def validate_region_encryption(
+    value: Any,
+    expose_type: Any,
+    errors: list[dict[str, str]],
+) -> None:
+    if value is not None and not isinstance(value, dict):
+        errors.append(error("spec.regions.local.encryption", "Region encryption must be an object", "invalid"))
+        return
+    encryption = value if isinstance(value, dict) else {}
+
+    protocol = encryption.get("protocol", "TLSv1.3")
+    if protocol not in REGION_ENCRYPTION_PROTOCOLS:
+        errors.append(error("spec.regions.local.encryption.protocol", "Region encryption protocol is invalid", "invalid"))
+
+    if expose_type == "Gateway" and "transportKeyStore" not in encryption:
+        errors.append(
+            error(
+                "spec.regions.local.encryption.transportKeyStore",
+                "Transport key store is required for Gateway exposure",
+                "required",
+            )
+        )
+
+    for store_name in REGION_KEY_STORES:
+        if store_name not in encryption:
+            continue
+        store = encryption.get(store_name)
+        if not isinstance(store, dict):
+            errors.append(
+                error(
+                    f"spec.regions.local.encryption.{store_name}",
+                    f"{store_name} must be an object",
+                    "invalid",
+                )
+            )
+            continue
+        for field in REGION_KEY_STORE_FIELDS:
+            if not isinstance(store.get(field), str) or store.get(field) == "":
+                errors.append(
+                    error(
+                        f"spec.regions.local.encryption.{store_name}.{field}",
+                        f"{field} is required",
+                        "required",
+                    )
+                )
+
+
+def validate_region_discovery(value: Any, errors: list[dict[str, str]]) -> None:
+    if value is None:
+        return
+    if not isinstance(value, dict):
+        errors.append(error("spec.regions.local.discovery", "Region discovery must be an object", "invalid"))
+        return
+    discovery_type = value.get("type")
+    if discovery_type != "relay":
+        errors.append(error("spec.regions.local.discovery.type", "Region discovery type is invalid", "invalid"))
+    heartbeat = value.get("heartbeat")
+    if heartbeat is None:
+        return
+    if not isinstance(heartbeat, dict):
+        errors.append(error("spec.regions.local.discovery.heartbeat", "Region discovery heartbeat is invalid", "invalid"))
+        return
+    interval = heartbeat.get("interval")
+    timeout = heartbeat.get("timeout")
+    if (
+        not isinstance(interval, int)
+        or isinstance(interval, bool)
+        or not isinstance(timeout, int)
+        or isinstance(timeout, bool)
+        or interval >= timeout
+    ):
+        errors.append(error("spec.regions.local.discovery.heartbeat", "Heartbeat interval must be less than timeout", "invalid"))
+
+
+def validate_remote_regions(value: Any, errors: list[dict[str, str]]) -> None:
+    if value is None:
+        return
+    if not isinstance(value, list):
+        errors.append(error("spec.regions.remotes", "Remote regions must be an array", "invalid"))
+        return
+    seen: set[str] = set()
+    for index, remote in enumerate(value):
+        if not isinstance(remote, dict):
+            errors.append(error(f"spec.regions.remotes[{index}]", "Remote region must be an object", "invalid"))
+            continue
+        name = remote.get("name")
+        if not isinstance(name, str) or name == "":
+            errors.append(error(f"spec.regions.remotes[{index}].name", "Remote region name is required", "required"))
+        elif name in seen:
+            errors.append(error(f"spec.regions.remotes[{index}].name", "Remote region name must be unique", "duplicate"))
+        else:
+            seen.add(name)
+        url = remote.get("url")
+        if not isinstance(url, str) or url == "":
+            errors.append(error(f"spec.regions.remotes[{index}].url", "Remote region URL is required", "required"))
+        for field in ("credentialRef", "namespace", "clusterRef"):
+            if field in remote and remote.get(field) is not None and not isinstance(remote.get(field), str):
+                errors.append(error(f"spec.regions.remotes[{index}].{field}", f"{field} must be a string", "invalid"))
+
+
+def validate_config_bundle_ref(value: Any, errors: list[dict[str, str]]) -> None:
+    if value is not None and not isinstance(value, str):
+        errors.append(error("spec.configBundleRef", "Config bundle reference must be a string", "invalid"))
+
+
+def validate_extensions_object(value: Any, errors: list[dict[str, str]]) -> None:
+    if value is None:
+        return
+    if not isinstance(value, list):
+        errors.append(error("spec.extensions", "Extensions must be an array", "invalid"))
+        return
+    for index, entry in enumerate(value):
+        field = f"spec.extensions[{index}]"
+        if not isinstance(entry, dict):
+            errors.append(error(field, "Extension entry must be an object", "invalid"))
+            continue
+        has_url = entry.get("url") is not None
+        has_artifact = entry.get("artifact") is not None
+        if has_url == has_artifact:
+            errors.append(
+                error(
+                    field,
+                    "exactly one of 'url' or 'artifact' must be set",
+                    "invalid",
+                )
+            )
+        for source in ("url", "artifact", "integrity"):
+            if source in entry and entry.get(source) is not None and not isinstance(entry.get(source), str):
+                errors.append(error(f"{field}.{source}", f"{source} must be a string", "invalid"))
+
+
 def connection_details_for(resource: dict[str, Any]) -> dict[str, Any] | None:
     name = get_path(resource, ["metadata", "name"])
     exposure = get_path(resource, ["spec", "exposure"])
@@ -1996,6 +2419,11 @@ def validate_merged_resource(
     validate_network_object(spec.get("network"), spec.get("instances"), errors)
     validate_exposure_object(spec.get("exposure"), errors)
     validate_management_object(spec.get("management"), errors)
+    validate_metadata_tags(metadata.get("tags"), errors)
+    validate_placement_object(spec.get("placement"), errors)
+    validate_regions_object(spec.get("regions"), spec, errors)
+    validate_config_bundle_ref(spec.get("configBundleRef"), errors)
+    validate_extensions_object(spec.get("extensions"), errors)
 
     if stored is not None:
         validate_runtime_version_change(stored, resource, errors)
@@ -2366,6 +2794,7 @@ def initialize_status(resource: dict[str, Any]) -> None:
     set_condition(status, "Healthy", "True", "")
     set_condition(status, "PrechecksPassed", "True", "")
     reconcile_connection_status(resource)
+    reconcile_region_conditions(resource)
     recalculate_mesh_stability(status)
 
 
@@ -2429,6 +2858,7 @@ def reconcile_update_status(
                 set_condition(status, "GracefulShutdown", "True", "")
 
     reconcile_connection_status(candidate)
+    reconcile_region_conditions(candidate)
     recalculate_mesh_stability(status)
 
 
@@ -2552,15 +2982,46 @@ def should_resume_without_count(
     return "instances" not in spec or spec.get("instances") is None
 
 
+def reconcile_region_conditions(resource: dict[str, Any]) -> None:
+    status = resource.setdefault("status", {})
+    if not isinstance(get_path(resource, ["spec", "regions"]), dict):
+        clear_condition(status, "DiscoveryRelayReady")
+        clear_condition(status, "RegionViewFormed")
+        return
+    set_condition(status, "DiscoveryRelayReady", "False", "")
+    set_condition(status, "RegionViewFormed", "False", "")
+
+
+def telemetry_probe(resource: dict[str, Any]) -> dict[str, Any]:
+    tags = get_path(resource, ["metadata", "tags"])
+    if not isinstance(tags, dict):
+        tags = {}
+    enabled = tags.get("mesh.io/telemetry", "true") != "false"
+    if not enabled:
+        return {"enabled": False}
+
+    probe: dict[str, Any] = {"enabled": True}
+    labels: dict[str, list[str]] = {}
+    for tag_key, output_key in TELEMETRY_LABEL_TAGS.items():
+        tag_value = tags.get(tag_key)
+        if isinstance(tag_value, str):
+            labels[output_key] = tag_value.split(",")
+    if labels:
+        probe["labels"] = labels
+    return probe
+
+
 def public_resource(resource: dict[str, Any]) -> dict[str, Any]:
     public = copy.deepcopy(resource)
     for key in list(public):
         if key.startswith("_"):
             del public[key]
     canonicalize_resource_access(public)
+    canonicalize_operational_fields(public)
     spec = public.setdefault("spec", {})
     if isinstance(spec, dict):
         spec["management"] = defaulted_management(spec.get("management"))
+        reconcile_region_conditions(public)
     reconcile_connection_status(public)
 
     storage = get_path(public, ["spec", "network", "storage"])
@@ -2568,6 +3029,8 @@ def public_resource(resource: dict[str, Any]) -> dict[str, Any]:
         storage.pop("size", None)
     status = public.get("status")
     if isinstance(status, dict):
+        status["telemetryProbe"] = telemetry_probe(public)
+        status.pop("configRefresh", None)
         recalculate_mesh_stability(status)
     return public
 
