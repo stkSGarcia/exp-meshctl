@@ -1,0 +1,170 @@
+{
+  "ast_grep": {
+    "category_counts": {
+      "slop": 483
+    },
+    "category_weighted": {
+      "slop": 1299
+    },
+    "counts": {
+      "chained-dict-get": 7,
+      "chained-none-check": 2,
+      "consecutive-append-calls": 1,
+      "consecutive-if-same-variable": 7,
+      "deep-dict-access": 15,
+      "defensive-function-isinstance-heavy": 12,
+      "defensive-isinstance-return": 8,
+      "defensive-type-probe-default-return": 5,
+      "defensive-validator-returnmix": 8,
+      "dict-get-empty-dict-default": 9,
+      "dict-get-empty-list-default": 4,
+      "dict-get-empty-string-default": 1,
+      "dict-get-zero-default": 2,
+      "empty-string-or": 1,
+      "exp-flat-guard-regex": 4,
+      "exp-guard-func": 4,
+      "exp-guardy-func": 19,
+      "exp-size-only": 130,
+      "get-then-none-check": 11,
+      "go-style-err-tuple-return": 9,
+      "guard-helper-graveyard-module": 1,
+      "guard-rail-helper-function": 19,
+      "guard-railed-utility-module": 1,
+      "if-not-guard": 34,
+      "isinstance-bool-exclusion": 12,
+      "list-comprehension-identity": 6,
+      "manual-dict-setdefault": 4,
+      "multiple-isinstance-or": 2,
+      "nested-if-no-else": 21,
+      "raw-guard-module": 1,
+      "redundant-return-none": 8,
+      "repeated-if-continue": 1,
+      "repeated-if-return-error": 1,
+      "repeated-validation-calls": 11,
+      "set-from-list-literal": 39,
+      "set-literal-list": 39,
+      "silent-type-probe-helper-function": 7,
+      "unnecessary-list-call": 1,
+      "verbose-and-return": 3,
+      "verbose-dict-update": 3,
+      "verbose-list-append-loop": 3,
+      "verbose-none-default": 4,
+      "verbose-or-return": 3
+    },
+    "rules_checked": 214,
+    "violation_lines": 4314,
+    "violations": 483,
+    "weighted": 1299
+  },
+  "classes": {
+    "attribute_counts_mean": 3.0,
+    "attribute_counts_sum": 3,
+    "count": 1,
+    "method_counts_mean": 32.0,
+    "method_counts_sum": 32
+  },
+  "complexity": {
+    "cc_max": 52,
+    "cc_ratings": {
+      "A": 109,
+      "B": 30,
+      "C": 11,
+      "D": 2,
+      "E": 0,
+      "F": 1
+    },
+    "cc_sum": 739,
+    "mi_min": 0.0,
+    "mi_ratings": {
+      "A": 0,
+      "B": 1,
+      "C": 1
+    },
+    "mi_sum": 16.209381261083664,
+    "num_complex": 14
+  },
+  "file_count": 2,
+  "functions": {
+    "cc_concentration": 0.4140138809779972,
+    "cc_extreme_count": 0,
+    "cc_high_count": 13,
+    "cc_max": 25,
+    "cc_mean": 4.978260869565218,
+    "cc_normalized": 0.005367496532193681,
+    "cc_std": 4.284528934926692,
+    "cc_sum": 687,
+    "cc_top20": 0.47307132459970885,
+    "count": 138,
+    "depth_max": 3,
+    "extreme_cc_mean": 0.0,
+    "high_cc_mean": 15.538461538461538,
+    "lines_mean": 29.434782608695652,
+    "lines_sum": 4062
+  },
+  "graph": {
+    "cyclic_dependency_mass": 0.0,
+    "dependency_entropy": 0.4755090808151824,
+    "edge_count": 296,
+    "node_count": 106,
+    "propagation_cost": 0.06522911051212937
+  },
+  "lines": {
+    "comments": 3,
+    "loc": 3895,
+    "multi_comment": 0,
+    "single_comment": 2,
+    "total_lines": 4367
+  },
+  "lint": {
+    "counts": {
+      "ANN401": 31,
+      "BLE001": 1,
+      "C901": 5,
+      "FBT001": 4,
+      "FURB113": 1,
+      "FURB118": 4,
+      "INP001": 1,
+      "PERF401": 2,
+      "PLC0415": 1,
+      "PLC1901": 8,
+      "PLR0904": 1,
+      "PLR0911": 3,
+      "PLR0912": 4,
+      "PLR2004": 1,
+      "PT009": 188,
+      "S404": 1,
+      "S603": 1,
+      "SIM102": 1,
+      "UP022": 1
+    },
+    "errors": 259,
+    "fixable": 0
+  },
+  "redundancy": {
+    "clone_lines": 298,
+    "clone_ratio_sum": 0.1565126050420168,
+    "cloned_sloc_lines": 298,
+    "files_with_clones": 2
+  },
+  "source_files": [],
+  "symbols": {
+    "classes": 1,
+    "expressions": 5536,
+    "expressions_top_level": 348,
+    "functions": 106,
+    "globals": 14,
+    "imports": 17,
+    "max_imports": 9,
+    "methods": 32,
+    "statements": 551,
+    "total": 153,
+    "type_aliases": 0,
+    "variables": 14
+  },
+  "verbosity_flagged_sloc_lines": 3350,
+  "waste": {
+    "single_use_functions": 58,
+    "trivial_wrappers": 0,
+    "unused_variables": 16
+  }
+}

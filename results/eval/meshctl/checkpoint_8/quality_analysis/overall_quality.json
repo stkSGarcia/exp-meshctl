@@ -1,0 +1,180 @@
+{
+  "ast_grep": {
+    "category_counts": {
+      "slop": 751
+    },
+    "category_weighted": {
+      "slop": 2087
+    },
+    "counts": {
+      "chained-dict-get": 7,
+      "chained-none-check": 2,
+      "consecutive-append-calls": 1,
+      "consecutive-if-same-variable": 7,
+      "deep-dict-access": 16,
+      "defensive-falsy-passthrough": 8,
+      "defensive-function-isinstance-heavy": 20,
+      "defensive-isinstance-return": 11,
+      "defensive-type-probe-default-return": 8,
+      "defensive-validator-returnmix": 11,
+      "dict-get-empty-dict-default": 9,
+      "dict-get-empty-list-default": 5,
+      "dict-get-empty-string-default": 1,
+      "dict-get-zero-default": 2,
+      "empty-string-or": 1,
+      "exp-flat-guard-regex": 6,
+      "exp-guard-func": 6,
+      "exp-guardy-func": 32,
+      "exp-size-only": 198,
+      "flat-isinstance-return-helper": 5,
+      "get-then-none-check": 17,
+      "go-style-err-tuple-return": 9,
+      "guard-helper-graveyard-module": 1,
+      "guard-rail-helper-function": 32,
+      "guard-railed-utility-module": 1,
+      "if-not-guard": 59,
+      "isinstance-bool-exclusion": 18,
+      "list-comprehension-identity": 7,
+      "manual-dict-setdefault": 4,
+      "multi-none-or-chain": 1,
+      "multiple-isinstance-or": 9,
+      "nested-if-no-else": 29,
+      "raw-guard-module": 1,
+      "redundant-return-none": 16,
+      "repeated-if-continue": 1,
+      "repeated-if-return-error": 1,
+      "repeated-validation-calls": 20,
+      "set-from-list-literal": 67,
+      "set-literal-list": 67,
+      "silent-type-probe-helper-function": 10,
+      "ternary-none-comparison": 1,
+      "three-guard-rail-helper-function": 5,
+      "unnecessary-list-call": 1,
+      "verbose-and-return": 4,
+      "verbose-dict-update": 3,
+      "verbose-list-append-loop": 4,
+      "verbose-none-default": 4,
+      "verbose-or-return": 3
+    },
+    "rules_checked": 214,
+    "violation_lines": 6984,
+    "violations": 751,
+    "weighted": 2087
+  },
+  "classes": {
+    "attribute_counts_mean": 3.0,
+    "attribute_counts_sum": 3,
+    "count": 1,
+    "method_counts_mean": 48.0,
+    "method_counts_sum": 48
+  },
+  "complexity": {
+    "cc_max": 85,
+    "cc_ratings": {
+      "A": 179,
+      "B": 44,
+      "C": 15,
+      "D": 3,
+      "E": 0,
+      "F": 1
+    },
+    "cc_sum": 1133,
+    "mi_min": 0.0,
+    "mi_ratings": {
+      "A": 0,
+      "B": 0,
+      "C": 2
+    },
+    "mi_sum": 4.176546591706239,
+    "num_complex": 19
+  },
+  "file_count": 2,
+  "functions": {
+    "cc_concentration": 0.4028460804462713,
+    "cc_extreme_count": 0,
+    "cc_high_count": 18,
+    "cc_max": 25,
+    "cc_mean": 5.038461538461538,
+    "cc_normalized": 0.0032055044482109897,
+    "cc_std": 4.1141280723398745,
+    "cc_sum": 1048,
+    "cc_top20": 0.46564885496183206,
+    "count": 208,
+    "depth_max": 3,
+    "extreme_cc_mean": 0.0,
+    "high_cc_mean": 15.277777777777779,
+    "lines_mean": 31.677884615384617,
+    "lines_sum": 6589
+  },
+  "graph": {
+    "cyclic_dependency_mass": 0.0,
+    "dependency_entropy": 0.4148947911425879,
+    "edge_count": 420,
+    "node_count": 160,
+    "propagation_cost": 0.055699685534591196
+  },
+  "lines": {
+    "comments": 3,
+    "loc": 6367,
+    "multi_comment": 0,
+    "single_comment": 2,
+    "total_lines": 7055
+  },
+  "lint": {
+    "counts": {
+      "ANN401": 45,
+      "ARG001": 2,
+      "BLE001": 1,
+      "C901": 8,
+      "FBT001": 4,
+      "FURB113": 1,
+      "FURB118": 4,
+      "INP001": 1,
+      "PERF401": 3,
+      "PLC0415": 1,
+      "PLC1901": 11,
+      "PLR0904": 1,
+      "PLR0911": 3,
+      "PLR0912": 4,
+      "PLR0914": 1,
+      "PLR0915": 1,
+      "PLR2004": 2,
+      "PLR6301": 1,
+      "PT009": 294,
+      "RUF031": 1,
+      "S404": 1,
+      "S603": 1,
+      "SIM102": 2,
+      "UP022": 1
+    },
+    "errors": 394,
+    "fixable": 1
+  },
+  "redundancy": {
+    "clone_lines": 426,
+    "clone_ratio_sum": 0.14874301675977653,
+    "cloned_sloc_lines": 426,
+    "files_with_clones": 2
+  },
+  "source_files": [],
+  "symbols": {
+    "classes": 1,
+    "expressions": 8503,
+    "expressions_top_level": 512,
+    "functions": 160,
+    "globals": 33,
+    "imports": 17,
+    "max_imports": 9,
+    "methods": 48,
+    "statements": 832,
+    "total": 242,
+    "type_aliases": 0,
+    "variables": 33
+  },
+  "verbosity_flagged_sloc_lines": 5409,
+  "waste": {
+    "single_use_functions": 98,
+    "trivial_wrappers": 0,
+    "unused_variables": 32
+  }
+}
