@@ -1,0 +1,75 @@
+{"submission_path": "eval-results", "problem_names": ["meshctl"], "env_config": "configs/environments/docker-python3.12-uv.yaml", "pass_policy": "all-cases", "overwrite": false, "event": "Evaluating a directory of submissions", "timestamp": "2026-06-12 19:24:49", "level": "info"}
+{"event": "Building base image for environment 'python3.12' base_image='ghcr.io/astral-sh/uv:python3.12-trixie-slim' image_name='slop-code:python3.12'", "timestamp": "2026-06-12 19:24:49", "level": "info"}
+{"event": "Checking if image exists image_name='slop-code:python3.12'", "timestamp": "2026-06-12 19:24:49", "level": "info"}
+{"event": "Found image found_image='sha256:7069c1c7335b754a99f4c9af7603093fc50531fe4c434fdac4db820e962c38ff' image_name='slop-code:python3.12'", "timestamp": "2026-06-12 19:24:49", "level": "debug"}
+{"event": "Found current image and not forcing build", "timestamp": "2026-06-12 19:24:49", "level": "info"}
+{"event": "Getting available problems problems_path='/home/stk/.cache/scbench/problems'", "timestamp": "2026-06-12 19:24:49", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/cfgpipe')", "timestamp": "2026-06-12 19:24:49", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/circuit_eval')", "timestamp": "2026-06-12 19:24:49", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/code_search')", "timestamp": "2026-06-12 19:24:49", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/dag_execution')", "timestamp": "2026-06-12 19:24:49", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/database_migration')", "timestamp": "2026-06-12 19:24:49", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/datagate')", "timestamp": "2026-06-12 19:24:49", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/dynamic_buffer')", "timestamp": "2026-06-12 19:24:49", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/dynamic_config_service_api')", "timestamp": "2026-06-12 19:24:49", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/env_manager')", "timestamp": "2026-06-12 19:24:49", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/etl_pipeline')", "timestamp": "2026-06-12 19:24:49", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/eve_industry')", "timestamp": "2026-06-12 19:24:49", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/eve_jump_planner')", "timestamp": "2026-06-12 19:24:49", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/eve_market_tools')", "timestamp": "2026-06-12 19:24:49", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/eve_route_planner')", "timestamp": "2026-06-12 19:24:49", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/execution_server')", "timestamp": "2026-06-12 19:24:49", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/file_backup')", "timestamp": "2026-06-12 19:24:49", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/file_merger')", "timestamp": "2026-06-12 19:24:49", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/file_query_tool')", "timestamp": "2026-06-12 19:24:49", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/forge')", "timestamp": "2026-06-12 19:24:49", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/l2m')", "timestamp": "2026-06-12 19:24:49", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/layered_config_synthesizer')", "timestamp": "2026-06-12 19:24:49", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/log_query')", "timestamp": "2026-06-12 19:24:50", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/meshctl')", "timestamp": "2026-06-12 19:24:50", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/metric_transform_lang')", "timestamp": "2026-06-12 19:24:50", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/migrate_configs')", "timestamp": "2026-06-12 19:24:50", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/mocked_http')", "timestamp": "2026-06-12 19:24:50", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/mvvault')", "timestamp": "2026-06-12 19:24:50", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/pwd_manager')", "timestamp": "2026-06-12 19:24:50", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/recli')", "timestamp": "2026-06-12 19:24:50", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/rejector')", "timestamp": "2026-06-12 19:24:50", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/sheeteval')", "timestamp": "2026-06-12 19:24:50", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/sith')", "timestamp": "2026-06-12 19:24:50", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/test_translator')", "timestamp": "2026-06-12 19:24:50", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/textdrop')", "timestamp": "2026-06-12 19:24:50", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/trajectory_api')", "timestamp": "2026-06-12 19:24:50", "level": "debug"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/xjq')", "timestamp": "2026-06-12 19:24:50", "level": "debug"}
+{"event": "Found problems problems='cfgpipe,circuit_eval,code_search,dag_execution,database_migration,datagate,dynamic_buffer,dynamic_config_service_api,env_manager,etl_pipeline,eve_industry,eve_jump_planner,eve_market_tools,eve_route_planner,execution_server,file_backup,file_merger,file_query_tool,forge,l2m,layered_config_synthesizer,log_query,meshctl,metric_transform_lang,migrate_configs,mocked_http,mvvault,pwd_manager,recli,rejector,sheeteval,sith,test_translator,textdrop,trajectory_api,xjq'", "timestamp": "2026-06-12 19:24:50", "level": "debug"}
+{"problem_name": "meshctl", "problem_dir": "eval-results/meshctl", "reason": "needs evaluation", "event": "Adding problem to evaluation", "timestamp": "2026-06-12 19:24:50", "level": "info"}
+{"event": "Evaluating 1 problems", "timestamp": "2026-06-12 19:24:50", "level": "info"}
+{"event": "Starting checkpoint evaluation problems=['meshctl']", "timestamp": "2026-06-12 19:24:50", "level": "info"}
+{"event": "Gathering checkpoint directories checkpoints=['checkpoint_1', 'checkpoint_2', 'checkpoint_3', 'checkpoint_4', 'checkpoint_5', 'checkpoint_6', 'checkpoint_7', 'checkpoint_8'] problem_name='meshctl' snapshot_dir_name='snapshot' submission_dir='eval-results/meshctl'", "timestamp": "2026-06-12 19:24:50", "level": "info"}
+{"event": "Checkpoint submission directory does not exist checkpoint_name='checkpoint_1' submission_dir='eval-results/meshctl'", "timestamp": "2026-06-12 19:24:50", "level": "warning"}
+{"event": "Checkpoint submission directory does not exist checkpoint_name='checkpoint_2' submission_dir='eval-results/meshctl'", "timestamp": "2026-06-12 19:24:50", "level": "warning"}
+{"event": "Checkpoint submission directory does not exist checkpoint_name='checkpoint_3' submission_dir='eval-results/meshctl'", "timestamp": "2026-06-12 19:24:50", "level": "warning"}
+{"event": "Found checkpoint directory checkpoint_name='checkpoint_4' problem_name='meshctl' snapshot='eval-results/meshctl/checkpoint_4/snapshot'", "timestamp": "2026-06-12 19:24:50", "level": "debug"}
+{"event": "Loading checkpoint config path=PosixPath('/home/stk/.cache/scbench/problems/meshctl/checkpoint_4')", "timestamp": "2026-06-12 19:24:50", "level": "debug"}
+{"event": "Found checkpoint directory checkpoint_name='checkpoint_5' problem_name='meshctl' snapshot='eval-results/meshctl/checkpoint_5/snapshot'", "timestamp": "2026-06-12 19:24:50", "level": "debug"}
+{"event": "Loading checkpoint config path=PosixPath('/home/stk/.cache/scbench/problems/meshctl/checkpoint_5')", "timestamp": "2026-06-12 19:24:50", "level": "debug"}
+{"event": "Found checkpoint directory checkpoint_name='checkpoint_6' problem_name='meshctl' snapshot='eval-results/meshctl/checkpoint_6/snapshot'", "timestamp": "2026-06-12 19:24:50", "level": "debug"}
+{"event": "Loading checkpoint config path=PosixPath('/home/stk/.cache/scbench/problems/meshctl/checkpoint_6')", "timestamp": "2026-06-12 19:24:50", "level": "debug"}
+{"event": "Found checkpoint directory checkpoint_name='checkpoint_7' problem_name='meshctl' snapshot='eval-results/meshctl/checkpoint_7/snapshot'", "timestamp": "2026-06-12 19:24:50", "level": "debug"}
+{"event": "Loading checkpoint config path=PosixPath('/home/stk/.cache/scbench/problems/meshctl/checkpoint_7')", "timestamp": "2026-06-12 19:24:50", "level": "debug"}
+{"event": "Found checkpoint directory checkpoint_name='checkpoint_8' problem_name='meshctl' snapshot='eval-results/meshctl/checkpoint_8/snapshot'", "timestamp": "2026-06-12 19:24:50", "level": "debug"}
+{"event": "Loading checkpoint config path=PosixPath('/home/stk/.cache/scbench/problems/meshctl/checkpoint_8')", "timestamp": "2026-06-12 19:24:50", "level": "debug"}
+{"event": "Evaluated checkpoint checkpoint_name='checkpoint_4' problem_name='meshctl'", "timestamp": "2026-06-12 19:27:48", "level": "info"}
+{"event": "Evaluated checkpoint checkpoint_name='checkpoint_5' problem_name='meshctl'", "timestamp": "2026-06-12 19:31:47", "level": "info"}
+{"event": "Evaluated checkpoint checkpoint_name='checkpoint_6' problem_name='meshctl'", "timestamp": "2026-06-12 19:35:19", "level": "info"}
+{"event": "Evaluated checkpoint checkpoint_name='checkpoint_7' problem_name='meshctl'", "timestamp": "2026-06-12 19:41:17", "level": "info"}
+{"event": "Evaluated checkpoint checkpoint_name='checkpoint_8' problem_name='meshctl'", "timestamp": "2026-06-12 19:46:26", "level": "info"}
+{"event": "Evaluation complete saving full results failed=0 successful=5 total=1", "timestamp": "2026-06-12 19:46:26", "level": "info"}
+{"successful": 5, "failed": 0, "event": "Evaluation complete", "timestamp": "2026-06-12 19:46:26", "level": "info"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/meshctl')", "timestamp": "2026-06-12 19:46:26", "level": "debug"}
+{"event": "Creating problem reports submission_dir='eval-results/meshctl'", "timestamp": "2026-06-12 19:46:26", "level": "debug"}
+{"event": "run_info.yaml not found submission_dir='eval-results/meshctl'", "timestamp": "2026-06-12 19:46:26", "level": "debug"}
+{"event": "Checkpoint directory not found checkpoint_dir='eval-results/meshctl/checkpoint_1'", "timestamp": "2026-06-12 19:46:26", "level": "warning"}
+{"event": "Checkpoint directory not found checkpoint_dir='eval-results/meshctl/checkpoint_2'", "timestamp": "2026-06-12 19:46:26", "level": "warning"}
+{"event": "Checkpoint directory not found checkpoint_dir='eval-results/meshctl/checkpoint_3'", "timestamp": "2026-06-12 19:46:26", "level": "warning"}
+{"event": "Loading problem config path=PosixPath('/home/stk/.cache/scbench/problems/meshctl')", "timestamp": "2026-06-12 19:46:35", "level": "debug"}
+{"event": "Saved run summary path='eval-results/result.json'", "timestamp": "2026-06-12 19:46:35", "level": "info"}
