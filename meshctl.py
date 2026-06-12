@@ -27,6 +27,19 @@ MEMORY_UNITS = {
 AUTH_DIGEST_ALGORITHMS = {"SHA-256", "SHA-384", "SHA-512"}
 ENCRYPTION_SOURCES = {"None", "Secret", "Service"}
 ENCRYPTION_CLIENT_MODES = {"None", "Authenticate", "Validate"}
+RUNTIME_CATALOG = {
+    "3.0.0": "deprecated",
+    "3.1.0": "skipped",
+    "3.1.1": "supported",
+    "4.0.0": "supported",
+    "4.0.1": "supported",
+}
+MIGRATION_STRATEGIES = {"FullStop", "LiveMigration", "RollingPatch"}
+MIGRATION_STAGES = {
+    "FullStop": ["Migrate"],
+    "RollingPatch": ["Migrate"],
+    "LiveMigration": ["Prepare", "Transfer", "Cutover"],
+}
 ONE_SHOT_COLLECTIONS = {
     "task": "tasks",
     "snapshot": "snapshots",
@@ -50,6 +63,8 @@ def main(argv: list[str] | None = None) -> int:
             return mesh_delete(args.name)
         if args.mesh_operation == "update":
             return mesh_update(args.file)
+        if args.mesh_operation == "migrate":
+            return mesh_migrate(args.name, args.rollback)
     if args.command == "vault":
         if args.vault_operation == "create":
             return vault_create(args.file)
@@ -98,6 +113,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     delete = mesh_operations.add_parser("delete")
     delete.add_argument("name")
+
+    migrate = mesh_operations.add_parser("migrate")
+    migrate.add_argument("name")
+    migrate.add_argument("--rollback", action="store_true")
 
     vault = commands.add_parser("vault")
     vault_operations = vault.add_subparsers(dest="vault_operation", required=True)
@@ -161,7 +180,7 @@ def mesh_create(input_path: str) -> int:
 
     meshes[name] = resource
     save_store(store)
-    print_json(public_resource(resource))
+    print_resource_with_warnings(public_resource(resource), runtime_warnings(resource))
     return 0
 
 
@@ -199,9 +218,45 @@ def mesh_update(input_path: str) -> int:
 
     canonicalize_resource_access(candidate)
     reconcile_update_status(stored, candidate, resume_without_count)
+    start_runtime_migration_if_needed(stored, candidate)
     meshes[name] = candidate
     save_store(store)
-    print_json(public_resource(candidate))
+    print_resource_with_warnings(public_resource(candidate), runtime_warnings(candidate))
+    return 0
+
+
+def mesh_migrate(name: str, rollback: bool) -> int:
+    store = load_store()
+    meshes = store["meshes"]
+    if name not in meshes:
+        print_errors([error("metadata.name", "Mesh not found", "not_found")])
+        return 0
+
+    resource = upgrade_stored_resource(meshes[name])
+    migration = active_migration(resource)
+    if migration is None:
+        print_errors(
+            [
+                error(
+                    "status.migration",
+                    f"no active migration for mesh '{name}'",
+                    "invalid",
+                )
+            ]
+        )
+        return 0
+
+    if rollback:
+        rollback_errors = rollback_migration(resource)
+        if rollback_errors:
+            print_errors(rollback_errors)
+            return 0
+    else:
+        advance_migration(resource)
+
+    meshes[name] = resource
+    save_store(store)
+    print_json(public_resource(resource))
     return 0
 
 
@@ -677,6 +732,7 @@ def normalize_mesh_for_create(
     name = metadata.get("name")
     validate_name(name, errors)
     validate_forbidden_autoscaling(spec, "spec", errors)
+    validate_live_migration_topology(spec, errors)
 
     normalized_spec: dict[str, Any] = {}
     normalize_instances(spec, normalized_spec, errors, default=1)
@@ -1271,6 +1327,125 @@ def normalize_runtime(
 def validate_runtime(runtime: Any, errors: list[dict[str, str]]) -> None:
     if not isinstance(runtime, str) or not RUNTIME_RE.fullmatch(runtime):
         errors.append(error("spec.runtime", "Runtime must be major.minor.patch", "invalid"))
+        return
+
+    status = RUNTIME_CATALOG.get(runtime)
+    if status is None:
+        errors.append(error("spec.runtime", f"runtime version '{runtime}' is not supported", "invalid"))
+    elif status == "skipped":
+        errors.append(
+            error(
+                "spec.runtime",
+                f"runtime version '{runtime}' is skipped and cannot be targeted",
+                "invalid",
+            )
+        )
+
+
+def runtime_warnings(resource: dict[str, Any]) -> list[dict[str, str]]:
+    runtime = get_path(resource, ["spec", "runtime"])
+    if isinstance(runtime, str) and RUNTIME_CATALOG.get(runtime) == "deprecated":
+        return [
+            {
+                "field": "spec.runtime",
+                "message": f"runtime version '{runtime}' is deprecated",
+            }
+        ]
+    return []
+
+
+def sort_warnings(warnings: list[dict[str, str]]) -> list[dict[str, str]]:
+    return sorted(warnings, key=lambda item: (item["field"], item["message"]))
+
+
+def print_resource_with_warnings(
+    resource: dict[str, Any],
+    warnings: list[dict[str, str]],
+) -> None:
+    if warnings:
+        resource = copy.deepcopy(resource)
+        resource["warnings"] = sort_warnings(warnings)
+    print_json(resource)
+
+
+def parse_runtime_version(runtime: str) -> tuple[int, int, int]:
+    major, minor, patch = runtime.split(".")
+    return int(major), int(minor), int(patch)
+
+
+def is_catalog_runtime(runtime: Any) -> bool:
+    return isinstance(runtime, str) and RUNTIME_CATALOG.get(runtime) in {
+        "supported",
+        "deprecated",
+    }
+
+
+def is_version_change(stored: dict[str, Any], candidate: dict[str, Any]) -> bool:
+    source = get_path(stored, ["spec", "runtime"])
+    target = get_path(candidate, ["spec", "runtime"])
+    return is_catalog_runtime(source) and is_catalog_runtime(target) and source != target
+
+
+def validate_runtime_version_change(
+    stored: dict[str, Any],
+    candidate: dict[str, Any],
+    errors: list[dict[str, str]],
+) -> None:
+    source = get_path(stored, ["spec", "runtime"])
+    target = get_path(candidate, ["spec", "runtime"])
+    strategy = get_path(candidate, ["spec", "migration", "strategy"])
+
+    if active_migration(stored) is not None:
+        if source != target:
+            errors.append(
+                error(
+                    "spec.runtime",
+                    "cannot change runtime version while a migration is in progress",
+                    "invalid",
+                )
+            )
+        stored_strategy = get_path(stored, ["spec", "migration", "strategy"])
+        if stored_strategy != strategy:
+            errors.append(
+                error(
+                    "spec.migration.strategy",
+                    "cannot change migration strategy while a migration is in progress",
+                    "invalid",
+                )
+            )
+        return
+
+    if not is_catalog_runtime(source) or not is_catalog_runtime(target) or source == target:
+        return
+
+    source_version = parse_runtime_version(source)
+    target_version = parse_runtime_version(target)
+    if target_version < source_version:
+        errors.append(
+            error(
+                "spec.runtime",
+                f"version downgrade from '{source}' to '{target}' is not allowed",
+                "invalid",
+            )
+        )
+
+    if strategy == "RollingPatch":
+        if source_version[:2] != target_version[:2]:
+            errors.append(
+                error(
+                    "spec.runtime",
+                    "RollingPatch requires source and target to share major and minor version",
+                    "invalid",
+                )
+            )
+        if target_version[0] < 4:
+            errors.append(
+                error(
+                    "spec.runtime",
+                    "RollingPatch requires target major version to be at least 4",
+                    "invalid",
+                )
+            )
 
 
 def normalize_resources(
@@ -1500,9 +1675,9 @@ def normalize_migration(
 
 
 def validate_migration_strategy(strategy: Any, errors: list[dict[str, str]]) -> None:
-    if strategy != "FullStop":
+    if strategy not in MIGRATION_STRATEGIES:
         errors.append(
-            error("spec.migration.strategy", "Migration strategy must be FullStop", "invalid")
+            error("spec.migration.strategy", "Migration strategy is invalid", "invalid")
         )
 
 
@@ -1616,9 +1791,11 @@ def validate_merged_resource(
     validate_resources_object(spec.get("resources"), errors)
     validate_access_object(spec.get("access"), errors)
     validate_migration_object(spec.get("migration"), errors)
+    validate_live_migration_topology(spec, errors)
     validate_network_object(spec.get("network"), spec.get("instances"), errors)
 
     if stored is not None:
+        validate_runtime_version_change(stored, resource, errors)
         stored_size = get_path(stored, ["spec", "network", "storage", "size"])
         candidate_size = get_path(resource, ["spec", "network", "storage", "size"])
         if stored_size != candidate_size:
@@ -1884,6 +2061,23 @@ def validate_migration_object(value: Any, errors: list[dict[str, str]]) -> None:
         validate_migration_strategy(value.get("strategy"), errors)
 
 
+def validate_live_migration_topology(
+    spec: dict[str, Any],
+    errors: list[dict[str, str]],
+) -> None:
+    if get_path(spec, ["migration", "strategy"]) != "LiveMigration":
+        return
+    if "regions" not in spec or spec.get("regions") is None:
+        return
+    errors.append(
+        error(
+            "spec.migration.strategy",
+            "LiveMigration strategy is not supported with multi-region topology",
+            "invalid",
+        )
+    )
+
+
 def validate_network_object(
     value: Any,
     instances: Any,
@@ -1946,7 +2140,6 @@ def initialize_status(resource: dict[str, Any]) -> None:
     running = isinstance(instances, int) and not isinstance(instances, bool) and instances > 0
 
     status["state"] = "Running" if running else "Stopped"
-    status["stable"] = "_transition" not in resource
     if "instances" not in status or not isinstance(status.get("instances"), dict):
         status["instances"] = {}
     status_instances = status["instances"]
@@ -1964,7 +2157,7 @@ def initialize_status(resource: dict[str, Any]) -> None:
             status["desiredInstancesOnResume"] = desired
     set_condition(status, "Healthy", "True", "")
     set_condition(status, "PrechecksPassed", "True", "")
-    sort_conditions(status)
+    recalculate_mesh_stability(status)
 
 
 def reconcile_update_status(
@@ -1992,19 +2185,16 @@ def reconcile_update_status(
         target = new_instances if is_positive_int(new_instances) else old_status["desiredInstancesOnResume"]
         candidate.setdefault("spec", {})["instances"] = target
         status["state"] = "Running"
-        status["stable"] = False
         status["instances"] = {"ready": 0, "starting": target, "stopped": 0}
         clear_condition(status, "GracefulShutdown")
         candidate["_transition"] = {"type": "resume", "target": target}
     elif is_positive_int(old_instances) and new_instances == 0:
         status["state"] = "Stopped"
-        status["stable"] = True
         status["desiredInstancesOnResume"] = old_instances
         status["instances"] = {"ready": 0, "starting": 0, "stopped": old_instances}
         set_condition(status, "GracefulShutdown", "True", "")
     elif is_positive_int(old_instances) and is_positive_int(new_instances) and new_instances > old_instances:
         status["state"] = "Running"
-        status["stable"] = False
         status["instances"] = {
             "ready": old_instances,
             "starting": new_instances - old_instances,
@@ -2014,13 +2204,11 @@ def reconcile_update_status(
         candidate["_transition"] = {"type": "scale", "target": new_instances}
     elif is_positive_int(old_instances) and is_positive_int(new_instances) and new_instances < old_instances:
         status["state"] = "Running"
-        status["stable"] = False
         status["instances"] = {"ready": new_instances, "starting": 0, "stopped": 0}
         set_condition(status, "Scaling", "True", f"Scaling from {old_instances} to {new_instances}")
         candidate["_transition"] = {"type": "scale", "target": new_instances}
     else:
         status["state"] = "Running" if is_positive_int(new_instances) else "Stopped"
-        status["stable"] = True
         if is_positive_int(new_instances):
             status["instances"] = {"ready": new_instances, "starting": 0, "stopped": 0}
             clear_condition(status, "GracefulShutdown")
@@ -2031,7 +2219,87 @@ def reconcile_update_status(
                 status["desiredInstancesOnResume"] = stopped
                 set_condition(status, "GracefulShutdown", "True", "")
 
-    sort_conditions(status)
+    recalculate_mesh_stability(status)
+
+
+def start_runtime_migration_if_needed(
+    stored: dict[str, Any],
+    candidate: dict[str, Any],
+) -> None:
+    if not is_version_change(stored, candidate):
+        return
+
+    source = get_path(stored, ["spec", "runtime"])
+    target = get_path(candidate, ["spec", "runtime"])
+    strategy = get_path(candidate, ["spec", "migration", "strategy"])
+    if not isinstance(strategy, str) or strategy not in MIGRATION_STAGES:
+        return
+
+    status = candidate.setdefault("status", {})
+    set_condition(status, "Migration", "True", "")
+    status["migration"] = {
+        "sourceRuntime": source,
+        "stage": MIGRATION_STAGES[strategy][0],
+        "targetRuntime": target,
+    }
+    recalculate_mesh_stability(status)
+
+
+def active_migration(resource: dict[str, Any]) -> dict[str, Any] | None:
+    status = resource.get("status")
+    if not isinstance(status, dict):
+        return None
+    migration = status.get("migration")
+    if not isinstance(migration, dict):
+        return None
+    if not condition_is(status, "Migration", "True"):
+        return None
+    return migration
+
+
+def migration_strategy(resource: dict[str, Any]) -> str:
+    strategy = get_path(resource, ["spec", "migration", "strategy"])
+    return strategy if isinstance(strategy, str) and strategy in MIGRATION_STAGES else "FullStop"
+
+
+def advance_migration(resource: dict[str, Any]) -> None:
+    migration = active_migration(resource)
+    if migration is None:
+        return
+
+    strategy = migration_strategy(resource)
+    stages = MIGRATION_STAGES[strategy]
+    current_stage = migration.get("stage")
+    try:
+        current_index = stages.index(current_stage)
+    except ValueError:
+        current_index = len(stages) - 1
+
+    if current_index >= len(stages) - 1:
+        complete_migration(resource)
+    else:
+        migration["stage"] = stages[current_index + 1]
+        recalculate_mesh_stability(resource.setdefault("status", {}))
+
+
+def complete_migration(resource: dict[str, Any]) -> None:
+    status = resource.setdefault("status", {})
+    clear_condition(status, "Migration")
+    status.pop("migration", None)
+    recalculate_mesh_stability(status)
+
+
+def rollback_migration(resource: dict[str, Any]) -> list[dict[str, str]]:
+    if migration_strategy(resource) != "LiveMigration":
+        return [
+            error(
+                "status.migration",
+                "rollback is only supported for LiveMigration strategy",
+                "invalid",
+            )
+        ]
+    complete_migration(resource)
+    return []
 
 
 def complete_pending_transition(resource: dict[str, Any]) -> bool:
@@ -2045,7 +2313,6 @@ def complete_pending_transition(resource: dict[str, Any]) -> bool:
         return True
 
     status = resource.setdefault("status", {})
-    status["stable"] = True
     status["state"] = "Running" if target > 0 else "Stopped"
     if target > 0:
         status["instances"] = {"ready": target, "starting": 0, "stopped": 0}
@@ -2054,7 +2321,7 @@ def complete_pending_transition(resource: dict[str, Any]) -> bool:
         status.pop("desiredInstancesOnResume", None)
     else:
         status["instances"] = {"ready": 0, "starting": 0, "stopped": 0}
-    sort_conditions(status)
+    recalculate_mesh_stability(status)
     return True
 
 
@@ -2087,7 +2354,7 @@ def public_resource(resource: dict[str, Any]) -> dict[str, Any]:
         storage.pop("size", None)
     status = public.get("status")
     if isinstance(status, dict):
-        sort_conditions(status)
+        recalculate_mesh_stability(status)
     return public
 
 
@@ -2142,6 +2409,30 @@ def has_condition(status: dict[str, Any], condition_type: str) -> bool:
     return any(
         isinstance(condition, dict) and condition.get("type") == condition_type
         for condition in status.get("conditions", [])
+    )
+
+
+def condition_is(
+    status: dict[str, Any],
+    condition_type: str,
+    condition_status: str,
+) -> bool:
+    return any(
+        isinstance(condition, dict)
+        and condition.get("type") == condition_type
+        and condition.get("status") == condition_status
+        for condition in status.get("conditions", [])
+    )
+
+
+def recalculate_mesh_stability(status: dict[str, Any]) -> None:
+    sort_conditions(status)
+    status["stable"] = (
+        condition_is(status, "Healthy", "True")
+        and condition_is(status, "PrechecksPassed", "True")
+        and not condition_is(status, "GracefulShutdown", "True")
+        and not condition_is(status, "Scaling", "True")
+        and not condition_is(status, "Migration", "True")
     )
 
 
