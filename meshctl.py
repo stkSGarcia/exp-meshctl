@@ -27,6 +27,13 @@ MEMORY_UNITS = {
 AUTH_DIGEST_ALGORITHMS = {"SHA-256", "SHA-384", "SHA-512"}
 ENCRYPTION_SOURCES = {"None", "Secret", "Service"}
 ENCRYPTION_CLIENT_MODES = {"None", "Authenticate", "Validate"}
+ONE_SHOT_COLLECTIONS = {
+    "task": "tasks",
+    "snapshot": "snapshots",
+    "recovery": "recoveries",
+}
+ONE_SHOT_TERMINAL_STATES = {"Succeeded", "Failed", "Unknown"}
+SNAPSHOT_SCOPE_KEYS = {"stores", "blueprints", "tallies", "definitions", "procedures"}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -54,6 +61,19 @@ def main(argv: list[str] | None = None) -> int:
             return vault_delete(args.name)
         if args.vault_operation == "update":
             return vault_update(args.file)
+    if args.command in ONE_SHOT_COLLECTIONS:
+        if args.one_shot_operation == "create":
+            return one_shot_create(args.command, args.file)
+        if args.one_shot_operation == "list":
+            return one_shot_list(args.command)
+        if args.one_shot_operation == "describe":
+            return one_shot_describe(args.command, args.name)
+        if args.one_shot_operation == "update":
+            return one_shot_update(args.command, args.file)
+        if args.one_shot_operation == "delete":
+            return one_shot_delete(args.command, args.name)
+        if args.one_shot_operation == "run":
+            return one_shot_run(args.command, args.name)
     parser.print_help(sys.stderr)
     return 2
 
@@ -95,6 +115,30 @@ def build_parser() -> argparse.ArgumentParser:
 
     vault_delete_parser = vault_operations.add_parser("delete")
     vault_delete_parser.add_argument("name")
+
+    for kind in ONE_SHOT_COLLECTIONS:
+        one_shot = commands.add_parser(kind)
+        one_shot_operations = one_shot.add_subparsers(
+            dest="one_shot_operation",
+            required=True,
+        )
+
+        one_shot_create_parser = one_shot_operations.add_parser("create")
+        one_shot_create_parser.add_argument("-f", "--file", required=True)
+
+        one_shot_update_parser = one_shot_operations.add_parser("update")
+        one_shot_update_parser.add_argument("-f", "--file", required=True)
+
+        one_shot_operations.add_parser("list")
+
+        one_shot_describe_parser = one_shot_operations.add_parser("describe")
+        one_shot_describe_parser.add_argument("name")
+
+        one_shot_delete_parser = one_shot_operations.add_parser("delete")
+        one_shot_delete_parser.add_argument("name")
+
+        one_shot_run_parser = one_shot_operations.add_parser("run")
+        one_shot_run_parser.add_argument("name")
     return parser
 
 
@@ -314,6 +358,149 @@ def vault_delete(name: str) -> int:
     return 0
 
 
+def one_shot_create(kind: str, input_path: str) -> int:
+    document, errors = load_resource_input(input_path)
+    if errors:
+        print_errors(errors)
+        return 0
+
+    store = load_store()
+    collection = one_shot_collection(store, kind)
+    resource, errors = normalize_one_shot_for_create(kind, document, store)
+    name = resource.get("metadata", {}).get("name")
+    if isinstance(name, str) and name in collection:
+        errors.append(error("metadata.name", f"{kind.title()} already exists", "duplicate"))
+
+    if errors:
+        print_errors(errors)
+        return 0
+
+    collection[name] = resource
+    save_store(store)
+    print_json(public_one_shot(kind, resource))
+    return 0
+
+
+def one_shot_update(kind: str, input_path: str) -> int:
+    document, errors = load_resource_input(input_path)
+    if errors:
+        print_errors(errors)
+        return 0
+
+    metadata = document.get("metadata")
+    name = metadata.get("name") if isinstance(metadata, dict) else None
+    errors = []
+    validate_name(name, errors)
+    if errors:
+        print_errors(errors)
+        return 0
+
+    store = load_store()
+    collection = one_shot_collection(store, kind)
+    if name not in collection:
+        print_errors([not_found_error(kind)])
+        return 0
+
+    stored = upgrade_stored_one_shot(collection[name])
+    candidate = deep_merge(stored, one_shot_update_patch(document))
+    validate_one_shot_update(kind, stored, candidate, errors)
+    if errors:
+        print_errors(errors)
+        return 0
+
+    collection[name] = candidate
+    save_store(store)
+    print_json(public_one_shot(kind, candidate))
+    return 0
+
+
+def one_shot_list(kind: str) -> int:
+    store = load_store()
+    summaries = [
+        {"name": name, "status": {"state": public_one_shot(kind, resource)["status"]["state"]}}
+        for name, resource in sorted(one_shot_collection(store, kind).items(), key=lambda item: item[0])
+    ]
+    print_json(summaries)
+    return 0
+
+
+def one_shot_describe(kind: str, name: str) -> int:
+    store = load_store()
+    collection = one_shot_collection(store, kind)
+    if name not in collection:
+        print_errors([not_found_error(kind)])
+        return 0
+    print_json(public_one_shot(kind, collection[name]))
+    return 0
+
+
+def one_shot_delete(kind: str, name: str) -> int:
+    store = load_store()
+    collection = one_shot_collection(store, kind)
+    if name not in collection:
+        print_errors([not_found_error(kind)])
+        return 0
+
+    if kind == "snapshot":
+        dependents = sorted(
+            recovery_name
+            for recovery_name, recovery in store["recoveries"].items()
+            if get_path(recovery, ["spec", "snapshotRef"]) == name
+        )
+        if dependents:
+            print_errors(
+                [
+                    error(
+                        "metadata.name",
+                        f"Snapshot {name} is referenced by recoveries: {', '.join(dependents)}",
+                        "conflict",
+                    )
+                ]
+            )
+            return 0
+
+    del collection[name]
+    save_store(store)
+    print_json({"message": f"Deleted {kind} {name}", "metadata": {"name": name}})
+    return 0
+
+
+def one_shot_run(kind: str, name: str) -> int:
+    store = load_store()
+    collection = one_shot_collection(store, kind)
+    if name not in collection:
+        print_errors([not_found_error(kind)])
+        return 0
+
+    resource = upgrade_stored_one_shot(collection[name])
+    state = get_path(resource, ["status", "state"])
+    if state != "Initializing":
+        print_errors(
+            [
+                error(
+                    "status.state",
+                    f"resource is in state '{state}', expected 'Initializing'",
+                    "invalid",
+                )
+            ]
+        )
+        return 0
+
+    status = resource.setdefault("status", {})
+    status["state"] = "Running"
+    if kind == "task":
+        complete_task_run(resource)
+    elif kind == "snapshot":
+        complete_snapshot_run(resource, store)
+    else:
+        complete_recovery_run(resource, store)
+
+    collection[name] = resource
+    save_store(store)
+    print_json(public_one_shot(kind, resource))
+    return 0
+
+
 def store_path() -> Path:
     override = os.environ.get("MESHCTL_STORE")
     if override:
@@ -322,7 +509,7 @@ def store_path() -> Path:
 
 
 def empty_store() -> dict[str, dict[str, dict[str, Any]]]:
-    return {"meshes": {}, "vaults": {}}
+    return {"meshes": {}, "vaults": {}, "tasks": {}, "snapshots": {}, "recoveries": {}}
 
 
 def clean_resource_collection(value: Any) -> dict[str, dict[str, Any]]:
@@ -349,8 +536,13 @@ def load_store() -> dict[str, dict[str, dict[str, Any]]]:
         return {
             "meshes": clean_resource_collection(content.get("meshes")),
             "vaults": clean_resource_collection(content.get("vaults")),
+            "tasks": clean_resource_collection(content.get("tasks")),
+            "snapshots": clean_resource_collection(content.get("snapshots")),
+            "recoveries": clean_resource_collection(content.get("recoveries")),
         }
-    return {"meshes": clean_resource_collection(content), "vaults": {}}
+    store = empty_store()
+    store["meshes"] = clean_resource_collection(content)
+    return store
 
 
 def save_store(store: dict[str, dict[str, dict[str, Any]]]) -> None:
@@ -652,6 +844,338 @@ def validate_template_exclusivity(
 ) -> None:
     if spec.get("template") is not None and spec.get("templateRef") is not None:
         errors.append(error("spec.template", "template and templateRef are mutually exclusive", "invalid"))
+
+
+def one_shot_collection(
+    store: dict[str, dict[str, dict[str, Any]]],
+    kind: str,
+) -> dict[str, dict[str, Any]]:
+    return store[ONE_SHOT_COLLECTIONS[kind]]
+
+
+def not_found_error(kind: str) -> dict[str, str]:
+    return error("metadata.name", f"{kind.title()} not found", "not_found")
+
+
+def normalize_one_shot_for_create(
+    kind: str,
+    document: dict[str, Any],
+    store: dict[str, dict[str, dict[str, Any]]],
+) -> tuple[dict[str, Any], list[dict[str, str]]]:
+    if kind == "task":
+        return normalize_task_for_create(document, store)
+    if kind == "snapshot":
+        return normalize_snapshot_for_create(document, store)
+    return normalize_recovery_for_create(document, store)
+
+
+def one_shot_metadata_and_spec(
+    document: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any], Any, list[dict[str, str]]]:
+    errors: list[dict[str, str]] = []
+    metadata = document.get("metadata")
+    spec = document.get("spec")
+    if not isinstance(metadata, dict):
+        metadata = {}
+    if not isinstance(spec, dict):
+        spec = {}
+    name = metadata.get("name")
+    validate_name(name, errors)
+    return metadata, spec, name, errors
+
+
+def normalize_task_for_create(
+    document: dict[str, Any],
+    store: dict[str, dict[str, dict[str, Any]]],
+) -> tuple[dict[str, Any], list[dict[str, str]]]:
+    _metadata, spec, name, errors = one_shot_metadata_and_spec(document)
+    normalized_spec: dict[str, Any] = {}
+    normalize_mesh_ref(spec, store, normalized_spec, errors)
+
+    inline = spec.get("inline")
+    bundle_ref = spec.get("bundleRef")
+    inline_set = isinstance(inline, str) and inline != ""
+    bundle_set = isinstance(bundle_ref, str) and bundle_ref != ""
+    if inline_set == bundle_set:
+        errors.append(
+            error(
+                "spec",
+                "exactly one of 'spec.inline' or 'spec.bundleRef' must be set",
+                "invalid",
+            )
+        )
+    else:
+        if inline_set:
+            normalized_spec["inline"] = inline
+        if bundle_set:
+            normalized_spec["bundleRef"] = bundle_ref
+    if inline is not None and not isinstance(inline, str):
+        errors.append(error("spec.inline", "Inline task content must be a string", "invalid"))
+    if bundle_ref is not None and not isinstance(bundle_ref, str):
+        errors.append(error("spec.bundleRef", "Bundle reference must be a string", "invalid"))
+
+    return one_shot_resource(name, normalized_spec), errors
+
+
+def normalize_snapshot_for_create(
+    document: dict[str, Any],
+    store: dict[str, dict[str, dict[str, Any]]],
+) -> tuple[dict[str, Any], list[dict[str, str]]]:
+    _metadata, spec, name, errors = one_shot_metadata_and_spec(document)
+    normalized_spec: dict[str, Any] = {}
+    normalize_mesh_ref(spec, store, normalized_spec, errors)
+    normalize_snapshot_storage(spec, normalized_spec, errors)
+    normalize_scope(spec, normalized_spec, errors)
+    normalize_one_shot_resources(spec, normalized_spec, errors)
+    return one_shot_resource(name, normalized_spec), errors
+
+
+def normalize_recovery_for_create(
+    document: dict[str, Any],
+    store: dict[str, dict[str, dict[str, Any]]],
+) -> tuple[dict[str, Any], list[dict[str, str]]]:
+    _metadata, spec, name, errors = one_shot_metadata_and_spec(document)
+    normalized_spec: dict[str, Any] = {}
+    normalize_mesh_ref(spec, store, normalized_spec, errors)
+    snapshot_ref = spec.get("snapshotRef")
+    normalize_one_shot_ref(snapshot_ref, "spec.snapshotRef", "Snapshot reference is invalid", errors)
+    if isinstance(snapshot_ref, str) and snapshot_ref:
+        normalized_spec["snapshotRef"] = snapshot_ref
+        snapshot = store["snapshots"].get(snapshot_ref)
+        if not isinstance(snapshot, dict):
+            errors.append(error("spec.snapshotRef", f"Snapshot {snapshot_ref} does not exist", "invalid"))
+        else:
+            snapshot_mesh_ref = get_path(snapshot, ["spec", "meshRef"])
+            recovery_mesh_ref = normalized_spec.get("meshRef")
+            if (
+                isinstance(recovery_mesh_ref, str)
+                and isinstance(snapshot_mesh_ref, str)
+                and snapshot_mesh_ref != recovery_mesh_ref
+            ):
+                errors.append(
+                    error(
+                        "spec.snapshotRef",
+                        f"snapshot '{snapshot_ref}' belongs to mesh '{snapshot_mesh_ref}', not '{recovery_mesh_ref}'",
+                        "invalid",
+                    )
+                )
+
+    normalize_scope(spec, normalized_spec, errors)
+    normalize_one_shot_resources(spec, normalized_spec, errors)
+    return one_shot_resource(name, normalized_spec), errors
+
+
+def normalize_mesh_ref(
+    spec: dict[str, Any],
+    store: dict[str, dict[str, dict[str, Any]]],
+    normalized_spec: dict[str, Any],
+    errors: list[dict[str, str]],
+) -> None:
+    mesh_ref = spec.get("meshRef")
+    normalize_one_shot_ref(mesh_ref, "spec.meshRef", "Mesh reference is invalid", errors)
+    if isinstance(mesh_ref, str) and mesh_ref:
+        normalized_spec["meshRef"] = mesh_ref
+        if mesh_ref not in store["meshes"]:
+            errors.append(error("spec.meshRef", f"Mesh {mesh_ref} does not exist", "invalid"))
+
+
+def normalize_one_shot_ref(
+    value: Any,
+    field: str,
+    message: str,
+    errors: list[dict[str, str]],
+) -> None:
+    if value is None or value == "" or not isinstance(value, str):
+        errors.append(error(field, message, "invalid"))
+
+
+def normalize_snapshot_storage(
+    spec: dict[str, Any],
+    normalized_spec: dict[str, Any],
+    errors: list[dict[str, str]],
+) -> None:
+    storage = spec.get("storage")
+    if storage is None:
+        return
+    if not isinstance(storage, dict):
+        errors.append(error("spec.storage", "Storage must be an object", "invalid"))
+        return
+
+    normalized_storage: dict[str, Any] = {}
+    if "size" in storage:
+        size = storage.get("size")
+        normalized_storage["size"] = size
+        if parse_quantity(size, "memory") is None:
+            errors.append(error("spec.storage.size", "Storage size is invalid", "invalid"))
+    if "className" in storage:
+        class_name = storage.get("className")
+        normalized_storage["className"] = class_name
+        if not isinstance(class_name, str):
+            errors.append(error("spec.storage.className", "Storage className must be string", "invalid"))
+    normalized_spec["storage"] = normalized_storage
+
+
+def normalize_scope(
+    spec: dict[str, Any],
+    normalized_spec: dict[str, Any],
+    errors: list[dict[str, str]],
+) -> None:
+    scope = spec.get("scope")
+    if scope is None:
+        return
+    if not isinstance(scope, dict):
+        errors.append(error("spec.scope", "Scope must be an object", "invalid"))
+        return
+    normalized_spec["scope"] = {
+        key: copy.deepcopy(scope[key])
+        for key in SNAPSHOT_SCOPE_KEYS
+        if key in scope
+    }
+
+
+def normalize_one_shot_resources(
+    spec: dict[str, Any],
+    normalized_spec: dict[str, Any],
+    errors: list[dict[str, str]],
+) -> None:
+    resources = spec.get("resources")
+    if resources is None:
+        normalized_spec["resources"] = {"memory": {"limit": "1Gi", "request": "1Gi"}}
+        return
+    normalize_resources(spec, normalized_spec, errors)
+
+
+def one_shot_resource(name: Any, spec: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "metadata": {"name": name},
+        "spec": spec,
+        "status": {"state": "Initializing"},
+    }
+
+
+def upgrade_stored_one_shot(resource: dict[str, Any]) -> dict[str, Any]:
+    upgraded = copy.deepcopy(resource)
+    metadata = upgraded.setdefault("metadata", {})
+    if not isinstance(metadata, dict):
+        metadata = {}
+        upgraded["metadata"] = metadata
+    spec = upgraded.setdefault("spec", {})
+    if not isinstance(spec, dict):
+        spec = {}
+        upgraded["spec"] = spec
+    status = upgraded.setdefault("status", {})
+    if not isinstance(status, dict):
+        status = {}
+        upgraded["status"] = status
+    status.setdefault("state", "Initializing")
+    return upgraded
+
+
+def one_shot_update_patch(document: dict[str, Any]) -> dict[str, Any]:
+    patch: dict[str, Any] = {}
+    if isinstance(document.get("metadata"), dict):
+        patch["metadata"] = {"name": document["metadata"].get("name")}
+    if isinstance(document.get("spec"), dict):
+        patch["spec"] = copy.deepcopy(document["spec"])
+    if isinstance(document.get("status"), dict):
+        patch["status"] = copy.deepcopy(document["status"])
+    return patch
+
+
+def validate_one_shot_update(
+    kind: str,
+    stored: dict[str, Any],
+    candidate: dict[str, Any],
+    errors: list[dict[str, str]],
+) -> None:
+    validate_name(get_path(candidate, ["metadata", "name"]), errors)
+    if stored.get("spec") != candidate.get("spec"):
+        errors.append(error("spec", "field 'spec' is immutable after creation", "immutable"))
+
+    status = candidate.get("status")
+    if status is not None and not isinstance(status, dict):
+        errors.append(error("status", "Status must be an object", "invalid"))
+        return
+    if not isinstance(status, dict):
+        return
+
+    state = status.get("state")
+    if state is not None and not is_allowed_one_shot_state(kind, state):
+        errors.append(error("status.state", "Status state is invalid", "invalid"))
+
+    stored_state = get_path(stored, ["status", "state"])
+    if stored_state in ONE_SHOT_TERMINAL_STATES and state != stored_state:
+        errors.append(error("status.state", "terminal states are irreversible", "invalid"))
+
+
+def is_allowed_one_shot_state(kind: str, state: Any) -> bool:
+    if kind == "task":
+        return state in {"Initializing", "Running", "Succeeded", "Failed"}
+    return state in {"Initializing", "Running", "Succeeded", "Failed", "Unknown"}
+
+
+def complete_task_run(resource: dict[str, Any]) -> None:
+    status = resource.setdefault("status", {})
+    inline = get_path(resource, ["spec", "inline"])
+    if isinstance(inline, str):
+        for index, line in enumerate(inline.splitlines(), start=1):
+            if line.startswith("FAIL:"):
+                reason = line[len("FAIL:") :].strip()
+                status["state"] = "Failed"
+                status["detail"] = f"command {index} failed: {reason}"
+                return
+    status["state"] = "Succeeded"
+    status.pop("detail", None)
+
+
+def complete_snapshot_run(
+    resource: dict[str, Any],
+    store: dict[str, dict[str, dict[str, Any]]],
+) -> None:
+    status = resource.setdefault("status", {})
+    if referenced_mesh_unstable(resource, store):
+        status["state"] = "Unknown"
+        status["detail"] = "referenced mesh is not stable"
+        status.pop("storageRef", None)
+        return
+    name = get_path(resource, ["metadata", "name"])
+    status["state"] = "Succeeded"
+    status.pop("detail", None)
+    status["storageRef"] = f"snapshot://{name}"
+
+
+def complete_recovery_run(
+    resource: dict[str, Any],
+    store: dict[str, dict[str, dict[str, Any]]],
+) -> None:
+    status = resource.setdefault("status", {})
+    if referenced_mesh_unstable(resource, store):
+        status["state"] = "Unknown"
+        status["detail"] = "referenced mesh is not stable"
+        return
+    status["state"] = "Succeeded"
+    status.pop("detail", None)
+
+
+def referenced_mesh_unstable(
+    resource: dict[str, Any],
+    store: dict[str, dict[str, dict[str, Any]]],
+) -> bool:
+    mesh_ref = get_path(resource, ["spec", "meshRef"])
+    mesh = store["meshes"].get(mesh_ref) if isinstance(mesh_ref, str) else None
+    return isinstance(mesh, dict) and get_path(mesh, ["status", "stable"]) is False
+
+
+def public_one_shot(kind: str, resource: dict[str, Any]) -> dict[str, Any]:
+    public = copy.deepcopy(upgrade_stored_one_shot(resource))
+    status = public.setdefault("status", {})
+    if isinstance(status, dict):
+        state = status.get("state")
+        if state not in {"Failed", "Unknown"}:
+            status.pop("detail", None)
+        if kind != "snapshot" or state != "Succeeded":
+            status.pop("storageRef", None)
+    return public
 
 
 def update_patch(document: dict[str, Any]) -> dict[str, Any]:

@@ -46,6 +46,25 @@ class MeshCtlCliTests(unittest.TestCase):
         self.assertEqual(0, result.returncode)
         return json.loads(result.stdout)
 
+    def create_mesh(self, name: str, instances: int = 1):
+        return self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        f"""
+                        metadata:
+                          name: {name}
+                        spec:
+                          instances: {instances}
+                        """
+                    )
+                ),
+            )
+        )
+
     def test_create_describe_list_and_delete(self) -> None:
         alpha = self.write_yaml(
             """
@@ -1559,6 +1578,491 @@ class MeshCtlCliTests(unittest.TestCase):
         self.assert_json_stdout(self.run_meshctl("vault", "delete", "dependent"))
         deleted = self.assert_json_stdout(self.run_meshctl("mesh", "delete", "blocked"))
         self.assertEqual({"name": "blocked"}, deleted["metadata"])
+
+    def test_task_create_list_describe_update_delete_and_run(self) -> None:
+        self.create_mesh("alpha")
+
+        created = self.assert_json_stdout(
+            self.run_meshctl(
+                "task",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: beta-task
+                        spec:
+                          meshRef: alpha
+                          inline: "echo ok"
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual("Initializing", created["status"]["state"])
+        self.assertEqual("alpha", created["spec"]["meshRef"])
+
+        described = self.assert_json_stdout(self.run_meshctl("task", "describe", "beta-task"))
+        self.assertEqual(created, described)
+
+        self.assert_json_stdout(
+            self.run_meshctl(
+                "task",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: alpha-task
+                        spec:
+                          meshRef: alpha
+                          bundleRef: bundle-a
+                        """
+                    )
+                ),
+            )
+        )
+        listed = self.assert_json_stdout(self.run_meshctl("task", "list"))
+        self.assertEqual(["alpha-task", "beta-task"], [item["name"] for item in listed])
+
+        updated = self.assert_json_stdout(
+            self.run_meshctl(
+                "task",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: beta-task
+                        status:
+                          state: Initializing
+                          detail: hidden
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual("Initializing", updated["status"]["state"])
+        self.assertNotIn("detail", updated["status"])
+
+        succeeded = self.assert_json_stdout(self.run_meshctl("task", "run", "beta-task"))
+        self.assertEqual("Succeeded", succeeded["status"]["state"])
+        self.assertNotIn("detail", succeeded["status"])
+
+        rerun = self.assert_json_stdout(self.run_meshctl("task", "run", "beta-task"))
+        self.assertEqual(
+            {("status.state", "invalid")},
+            {(item["field"], item["type"]) for item in rerun["errors"]},
+        )
+
+        deleted = self.assert_json_stdout(self.run_meshctl("task", "delete", "alpha-task"))
+        self.assertEqual({"name": "alpha-task"}, deleted["metadata"])
+
+    def test_task_validation_and_inline_failure(self) -> None:
+        self.create_mesh("alpha")
+
+        invalid_mesh = self.assert_json_stdout(
+            self.run_meshctl(
+                "task",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: missing-mesh-task
+                        spec:
+                          meshRef: absent
+                          inline: "echo ok"
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertIn(
+            ("spec.meshRef", "invalid"),
+            {(item["field"], item["type"]) for item in invalid_mesh["errors"]},
+        )
+
+        exclusive = self.assert_json_stdout(
+            self.run_meshctl(
+                "task",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: both-sources
+                        spec:
+                          meshRef: alpha
+                          inline: "echo ok"
+                          bundleRef: bundle-a
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {("spec", "invalid")},
+            {(item["field"], item["type"]) for item in exclusive["errors"]},
+        )
+        self.assertEqual(
+            "exactly one of 'spec.inline' or 'spec.bundleRef' must be set",
+            exclusive["errors"][0]["message"],
+        )
+
+        self.assert_json_stdout(
+            self.run_meshctl(
+                "task",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: failing-task
+                        spec:
+                          meshRef: alpha
+                          inline: "FAIL: exploded"
+                        """
+                    )
+                ),
+            )
+        )
+        failed = self.assert_json_stdout(self.run_meshctl("task", "run", "failing-task"))
+        self.assertEqual("Failed", failed["status"]["state"])
+        self.assertEqual("command 1 failed: exploded", failed["status"]["detail"])
+
+    def test_snapshot_defaults_scope_run_immutability_and_dependency_protection(self) -> None:
+        self.create_mesh("alpha")
+
+        created = self.assert_json_stdout(
+            self.run_meshctl(
+                "snapshot",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: snap-alpha
+                        spec:
+                          meshRef: alpha
+                          scope:
+                            stores: ["primary"]
+                            procedures: ["restore"]
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual("Initializing", created["status"]["state"])
+        self.assertEqual(
+            {"limit": "1Gi", "request": "1Gi"},
+            created["spec"]["resources"]["memory"],
+        )
+        self.assertEqual(["primary"], created["spec"]["scope"]["stores"])
+
+        succeeded = self.assert_json_stdout(self.run_meshctl("snapshot", "run", "snap-alpha"))
+        self.assertEqual("Succeeded", succeeded["status"]["state"])
+        self.assertTrue(succeeded["status"]["storageRef"])
+        self.assertNotIn("detail", succeeded["status"])
+
+        immutable = self.assert_json_stdout(
+            self.run_meshctl(
+                "snapshot",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: snap-alpha
+                        spec:
+                          storage:
+                            size: 2Gi
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {("spec", "immutable")},
+            {(item["field"], item["type"]) for item in immutable["errors"]},
+        )
+
+        self.assert_json_stdout(
+            self.run_meshctl(
+                "recovery",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: recovery-alpha
+                        spec:
+                          meshRef: alpha
+                          snapshotRef: snap-alpha
+                        """
+                    )
+                ),
+            )
+        )
+        blocked = self.assert_json_stdout(self.run_meshctl("snapshot", "delete", "snap-alpha"))
+        self.assertEqual(
+            {("metadata.name", "conflict")},
+            {(item["field"], item["type"]) for item in blocked["errors"]},
+        )
+        self.assertIn("recovery-alpha", blocked["errors"][0]["message"])
+
+        self.assert_json_stdout(self.run_meshctl("recovery", "delete", "recovery-alpha"))
+        deleted = self.assert_json_stdout(self.run_meshctl("snapshot", "delete", "snap-alpha"))
+        self.assertEqual({"name": "snap-alpha"}, deleted["metadata"])
+
+    def test_snapshot_validation_and_unknown_run(self) -> None:
+        self.create_mesh("alpha")
+
+        invalid_resources = self.assert_json_stdout(
+            self.run_meshctl(
+                "snapshot",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: bad-snapshot
+                        spec:
+                          meshRef: alpha
+                          resources:
+                            memory:
+                              limit: 1Gi
+                              request: 2Gi
+                            cpu:
+                              limit: 100m
+                              request: 1
+                        """
+                    )
+                ),
+            )
+        )
+        errors = {(item["field"], item["type"]) for item in invalid_resources["errors"]}
+        self.assertIn(("spec.resources.memory.request", "invalid"), errors)
+        self.assertIn(("spec.resources.cpu.request", "invalid"), errors)
+
+        missing_mesh = self.assert_json_stdout(
+            self.run_meshctl(
+                "snapshot",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: missing-mesh-snapshot
+                        spec:
+                          meshRef: absent
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertIn(
+            ("spec.meshRef", "invalid"),
+            {(item["field"], item["type"]) for item in missing_mesh["errors"]},
+        )
+
+        self.assert_json_stdout(
+            self.run_meshctl(
+                "snapshot",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: snap-unknown
+                        spec:
+                          meshRef: alpha
+                        """
+                    )
+                ),
+            )
+        )
+        self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: alpha
+                        spec:
+                          instances: 2
+                        """
+                    )
+                ),
+            )
+        )
+        unknown = self.assert_json_stdout(self.run_meshctl("snapshot", "run", "snap-unknown"))
+        self.assertEqual("Unknown", unknown["status"]["state"])
+        self.assertTrue(unknown["status"]["detail"])
+        self.assertNotIn("storageRef", unknown["status"])
+
+    def test_recovery_validation_list_run_and_immutability(self) -> None:
+        self.create_mesh("alpha")
+        self.create_mesh("beta")
+        for name, mesh_ref in (("snap-alpha", "alpha"), ("snap-beta", "beta")):
+            self.assert_json_stdout(
+                self.run_meshctl(
+                    "snapshot",
+                    "create",
+                    "-f",
+                    str(
+                        self.write_yaml(
+                            f"""
+                            metadata:
+                              name: {name}
+                            spec:
+                              meshRef: {mesh_ref}
+                            """
+                        )
+                    ),
+                )
+            )
+
+        missing_snapshot = self.assert_json_stdout(
+            self.run_meshctl(
+                "recovery",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: missing-snapshot
+                        spec:
+                          meshRef: alpha
+                          snapshotRef: absent
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertIn(
+            ("spec.snapshotRef", "invalid"),
+            {(item["field"], item["type"]) for item in missing_snapshot["errors"]},
+        )
+
+        mismatch = self.assert_json_stdout(
+            self.run_meshctl(
+                "recovery",
+                "create",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: mismatch
+                        spec:
+                          meshRef: alpha
+                          snapshotRef: snap-beta
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {("spec.snapshotRef", "invalid")},
+            {(item["field"], item["type"]) for item in mismatch["errors"]},
+        )
+        self.assertEqual(
+            "snapshot 'snap-beta' belongs to mesh 'beta', not 'alpha'",
+            mismatch["errors"][0]["message"],
+        )
+
+        for recovery_name in ("zeta-recovery", "alpha-recovery"):
+            created = self.assert_json_stdout(
+                self.run_meshctl(
+                    "recovery",
+                    "create",
+                    "-f",
+                    str(
+                        self.write_yaml(
+                            f"""
+                            metadata:
+                              name: {recovery_name}
+                            spec:
+                              meshRef: alpha
+                              snapshotRef: snap-alpha
+                            """
+                        )
+                    ),
+                )
+            )
+            self.assertEqual("Initializing", created["status"]["state"])
+            self.assertEqual(
+                {"limit": "1Gi", "request": "1Gi"},
+                created["spec"]["resources"]["memory"],
+            )
+
+        listed = self.assert_json_stdout(self.run_meshctl("recovery", "list"))
+        self.assertEqual(["alpha-recovery", "zeta-recovery"], [item["name"] for item in listed])
+
+        immutable = self.assert_json_stdout(
+            self.run_meshctl(
+                "recovery",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: alpha-recovery
+                        spec:
+                          scope:
+                            stores: ["secondary"]
+                        """
+                    )
+                ),
+            )
+        )
+        self.assertEqual(
+            {("spec", "immutable")},
+            {(item["field"], item["type"]) for item in immutable["errors"]},
+        )
+
+        succeeded = self.assert_json_stdout(self.run_meshctl("recovery", "run", "alpha-recovery"))
+        self.assertEqual("Succeeded", succeeded["status"]["state"])
+        self.assertNotIn("detail", succeeded["status"])
+
+        self.assert_json_stdout(
+            self.run_meshctl(
+                "mesh",
+                "update",
+                "-f",
+                str(
+                    self.write_yaml(
+                        """
+                        metadata:
+                          name: alpha
+                        spec:
+                          instances: 2
+                        """
+                    )
+                ),
+            )
+        )
+        unknown = self.assert_json_stdout(self.run_meshctl("recovery", "run", "zeta-recovery"))
+        self.assertEqual("Unknown", unknown["status"]["state"])
+        self.assertTrue(unknown["status"]["detail"])
 
 
 if __name__ == "__main__":
