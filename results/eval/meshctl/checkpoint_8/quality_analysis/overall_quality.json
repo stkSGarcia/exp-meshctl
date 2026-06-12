@@ -1,0 +1,177 @@
+{
+  "ast_grep": {
+    "category_counts": {
+      "slop": 743
+    },
+    "category_weighted": {
+      "slop": 1990
+    },
+    "counts": {
+      "chained-dict-get": 8,
+      "chained-none-check": 2,
+      "consecutive-append-calls": 1,
+      "consecutive-if-same-variable": 7,
+      "deep-dict-access": 20,
+      "defensive-falsy-passthrough": 6,
+      "defensive-function-isinstance-heavy": 17,
+      "defensive-isinstance-return": 14,
+      "defensive-type-probe-default-return": 9,
+      "defensive-validator-returnmix": 13,
+      "dict-get-empty-dict-default": 11,
+      "dict-get-empty-list-default": 5,
+      "dict-get-empty-string-default": 1,
+      "dict-get-zero-default": 2,
+      "empty-string-or": 1,
+      "exp-flat-guard-regex": 6,
+      "exp-guard-func": 8,
+      "exp-guardy-func": 26,
+      "exp-size-only": 194,
+      "flat-isinstance-return-helper": 4,
+      "get-then-none-check": 14,
+      "go-style-err-tuple-return": 9,
+      "guard-rail-helper-function": 26,
+      "guard-railed-utility-module": 1,
+      "if-not-guard": 59,
+      "isinstance-bool-exclusion": 18,
+      "list-comprehension-identity": 3,
+      "manual-dict-setdefault": 5,
+      "multi-none-or-chain": 1,
+      "multiple-isinstance-or": 4,
+      "nested-if-no-else": 25,
+      "predicate-count-via-sum-one": 1,
+      "raw-guard-module": 1,
+      "redundant-return-none": 17,
+      "repeated-if-continue": 1,
+      "repeated-if-return-error": 1,
+      "repeated-validation-calls": 18,
+      "set-from-list-literal": 72,
+      "set-literal-list": 72,
+      "silent-type-probe-helper-function": 12,
+      "unnecessary-list-call": 2,
+      "verbose-and-return": 7,
+      "verbose-dict-update": 3,
+      "verbose-list-append-loop": 7,
+      "verbose-none-default": 6,
+      "verbose-or-return": 3
+    },
+    "rules_checked": 214,
+    "violation_lines": 6913,
+    "violations": 743,
+    "weighted": 1990
+  },
+  "classes": {
+    "attribute_counts_mean": 3.0,
+    "attribute_counts_sum": 3,
+    "count": 1,
+    "method_counts_mean": 48.0,
+    "method_counts_sum": 48
+  },
+  "complexity": {
+    "cc_max": 99,
+    "cc_ratings": {
+      "A": 173,
+      "B": 44,
+      "C": 14,
+      "D": 3,
+      "E": 0,
+      "F": 1
+    },
+    "cc_sum": 1088,
+    "mi_min": 0.0,
+    "mi_ratings": {
+      "A": 0,
+      "B": 0,
+      "C": 2
+    },
+    "mi_sum": 1.6661207257518562,
+    "num_complex": 18
+  },
+  "file_count": 2,
+  "functions": {
+    "cc_concentration": 0.39746525506056823,
+    "cc_extreme_count": 0,
+    "cc_high_count": 17,
+    "cc_max": 25,
+    "cc_mean": 4.848039215686274,
+    "cc_normalized": 0.003341417212009135,
+    "cc_std": 4.002640271284905,
+    "cc_sum": 989,
+    "cc_top20": 0.46309403437815977,
+    "count": 204,
+    "depth_max": 3,
+    "extreme_cc_mean": 0.0,
+    "high_cc_mean": 15.176470588235293,
+    "lines_mean": 31.985294117647058,
+    "lines_sum": 6525
+  },
+  "graph": {
+    "cyclic_dependency_mass": 0.0,
+    "dependency_entropy": 0.42457595443926976,
+    "edge_count": 409,
+    "node_count": 156,
+    "propagation_cost": 0.05260545905707196
+  },
+  "lines": {
+    "comments": 3,
+    "loc": 6305,
+    "multi_comment": 0,
+    "single_comment": 2,
+    "total_lines": 6982
+  },
+  "lint": {
+    "counts": {
+      "ANN401": 52,
+      "ARG001": 1,
+      "BLE001": 1,
+      "C901": 7,
+      "FBT001": 8,
+      "FBT002": 1,
+      "FURB113": 1,
+      "FURB118": 5,
+      "INP001": 1,
+      "PERF401": 4,
+      "PLC0415": 1,
+      "PLC1901": 9,
+      "PLR0904": 1,
+      "PLR0911": 3,
+      "PLR0912": 4,
+      "PLR0914": 1,
+      "PLR0915": 1,
+      "PLR2004": 2,
+      "PT009": 314,
+      "S404": 1,
+      "S603": 1,
+      "SIM102": 1,
+      "UP022": 1
+    },
+    "errors": 421,
+    "fixable": 0
+  },
+  "redundancy": {
+    "clone_lines": 409,
+    "clone_ratio_sum": 0.1518752320831786,
+    "cloned_sloc_lines": 409,
+    "files_with_clones": 2
+  },
+  "source_files": [],
+  "symbols": {
+    "classes": 1,
+    "expressions": 8522,
+    "expressions_top_level": 500,
+    "functions": 156,
+    "globals": 30,
+    "imports": 17,
+    "max_imports": 9,
+    "methods": 48,
+    "statements": 830,
+    "total": 235,
+    "type_aliases": 0,
+    "variables": 30
+  },
+  "verbosity_flagged_sloc_lines": 5314,
+  "waste": {
+    "single_use_functions": 94,
+    "trivial_wrappers": 1,
+    "unused_variables": 34
+  }
+}

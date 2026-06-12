@@ -1,0 +1,149 @@
+{
+  "ast_grep": {
+    "category_counts": {
+      "slop": 119
+    },
+    "category_weighted": {
+      "slop": 257
+    },
+    "counts": {
+      "chained-dict-get": 2,
+      "chained-none-check": 2,
+      "consecutive-if-same-variable": 2,
+      "deep-dict-access": 2,
+      "defensive-function-isinstance-heavy": 1,
+      "defensive-isinstance-return": 2,
+      "defensive-validator-returnmix": 2,
+      "dict-get-empty-dict-default": 2,
+      "empty-string-or": 1,
+      "exp-flat-guard-regex": 3,
+      "exp-guard-func": 4,
+      "exp-guardy-func": 6,
+      "exp-size-only": 33,
+      "get-then-none-check": 2,
+      "go-style-err-tuple-return": 8,
+      "if-not-guard": 11,
+      "isinstance-bool-exclusion": 2,
+      "multiple-isinstance-or": 2,
+      "nested-if-no-else": 6,
+      "redundant-return-none": 7,
+      "repeated-if-continue": 1,
+      "repeated-validation-calls": 1,
+      "set-from-list-literal": 7,
+      "set-literal-list": 7,
+      "verbose-dict-update": 1,
+      "verbose-list-append-loop": 1,
+      "verbose-or-return": 1
+    },
+    "rules_checked": 214,
+    "violation_lines": 599,
+    "violations": 119,
+    "weighted": 257
+  },
+  "classes": {
+    "attribute_counts_mean": 3.0,
+    "attribute_counts_sum": 3,
+    "count": 1,
+    "method_counts_mean": 12.0,
+    "method_counts_sum": 12
+  },
+  "complexity": {
+    "cc_max": 21,
+    "cc_ratings": {
+      "A": 34,
+      "B": 10,
+      "C": 0,
+      "D": 1,
+      "E": 0,
+      "F": 0
+    },
+    "cc_sum": 148,
+    "mi_min": 14.617089710872461,
+    "mi_ratings": {
+      "A": 1,
+      "B": 1,
+      "C": 0
+    },
+    "mi_sum": 55.096652526989985,
+    "num_complex": 1
+  },
+  "file_count": 2,
+  "functions": {
+    "cc_concentration": 0.4463320463320463,
+    "cc_extreme_count": 0,
+    "cc_high_count": 1,
+    "cc_max": 21,
+    "cc_mean": 3.7837837837837838,
+    "cc_normalized": 0.026757369614512475,
+    "cc_std": 3.764860445511118,
+    "cc_sum": 140,
+    "cc_top20": 0.5071428571428571,
+    "count": 37,
+    "depth_max": 3,
+    "extreme_cc_mean": 0.0,
+    "high_cc_mean": 21.0,
+    "lines_mean": 16.405405405405407,
+    "lines_sum": 607
+  },
+  "graph": {
+    "cyclic_dependency_mass": 0.0,
+    "dependency_entropy": 0.344961464958731,
+    "edge_count": 45,
+    "node_count": 25,
+    "propagation_cost": 0.13833333333333334
+  },
+  "lines": {
+    "comments": 3,
+    "loc": 602,
+    "multi_comment": 0,
+    "single_comment": 2,
+    "total_lines": 718
+  },
+  "lint": {
+    "counts": {
+      "ANN401": 6,
+      "BLE001": 1,
+      "C901": 1,
+      "FURB118": 1,
+      "INP001": 1,
+      "PLC0415": 1,
+      "PLC1901": 3,
+      "PLR0911": 1,
+      "PLR0912": 1,
+      "PLR2004": 1,
+      "PT009": 32,
+      "S404": 1,
+      "S603": 1,
+      "UP022": 1
+    },
+    "errors": 52,
+    "fixable": 0
+  },
+  "redundancy": {
+    "clone_lines": 6,
+    "clone_ratio_sum": 0.016260162601626018,
+    "cloned_sloc_lines": 6,
+    "files_with_clones": 2
+  },
+  "source_files": [],
+  "symbols": {
+    "classes": 1,
+    "expressions": 915,
+    "expressions_top_level": 59,
+    "functions": 25,
+    "globals": 7,
+    "imports": 16,
+    "max_imports": 8,
+    "methods": 12,
+    "statements": 141,
+    "total": 45,
+    "type_aliases": 0,
+    "variables": 7
+  },
+  "verbosity_flagged_sloc_lines": 491,
+  "waste": {
+    "single_use_functions": 17,
+    "trivial_wrappers": 0,
+    "unused_variables": 8
+  }
+}
