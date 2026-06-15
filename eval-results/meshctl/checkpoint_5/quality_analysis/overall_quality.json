@@ -1,0 +1,125 @@
+{
+  "ast_grep": {
+    "category_counts": {},
+    "category_weighted": {},
+    "counts": {},
+    "rules_checked": 214,
+    "violation_lines": 0,
+    "violations": 0,
+    "weighted": 0
+  },
+  "classes": {
+    "attribute_counts_mean": 3.0,
+    "attribute_counts_sum": 3,
+    "count": 1,
+    "method_counts_mean": 33.0,
+    "method_counts_sum": 33
+  },
+  "complexity": {
+    "cc_max": 58,
+    "cc_ratings": {
+      "A": 111,
+      "B": 28,
+      "C": 10,
+      "D": 2,
+      "E": 0,
+      "F": 1
+    },
+    "cc_sum": 724,
+    "mi_min": 0.0,
+    "mi_ratings": {
+      "A": 0,
+      "B": 1,
+      "C": 1
+    },
+    "mi_sum": 15.65993126215865,
+    "num_complex": 13
+  },
+  "file_count": 2,
+  "functions": {
+    "cc_concentration": 0.415132523828176,
+    "cc_extreme_count": 0,
+    "cc_high_count": 12,
+    "cc_max": 25,
+    "cc_mean": 4.826086956521739,
+    "cc_normalized": 0.005627051395447529,
+    "cc_std": 4.252801641577273,
+    "cc_sum": 666,
+    "cc_top20": 0.47897897897897895,
+    "count": 138,
+    "depth_max": 3,
+    "extreme_cc_mean": 0.0,
+    "high_cc_mean": 15.916666666666666,
+    "lines_mean": 28.81159420289855,
+    "lines_sum": 3976
+  },
+  "graph": {
+    "cyclic_dependency_mass": 0.0,
+    "dependency_entropy": 0.44280375413325496,
+    "edge_count": 294,
+    "node_count": 105,
+    "propagation_cost": 0.06254578754578755
+  },
+  "lines": {
+    "comments": 3,
+    "loc": 3810,
+    "multi_comment": 0,
+    "single_comment": 2,
+    "total_lines": 4279
+  },
+  "lint": {
+    "counts": {
+      "ANN401": 31,
+      "BLE001": 1,
+      "C901": 5,
+      "FBT001": 4,
+      "FURB113": 1,
+      "FURB118": 4,
+      "INP001": 1,
+      "PERF401": 1,
+      "PLC0415": 1,
+      "PLC1901": 9,
+      "PLR0904": 1,
+      "PLR0911": 3,
+      "PLR0912": 4,
+      "PLR0914": 1,
+      "PLR2004": 1,
+      "PT009": 184,
+      "S404": 1,
+      "S603": 1,
+      "SIM102": 1,
+      "UP022": 1
+    },
+    "errors": 256,
+    "fixable": 0
+  },
+  "redundancy": {
+    "clone_lines": 270,
+    "clone_ratio_sum": 0.1443850267379679,
+    "cloned_sloc_lines": 270,
+    "files_with_clones": 2
+  },
+  "source_files": [
+    "meshctl.py"
+  ],
+  "symbols": {
+    "classes": 1,
+    "expressions": 5390,
+    "expressions_top_level": 332,
+    "functions": 105,
+    "globals": 13,
+    "imports": 17,
+    "max_imports": 9,
+    "methods": 33,
+    "statements": 551,
+    "total": 152,
+    "type_aliases": 0,
+    "variables": 13
+  },
+  "verbosity_flagged_sloc_lines": 270,
+  "waste": {
+    "single_use_functions": 54,
+    "trivial_wrappers": 0,
+    "unused_variables": 19
+  }
+}

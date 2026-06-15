@@ -1,0 +1,5 @@
+[
+  "mesh-resource-management/add-meshctl-mesh-crud",
+  "mesh-resource-management/add-access-security-model",
+  "mesh-resource-management/add-mesh-lifecycle-topology"
+]

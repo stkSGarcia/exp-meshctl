@@ -1,0 +1,5 @@
+[
+  "mesh-resource-management/add-access-security-model",
+  "vault-resource-management/add-vault-resource-management",
+  "mesh-resource-management/add-meshctl-mesh-crud"
+]

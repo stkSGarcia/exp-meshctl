@@ -1,0 +1,5 @@
+[
+  "one-shot-operations/add-one-shot-operations",
+  "mesh-resource-management/add-mesh-lifecycle-topology",
+  "mesh-resource-management/add-access-security-model"
+]
