@@ -1,0 +1,5 @@
+[
+  "mesh-resource-management/add-meshctl-mesh-crud",
+  "vault-resource-management/add-vault-resource-management",
+  "runtime-migration-strategies/add-runtime-migration-strategies"
+]
