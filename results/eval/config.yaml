@@ -1,8 +1,0 @@
-problems:
-  - meshctl
-model:
-  name: codex-gpt5.5
-thinking: high
-prompt_path: external
-agent:
-  type: external
