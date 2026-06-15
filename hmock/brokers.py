@@ -10,6 +10,8 @@ from __future__ import annotations
 import ast
 import os
 import re
+import struct
+from concurrent import futures
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping
@@ -20,8 +22,25 @@ FALSE_VALUES = {"0", "false", "no", "off", ""}
 DEFAULT_KAFKA_BROKERS = "kafka:9092"
 DEFAULT_KAFKA_CLIENT_ID = "hmock"
 DEFAULT_AMQP_URL = "amqp://guest:guest@rabbitmq:5672"
+DEFAULT_GRPC_HOST = "0.0.0.0"
+DEFAULT_GRPC_PORT = 50051
 TEMPLATE_RE = re.compile(r"{{\s*\.?([A-Za-z_][A-Za-z0-9_]*)\s*}}")
+HEADER_GET_RE = re.compile(r'{{\s*\.([A-Za-z_][A-Za-z0-9_]*)\.Get\s+"([^"]+)"\s*}}')
 CONDITION_VAR_RE = re.compile(r"\.([A-Za-z_][A-Za-z0-9_]*)")
+
+
+class HeaderMap:
+    def __init__(self, values: Mapping[str, Any] | None = None) -> None:
+        self._values = {
+            str(key).lower(): str(value)
+            for key, value in (values or {}).items()
+        }
+
+    def Get(self, key: str) -> str:
+        return self._values.get(key.lower(), "")
+
+    def as_dict(self) -> dict[str, str]:
+        return dict(self._values)
 
 
 @dataclass(frozen=True)
@@ -96,10 +115,33 @@ class AMQPConfig:
 
 
 @dataclass(frozen=True)
+class GRPCConfig:
+    enabled: bool = False
+    host: str = DEFAULT_GRPC_HOST
+    port: int = DEFAULT_GRPC_PORT
+    descriptor_set_paths: tuple[Path, ...] = ()
+
+    @classmethod
+    def from_env(cls, env: Mapping[str, str] | None = None) -> GRPCConfig:
+        values = os.environ if env is None else env
+        templates_dir = Path(first_non_empty(values.get("HM_TEMPLATES_DIR"), "."))
+        return cls(
+            enabled=parse_bool(values.get("HM_GRPC_ENABLED"), default=False),
+            host=first_non_empty(values.get("HM_GRPC_HOST"), DEFAULT_GRPC_HOST),
+            port=parse_int(values.get("HM_GRPC_PORT"), default=DEFAULT_GRPC_PORT),
+            descriptor_set_paths=parse_descriptor_set_paths(
+                values.get("HM_GRPC_DESCRIPTOR_SET_PATHS", ""),
+                templates_dir,
+            ),
+        )
+
+
+@dataclass(frozen=True)
 class PublishKafkaAction:
     topic: str
     payload: str | None = None
     payload_from_file: str | None = None
+    order: int = 0
 
 
 @dataclass(frozen=True)
@@ -108,9 +150,28 @@ class PublishAMQPAction:
     routing_key: str
     payload: str | None = None
     payload_from_file: str | None = None
+    order: int = 0
 
 
-BrokerAction = PublishKafkaAction | PublishAMQPAction | Callable[[dict[str, Any]], Any]
+@dataclass(frozen=True)
+class ReplyHTTPAction:
+    status_code: str = "200"
+    content_type: str = "application/json"
+    body: str | None = ""
+    body_from_file: str | None = None
+    headers: Mapping[str, str] = field(default_factory=dict)
+    order: int = 0
+
+
+@dataclass(frozen=True)
+class ReplyGRPCAction:
+    payload: str | None = None
+    payload_from_file: str | None = None
+    headers: Mapping[str, str] = field(default_factory=dict)
+    order: int = 0
+
+
+BrokerAction = PublishKafkaAction | PublishAMQPAction | ReplyHTTPAction | ReplyGRPCAction | Callable[[dict[str, Any]], Any]
 
 
 @dataclass(frozen=True)
@@ -130,20 +191,41 @@ class AMQPExpectation:
 
 
 @dataclass(frozen=True)
+class GRPCExpectation:
+    service: str
+    method: str
+    condition: str | bool | None = None
+    behaviors: tuple[BrokerAction, ...] = ()
+
+
+@dataclass(frozen=True)
 class LoadedMocks:
     kafka: tuple[KafkaExpectation, ...] = ()
     amqp: tuple[AMQPExpectation, ...] = ()
+    grpc: tuple[GRPCExpectation, ...] = ()
     base_dir: Path = Path(".")
 
     @property
     def kafka_topics(self) -> tuple[str, ...]:
         return tuple(dict.fromkeys(expectation.topic for expectation in self.kafka))
 
+    @property
+    def requires_grpc_descriptors(self) -> bool:
+        return bool(self.grpc) or any(
+            isinstance(behavior, ReplyGRPCAction)
+            for expectation in (*self.kafka, *self.amqp, *self.grpc)
+            for behavior in expectation.behaviors
+        )
+
 
 class MockValidationError(ValueError):
     def __init__(self, errors: list[dict[str, str]]) -> None:
         self.errors = sorted(errors, key=lambda item: item["field"])
         super().__init__("mock validation failed")
+
+
+class GRPCDescriptorError(ValueError):
+    pass
 
 
 class InMemoryKafkaBroker:
@@ -310,6 +392,15 @@ def parse_bool(value: str | None, *, default: bool) -> bool:
     return default
 
 
+def parse_int(value: str | None, *, default: int) -> int:
+    if value in (None, ""):
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
 def first_non_empty(value: str | None, fallback: str) -> str:
     if value is None or value == "":
         return fallback
@@ -319,6 +410,17 @@ def first_non_empty(value: str | None, fallback: str) -> str:
 def parse_broker_list(value: str) -> tuple[str, ...]:
     brokers = tuple(item.strip() for item in value.split(",") if item.strip())
     return brokers or (DEFAULT_KAFKA_BROKERS,)
+
+
+def parse_descriptor_set_paths(value: str, base_dir: Path) -> tuple[Path, ...]:
+    paths: list[Path] = []
+    for item in value.split(","):
+        stripped = item.strip()
+        if not stripped:
+            continue
+        path = Path(stripped)
+        paths.append(path if path.is_absolute() else base_dir / path)
+    return tuple(paths)
 
 
 def load_mock_definitions(
@@ -333,6 +435,7 @@ def load_mock_definitions(
 
     kafka: list[KafkaExpectation] = []
     amqp: list[AMQPExpectation] = []
+    grpc: list[GRPCExpectation] = []
     errors: list[dict[str, str]] = []
     for index, document in enumerate(document_list):
         if not isinstance(document, Mapping):
@@ -344,15 +447,17 @@ def load_mock_definitions(
                 kafka.append(expectation)
             elif isinstance(expectation, AMQPExpectation):
                 amqp.append(expectation)
+            elif isinstance(expectation, GRPCExpectation):
+                grpc.append(expectation)
         except MockValidationError as exc:
             errors.extend(exc.errors)
 
     if errors:
         raise MockValidationError(errors)
-    return LoadedMocks(tuple(kafka), tuple(amqp), Path(base_dir))
+    return LoadedMocks(tuple(kafka), tuple(amqp), tuple(grpc), Path(base_dir))
 
 
-def parse_expectation(document: Mapping[str, Any], index: int) -> KafkaExpectation | AMQPExpectation | None:
+def parse_expectation(document: Mapping[str, Any], index: int) -> KafkaExpectation | AMQPExpectation | GRPCExpectation | None:
     expect = document.get("expect")
     if not isinstance(expect, Mapping):
         return None
@@ -401,6 +506,29 @@ def parse_expectation(document: Mapping[str, Any], index: int) -> KafkaExpectati
             condition=condition,
             behaviors=behaviors,
         )
+    if "grpc" in expect:
+        grpc = expect["grpc"]
+        if not isinstance(grpc, Mapping):
+            raise MockValidationError(
+                [validation_error(f"mocks[{index}].expect.grpc", "gRPC expectation must be an object", "invalid")]
+            )
+        errors = require_strings(
+            [
+                (grpc.get("service"), f"mocks[{index}].expect.grpc.service"),
+                (grpc.get("method"), f"mocks[{index}].expect.grpc.method"),
+            ]
+        )
+        if errors:
+            raise MockValidationError(errors)
+        if grpc.get("condition") is not None:
+            condition = grpc.get("condition")
+        behaviors = parse_behaviors(document.get("behaviors", document.get("actions", [])), f"mocks[{index}].behaviors")
+        return GRPCExpectation(
+            service=grpc["service"],
+            method=grpc["method"],
+            condition=condition,
+            behaviors=behaviors,
+        )
     return None
 
 
@@ -427,6 +555,7 @@ def parse_behaviors(value: Any, path: str) -> tuple[BrokerAction, ...]:
 
 
 def parse_behavior(item: Mapping[str, Any], path: str) -> BrokerAction | None:
+    order = parse_int(str(item.get("order")) if item.get("order") is not None else None, default=0)
     if "publish_kafka" in item:
         value = require_mapping(item["publish_kafka"], f"{path}.publish_kafka", "Kafka publish must be an object")
         errors = require_strings([(value.get("topic"), f"{path}.publish_kafka.topic")])
@@ -440,6 +569,7 @@ def parse_behavior(item: Mapping[str, Any], path: str) -> BrokerAction | None:
                 value.get("payload_from_file"),
                 f"{path}.publish_kafka.payload_from_file",
             ),
+            order=order,
         )
     if "publish_amqp" in item:
         value = require_mapping(item["publish_amqp"], f"{path}.publish_amqp", "AMQP publish must be an object")
@@ -460,6 +590,41 @@ def parse_behavior(item: Mapping[str, Any], path: str) -> BrokerAction | None:
                 value.get("payload_from_file"),
                 f"{path}.publish_amqp.payload_from_file",
             ),
+            order=order,
+        )
+    if "reply_http" in item:
+        value = require_mapping(item["reply_http"], f"{path}.reply_http", "HTTP reply must be an object")
+        has_body = value.get("body") is not None or value.get("payload") is not None
+        has_file = value.get("body_from_file") is not None or value.get("payload_from_file") is not None
+        if has_body and has_file:
+            raise MockValidationError(
+                [validation_error(f"{path}.reply_http", "at most one inline body or body_from_file is allowed", "invalid")]
+            )
+        headers = string_map(value.get("headers", {}), f"{path}.reply_http.headers")
+        body_value = value.get("body", value.get("payload", ""))
+        file_value = value.get("body_from_file", value.get("payload_from_file"))
+        return ReplyHTTPAction(
+            status_code=str(value.get("status_code", value.get("status", "200"))),
+            content_type=first_non_empty(string_or_none(value.get("content_type"), f"{path}.reply_http.content_type"), "application/json"),
+            body=string_or_none(body_value, f"{path}.reply_http.body"),
+            body_from_file=string_or_none(file_value, f"{path}.reply_http.body_from_file"),
+            headers=headers,
+            order=order,
+        )
+    if "reply_grpc" in item:
+        value = require_mapping(item["reply_grpc"], f"{path}.reply_grpc", "gRPC reply must be an object")
+        errors = payload_source_errors(value, f"{path}.reply_grpc")
+        if errors:
+            raise MockValidationError(errors)
+        headers = string_map(value.get("headers", {}), f"{path}.reply_grpc.headers")
+        return ReplyGRPCAction(
+            payload=string_or_none(value.get("payload"), f"{path}.reply_grpc.payload"),
+            payload_from_file=string_or_none(
+                value.get("payload_from_file"),
+                f"{path}.reply_grpc.payload_from_file",
+            ),
+            headers=headers,
+            order=order,
         )
     return None
 
@@ -489,6 +654,16 @@ def render_payload(
 
 
 def render_template(template: str, context: Mapping[str, Any]) -> str:
+    def replace_header_get(match: re.Match[str]) -> str:
+        value = context.get(match.group(1))
+        if hasattr(value, "Get"):
+            return str(value.Get(match.group(2)))
+        if isinstance(value, Mapping):
+            return str(value.get(match.group(2), value.get(match.group(2).lower(), "")))
+        return ""
+
+    template = HEADER_GET_RE.sub(replace_header_get, template)
+
     def replace(match: re.Match[str]) -> str:
         return str(context.get(match.group(1), ""))
 
@@ -570,5 +745,292 @@ def string_or_none(value: Any, path: str) -> str | None:
     return value
 
 
+def string_map(value: Any, path: str) -> dict[str, str]:
+    if not isinstance(value, Mapping):
+        raise MockValidationError([validation_error(path, "Field must be a string map", "invalid")])
+    errors: list[dict[str, str]] = []
+    result: dict[str, str] = {}
+    for key, item in value.items():
+        if not isinstance(key, str) or not isinstance(item, str):
+            errors.append(validation_error(path, "Field must be a string map", "invalid"))
+            continue
+        result[key] = item
+    if errors:
+        raise MockValidationError(errors)
+    return result
+
+
 def validation_error(field: str, message: str, kind: str) -> dict[str, str]:
     return {"field": field, "message": message, "type": kind}
+
+
+def validate_grpc_startup(config: GRPCConfig, mocks: LoadedMocks) -> None:
+    if not config.enabled or not mocks.requires_grpc_descriptors:
+        return
+    if not config.descriptor_set_paths:
+        raise MockValidationError(
+            [validation_error("HM_GRPC_DESCRIPTOR_SET_PATHS", "descriptor-set paths are required for gRPC mocks", "required")]
+        )
+    load_grpc_descriptors(config.descriptor_set_paths, mocks)
+
+
+class GRPCDescriptorRegistry:
+    def __init__(self, pool: Any, message_factory: Any, json_format: Any) -> None:
+        self.pool = pool
+        self.message_factory = message_factory
+        self.json_format = json_format
+
+    def method_descriptors(self, service: str, method: str) -> tuple[Any, Any]:
+        service_descriptor = self.pool.FindServiceByName(service)
+        method_descriptor = service_descriptor.FindMethodByName(method)
+        if method_descriptor is None:
+            raise GRPCDescriptorError(f"unknown gRPC method: {service}/{method}")
+        return method_descriptor.input_type, method_descriptor.output_type
+
+    def decode_request_json(self, service: str, method: str, payload: bytes) -> str:
+        input_type, _ = self.method_descriptors(service, method)
+        message_class = self.message_factory.GetMessageClass(input_type)
+        message = message_class()
+        message.ParseFromString(payload)
+        return self.json_format.MessageToJson(message, preserving_proto_field_name=True)
+
+    def encode_response_json(self, service: str, method: str, payload_json: str) -> bytes:
+        _, output_type = self.method_descriptors(service, method)
+        message_class = self.message_factory.GetMessageClass(output_type)
+        message = message_class()
+        self.json_format.Parse(payload_json, message)
+        return message.SerializeToString()
+
+
+def load_grpc_descriptors(
+    descriptor_set_paths: Iterable[Path],
+    mocks: LoadedMocks | None = None,
+) -> GRPCDescriptorRegistry:
+    try:
+        from google.protobuf import descriptor_pb2, descriptor_pool, json_format, message_factory
+    except Exception as exc:  # pragma: no cover - depends on optional install
+        raise MockValidationError(
+            [validation_error("HM_GRPC_DESCRIPTOR_SET_PATHS", "protobuf support is not installed", "invalid")]
+        ) from exc
+
+    pool = descriptor_pool.DescriptorPool()
+    for path in descriptor_set_paths:
+        try:
+            raw = path.read_bytes()
+            descriptor_set = descriptor_pb2.FileDescriptorSet()
+            descriptor_set.ParseFromString(raw)
+            for file_descriptor in descriptor_set.file:
+                pool.Add(file_descriptor)
+        except Exception as exc:
+            raise MockValidationError(
+                [validation_error(str(path), "descriptor-set file is missing, unreadable, or invalid", "invalid")]
+            ) from exc
+
+    registry = GRPCDescriptorRegistry(pool, message_factory, json_format)
+    if mocks is not None:
+        for expectation in mocks.grpc:
+            try:
+                registry.method_descriptors(expectation.service, expectation.method)
+            except Exception as exc:
+                raise MockValidationError(
+                    [
+                        validation_error(
+                            f"{expectation.service}/{expectation.method}",
+                            "descriptor set does not define the configured gRPC service and method",
+                            "invalid",
+                        )
+                    ]
+                ) from exc
+    return registry
+
+
+def frame_grpc_message(payload: bytes, *, compressed: bool = False) -> bytes:
+    return struct.pack(">BI", 1 if compressed else 0, len(payload)) + payload
+
+
+def unframe_grpc_message(data: bytes) -> tuple[bool, bytes]:
+    if len(data) < 5:
+        raise ValueError("gRPC frame is too short")
+    compressed, length = struct.unpack(">BI", data[:5])
+    payload = data[5:]
+    if len(payload) != length:
+        raise ValueError("gRPC frame length does not match payload")
+    return bool(compressed), payload
+
+
+def decode_grpc_payload_json(
+    framed_body: bytes,
+    service: str,
+    method: str,
+    registry: GRPCDescriptorRegistry | None = None,
+) -> str:
+    compressed, payload = unframe_grpc_message(framed_body)
+    if compressed:
+        raise ValueError("compressed gRPC messages are not supported")
+    if registry is None:
+        return payload.decode("utf-8")
+    return registry.decode_request_json(service, method, payload)
+
+
+def encode_grpc_payload_json(
+    payload_json: str,
+    service: str,
+    method: str,
+    registry: GRPCDescriptorRegistry | None = None,
+) -> bytes:
+    if registry is None:
+        payload = payload_json.encode("utf-8")
+    else:
+        payload = registry.encode_response_json(service, method, payload_json)
+    return frame_grpc_message(payload)
+
+
+def build_grpc_context(
+    service: str,
+    method: str,
+    framed_body: bytes,
+    headers: Mapping[str, Any] | None = None,
+    registry: GRPCDescriptorRegistry | None = None,
+) -> dict[str, Any]:
+    return {
+        "GRPCService": service,
+        "GRPCMethod": method,
+        "GRPCPayload": decode_grpc_payload_json(framed_body, service, method, registry),
+        "GRPCHeader": HeaderMap(headers),
+    }
+
+
+def render_grpc_reply(
+    action: ReplyGRPCAction,
+    context: Mapping[str, Any],
+    base_dir: Path,
+    service: str,
+    method: str,
+    registry: GRPCDescriptorRegistry | None = None,
+) -> dict[str, Any]:
+    rendered_payload = render_payload(action.payload, action.payload_from_file, context, base_dir)
+    headers = {
+        "grpc-status": "0",
+        "grpc-message": "OK",
+        "Content-Type": "application/grpc",
+    }
+    headers.update({key: render_template(value, context) for key, value in action.headers.items()})
+    return {
+        "headers": headers,
+        "body": encode_grpc_payload_json(rendered_payload, service, method, registry),
+    }
+
+
+class GRPCServerAdapter:
+    def __init__(
+        self,
+        config: GRPCConfig,
+        mocks: LoadedMocks,
+        registry: GRPCDescriptorRegistry | None = None,
+    ) -> None:
+        self.config = config
+        self.mocks = mocks
+        self.registry = registry
+        self.started = False
+        self.listen_address: tuple[str, int] | None = None
+        self._server: Any | None = None
+
+    def start(self) -> None:
+        if not self.config.enabled:
+            return
+        validate_grpc_startup(self.config, self.mocks)
+        try:
+            import grpc  # type: ignore
+        except Exception:
+            grpc = None
+        if grpc is not None:
+            server = grpc.server(futures.ThreadPoolExecutor(max_workers=4))
+            server.add_generic_rpc_handlers((self._generic_rpc_handler(grpc),))
+            bound_port = server.add_insecure_port(f"{self.config.host}:{self.config.port}")
+            server.start()
+            self._server = server
+            self.listen_address = (self.config.host, bound_port or self.config.port)
+        else:
+            self.listen_address = (self.config.host, self.config.port)
+        self.started = True
+
+    def stop(self, grace: float | None = None) -> None:
+        if self._server is not None:
+            self._server.stop(grace)
+        self.started = False
+
+    def _generic_rpc_handler(self, grpc_module: Any) -> Any:
+        adapter = self
+
+        class Handler(grpc_module.GenericRpcHandler):
+            def service(self, handler_call_details: Any) -> Any:
+                service, method = split_grpc_method_path(handler_call_details.method)
+                if not service or not method:
+                    return None
+
+                def unary_unary(request: bytes, context: Any) -> bytes:
+                    response = adapter.handle_unary(
+                        service,
+                        method,
+                        frame_grpc_message(request),
+                        dict(handler_call_details.invocation_metadata or ()),
+                    )
+                    if response is None:
+                        context.set_code(grpc_module.StatusCode.NOT_FOUND)
+                        context.set_details("No matching gRPC mock")
+                        return b""
+                    headers = response["headers"]
+                    metadata = [
+                        (key, value)
+                        for key, value in headers.items()
+                        if key.lower() not in {"content-type", "grpc-status", "grpc-message"}
+                    ]
+                    if metadata:
+                        context.send_initial_metadata(metadata)
+                    _, payload = unframe_grpc_message(response["body"])
+                    return payload
+
+                return grpc_module.unary_unary_rpc_method_handler(
+                    unary_unary,
+                    request_deserializer=lambda value: value,
+                    response_serializer=lambda value: value,
+                )
+
+        return Handler()
+
+    def handle_unary(
+        self,
+        service: str,
+        method: str,
+        framed_body: bytes,
+        headers: Mapping[str, Any] | None = None,
+    ) -> dict[str, Any] | None:
+        context = build_grpc_context(service, method, framed_body, headers, self.registry)
+        for expectation in self.mocks.grpc:
+            if expectation.service != service or expectation.method != method:
+                continue
+            if not evaluate_condition(expectation.condition, context):
+                continue
+            for behavior in sorted(expectation.behaviors, key=behavior_order):
+                if isinstance(behavior, ReplyGRPCAction):
+                    return render_grpc_reply(
+                        behavior,
+                        context,
+                        self.mocks.base_dir,
+                        service,
+                        method,
+                        self.registry,
+                    )
+            return None
+        return None
+
+
+def behavior_order(behavior: BrokerAction) -> int:
+    return int(getattr(behavior, "order", 0))
+
+
+def split_grpc_method_path(path: str) -> tuple[str, str]:
+    parts = path.strip("/").split("/")
+    if len(parts) != 2:
+        return "", ""
+    return parts[0], parts[1]
