@@ -1,0 +1,18 @@
+[
+  {
+    "label": "Runtime Catalog Diagnostics",
+    "tags": ["runtime catalog", "deprecated warnings", "skipped versions"]
+  },
+  {
+    "label": "Strategy Version Rules",
+    "tags": ["migration strategy", "version downgrade", "rolling patch"]
+  },
+  {
+    "label": "Migration Lifecycle",
+    "tags": ["migration state", "stage progression", "completion cleanup"]
+  },
+  {
+    "label": "Operational Safeguards",
+    "tags": ["active restrictions", "rollback handling", "stability status"]
+  }
+]

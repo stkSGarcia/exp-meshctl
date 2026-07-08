@@ -1,0 +1,10 @@
+[
+  {
+    "label": "Command Surface Integration",
+    "tags": ["mesh command", "migrate routing", "operator workflow"]
+  },
+  {
+    "label": "Create Update Enforcement",
+    "tags": ["create validation", "update rules", "resource persistence"]
+  }
+]
