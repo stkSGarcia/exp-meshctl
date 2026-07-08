@@ -1,0 +1,10 @@
+[
+  {
+    "label": "Region Exposure Modes",
+    "tags": ["region expose type", "local connectivity", "exposure separation"]
+  },
+  {
+    "label": "Gateway Security Requirement",
+    "tags": ["gateway transport", "key store required", "regional security"]
+  }
+]

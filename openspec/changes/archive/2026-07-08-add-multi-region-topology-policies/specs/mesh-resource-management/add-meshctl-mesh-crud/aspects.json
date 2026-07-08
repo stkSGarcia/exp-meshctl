@@ -1,0 +1,10 @@
+[
+  {
+    "label": "Lifecycle Output Defaults",
+    "tags": ["create describe output", "placement telemetry", "operational defaults"]
+  },
+  {
+    "label": "Lifecycle Policy Validation",
+    "tags": ["mesh update validation", "regional migration", "policy fields"]
+  }
+]

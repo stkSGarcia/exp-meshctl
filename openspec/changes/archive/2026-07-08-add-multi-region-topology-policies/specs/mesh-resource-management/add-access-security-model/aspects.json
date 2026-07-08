@@ -1,0 +1,10 @@
+[
+  {
+    "label": "Encryption Boundary",
+    "tags": ["inter region encryption", "access isolation", "field path validation"]
+  },
+  {
+    "label": "Key Store Validation",
+    "tags": ["secret reference", "alias filename", "credential stores"]
+  }
+]

@@ -1,0 +1,18 @@
+[
+  {
+    "label": "Operational Output",
+    "tags": ["always present output", "metadata tags", "telemetry probe"]
+  },
+  {
+    "label": "Regional Topology",
+    "tags": ["local region", "remote regions", "relay discovery"]
+  },
+  {
+    "label": "Policy Validation",
+    "tags": ["live migration block", "placement affinity", "extension source"]
+  },
+  {
+    "label": "Refresh And Status",
+    "tags": ["config refresh", "region conditions", "stability rules"]
+  }
+]
