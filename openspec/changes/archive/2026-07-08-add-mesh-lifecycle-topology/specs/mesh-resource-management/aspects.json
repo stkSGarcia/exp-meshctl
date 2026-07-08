@@ -1,0 +1,18 @@
+[
+  {
+    "label": "Update Operation and Merge Semantics",
+    "tags": ["mesh update", "partial merge", "atomic persistence"]
+  },
+  {
+    "label": "Lifecycle Status Reconciliation",
+    "tags": ["scaling transitions", "stopped state", "status conditions"]
+  },
+  {
+    "label": "Network Storage Topology",
+    "tags": ["storage immutability", "ephemeral projection", "storage class"]
+  },
+  {
+    "label": "Replication and Validation Rules",
+    "tags": ["replication factor", "postmerge constraints", "immutable errors"]
+  }
+]

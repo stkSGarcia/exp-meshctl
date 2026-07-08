@@ -1,0 +1,18 @@
+[
+  {
+    "label": "Vault CLI and Persistence",
+    "tags": ["vault commands", "resource store", "json output"]
+  },
+  {
+    "label": "Vault Spec Defaults",
+    "tags": ["mesh reference", "vault name", "update policy"]
+  },
+  {
+    "label": "Vault Validation and Immutability",
+    "tags": ["duplicate identity", "template exclusivity", "immutable fields"]
+  },
+  {
+    "label": "Parent Mesh Status Integration",
+    "tags": ["ready condition", "pending state", "parent stability"]
+  }
+]

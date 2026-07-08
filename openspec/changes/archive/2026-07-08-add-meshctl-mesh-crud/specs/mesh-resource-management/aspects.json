@@ -1,0 +1,18 @@
+[
+  {
+    "label": "CLI Command Surface",
+    "tags": ["command surface", "mesh operations", "resource lifecycle"]
+  },
+  {
+    "label": "Create Input and Defaulting",
+    "tags": ["yaml input", "field defaults", "resource normalization"]
+  },
+  {
+    "label": "Validation and Structured Errors",
+    "tags": ["name validation", "quantity validation", "structured errors"]
+  },
+  {
+    "label": "Persistence and Output Semantics",
+    "tags": ["local store", "json stdout", "sorted summaries"]
+  }
+]

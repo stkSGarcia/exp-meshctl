@@ -1,0 +1,18 @@
+[
+  {
+    "label": "Authentication Defaults and Validation",
+    "tags": ["authentication defaults", "digest algorithms", "credential references"]
+  },
+  {
+    "label": "Permission Role Model",
+    "tags": ["permission roles", "role validation", "duplicate roles"]
+  },
+  {
+    "label": "Encryption Certificate Rules",
+    "tags": ["encryption source", "certificate references", "client modes"]
+  },
+  {
+    "label": "Access Output and Error Ordering",
+    "tags": ["access projection", "json errors", "deterministic ordering"]
+  }
+]

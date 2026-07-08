@@ -1,0 +1,18 @@
+[
+  {
+    "label": "Command Surface",
+    "tags": ["cli verbs", "resource listing", "describe output"]
+  },
+  {
+    "label": "Creation Validation",
+    "tags": ["mesh references", "snapshot ownership", "field exclusivity"]
+  },
+  {
+    "label": "Run Lifecycle",
+    "tags": ["state transitions", "inline execution", "unstable meshes"]
+  },
+  {
+    "label": "Safety Constraints",
+    "tags": ["spec immutability", "delete protection", "status projection"]
+  }
+]
