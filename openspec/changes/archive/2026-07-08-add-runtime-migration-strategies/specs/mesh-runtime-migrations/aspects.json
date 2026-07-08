@@ -1,0 +1,18 @@
+[
+  {
+    "label": "Runtime Catalog Validation",
+    "tags": ["runtime catalog", "version status", "deprecated warnings"]
+  },
+  {
+    "label": "Migration Strategy Rules",
+    "tags": ["strategy validation", "version changes", "downgrade prevention"]
+  },
+  {
+    "label": "Migration Lifecycle Command",
+    "tags": ["migration state", "stage advancement", "rollback handling"]
+  },
+  {
+    "label": "Stability And Errors",
+    "tags": ["stable status", "active guards", "error accumulation"]
+  }
+]
