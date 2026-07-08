@@ -1,0 +1,10 @@
+[
+  {
+    "label": "Shell Command Surface",
+    "tags": ["mesh shell", "cli lookup", "command routing"]
+  },
+  {
+    "label": "Shell Result Handling",
+    "tags": ["bare output", "missing mesh", "unexposed rejection"]
+  }
+]

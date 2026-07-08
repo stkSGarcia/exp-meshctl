@@ -1,0 +1,10 @@
+[
+  {
+    "label": "Resource Lifecycle Output",
+    "tags": ["create response", "describe response", "computed status"]
+  },
+  {
+    "label": "Update Validation",
+    "tags": ["partial updates", "connectivity fields", "lifecycle checks"]
+  }
+]

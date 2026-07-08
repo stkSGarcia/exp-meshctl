@@ -1,0 +1,18 @@
+[
+  {
+    "label": "Exposure Configuration",
+    "tags": ["exposure modes", "field constraints", "port defaults"]
+  },
+  {
+    "label": "Connection Status",
+    "tags": ["connection details", "status projection", "https endpoints"]
+  },
+  {
+    "label": "Management Endpoint",
+    "tags": ["management access", "admin endpoint", "immutable toggle"]
+  },
+  {
+    "label": "Validation Errors",
+    "tags": ["json errors", "required fields", "sorted diagnostics"]
+  }
+]
