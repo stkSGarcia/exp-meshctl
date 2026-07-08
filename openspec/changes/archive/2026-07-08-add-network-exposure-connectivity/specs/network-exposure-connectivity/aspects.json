@@ -1,0 +1,18 @@
+[
+  {
+    "label": "Exposure Configuration",
+    "tags": ["mesh exposure", "gateway mode", "port routing"]
+  },
+  {
+    "label": "Derived Connection Status",
+    "tags": ["connection details", "status projection", "https endpoints"]
+  },
+  {
+    "label": "Management Endpoint",
+    "tags": ["management access", "immutable flag", "admin endpoint"]
+  },
+  {
+    "label": "Shell Command Errors",
+    "tags": ["shell command", "json errors", "missing exposure"]
+  }
+]
