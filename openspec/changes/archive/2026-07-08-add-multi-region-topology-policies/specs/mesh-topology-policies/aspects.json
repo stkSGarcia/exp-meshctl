@@ -1,0 +1,18 @@
+[
+  {
+    "label": "Metadata And Defaults",
+    "tags": ["metadata tags", "default output", "telemetry status"]
+  },
+  {
+    "label": "Region Topology",
+    "tags": ["local region", "remote regions", "relay discovery"]
+  },
+  {
+    "label": "Validation And Security",
+    "tags": ["encryption stores", "migration restriction", "warning behavior"]
+  },
+  {
+    "label": "Operational References",
+    "tags": ["placement affinity", "config refresh", "extension sources"]
+  }
+]
