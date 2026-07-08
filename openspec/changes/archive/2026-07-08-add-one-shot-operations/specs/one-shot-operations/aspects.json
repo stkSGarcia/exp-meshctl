@@ -1,0 +1,18 @@
+[
+  {
+    "label": "CLI Resource Surface",
+    "tags": ["one-shot commands", "resource crud", "json output"]
+  },
+  {
+    "label": "Creation Validation",
+    "tags": ["mesh references", "spec normalization", "quantity checks"]
+  },
+  {
+    "label": "Execution Lifecycle",
+    "tags": ["run transitions", "terminal phases", "unstable meshes"]
+  },
+  {
+    "label": "Integrity Protection",
+    "tags": ["spec immutability", "snapshot dependencies", "status projection"]
+  }
+]

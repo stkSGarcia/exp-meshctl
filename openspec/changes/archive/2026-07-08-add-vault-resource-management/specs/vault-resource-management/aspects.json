@@ -1,0 +1,18 @@
+[
+  {
+    "label": "Vault CLI Surface",
+    "tags": ["vault commands", "yaml inputs", "json outputs"]
+  },
+  {
+    "label": "Vault Spec Validation",
+    "tags": ["mesh references", "template exclusivity", "policy defaults"]
+  },
+  {
+    "label": "Vault Identity Updates",
+    "tags": ["partial vault merge", "immutable identity", "duplicate vaults"]
+  },
+  {
+    "label": "Parent Derived Status",
+    "tags": ["ready condition", "pending state", "mesh stability"]
+  }
+]

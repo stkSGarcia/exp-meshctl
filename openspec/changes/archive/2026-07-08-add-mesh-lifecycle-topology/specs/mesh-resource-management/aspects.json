@@ -1,0 +1,18 @@
+[
+  {
+    "label": "Update Merge Semantics",
+    "tags": ["update command", "partial merge", "atomic updates"]
+  },
+  {
+    "label": "Lifecycle Reconciliation",
+    "tags": ["scaling transitions", "stop resume", "condition reconciliation"]
+  },
+  {
+    "label": "Network Topology Fields",
+    "tags": ["storage immutability", "ephemeral projection", "replication factor"]
+  },
+  {
+    "label": "Status and Output Contracts",
+    "tags": ["status instances", "public projection", "error contracts"]
+  }
+]

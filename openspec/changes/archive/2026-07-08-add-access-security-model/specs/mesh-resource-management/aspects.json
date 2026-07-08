@@ -1,0 +1,18 @@
+[
+  {
+    "label": "Authentication Access Rules",
+    "tags": ["digest algorithms", "credential references", "disabled authentication"]
+  },
+  {
+    "label": "Permission Role Validation",
+    "tags": ["permission roles", "role requirements", "duplicate roles"]
+  },
+  {
+    "label": "Encryption Mode Validation",
+    "tags": ["certificate sources", "client modes", "reference constraints"]
+  },
+  {
+    "label": "Access Output Contracts",
+    "tags": ["access defaults", "conditional output", "sorted errors"]
+  }
+]

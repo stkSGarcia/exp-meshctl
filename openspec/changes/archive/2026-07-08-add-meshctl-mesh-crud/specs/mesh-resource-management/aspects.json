@@ -1,0 +1,18 @@
+[
+  {
+    "label": "CLI Command Surface",
+    "tags": ["mesh commands", "yaml create", "resource operations"]
+  },
+  {
+    "label": "Validation and Defaulting",
+    "tags": ["name rules", "quantity validation", "field defaults"]
+  },
+  {
+    "label": "Persistence Lifecycle",
+    "tags": ["local store", "duplicate prevention", "not found"]
+  },
+  {
+    "label": "JSON Output Contracts",
+    "tags": ["stdout json", "error schema", "list summaries"]
+  }
+]
