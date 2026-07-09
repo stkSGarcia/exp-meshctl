@@ -1,0 +1,18 @@
+[
+  {
+    "label": "Command Surface",
+    "tags": ["mesh commands", "crud operations", "yaml create"]
+  },
+  {
+    "label": "Validation and Errors",
+    "tags": ["field validation", "structured errors", "autoscaling forbidden"]
+  },
+  {
+    "label": "Defaulting and Persistence",
+    "tags": ["resource defaults", "mesh storage", "running status"]
+  },
+  {
+    "label": "Output Contracts",
+    "tags": ["stdout json", "list summaries", "delete confirmation"]
+  }
+]

@@ -1,0 +1,18 @@
+[
+  {
+    "label": "Command Surface",
+    "tags": ["resource commands", "cli routing", "json listing"]
+  },
+  {
+    "label": "Creation Validation",
+    "tags": ["mesh references", "snapshot ownership", "scope fields"]
+  },
+  {
+    "label": "Execution Lifecycle",
+    "tags": ["run transitions", "terminal phases", "unstable mesh"]
+  },
+  {
+    "label": "Update Protection",
+    "tags": ["spec immutability", "delete conflicts", "status projection"]
+  }
+]

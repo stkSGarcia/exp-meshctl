@@ -1,0 +1,18 @@
+[
+  {
+    "label": "Update Merge Behavior",
+    "tags": ["partial update", "nested merge", "atomic save"]
+  },
+  {
+    "label": "Lifecycle Status Transitions",
+    "tags": ["scaling state", "stop resume", "status conditions"]
+  },
+  {
+    "label": "Network Topology",
+    "tags": ["storage mode", "replication factor", "immutable size"]
+  },
+  {
+    "label": "Error and Output Contracts",
+    "tags": ["json output", "immutable errors", "post merge"]
+  }
+]

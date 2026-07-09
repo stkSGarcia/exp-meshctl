@@ -1,0 +1,18 @@
+[
+  {
+    "label": "Vault Command Surface",
+    "tags": ["vault commands", "crud workflow", "yaml input"]
+  },
+  {
+    "label": "Vault Resource Model",
+    "tags": ["spec defaults", "mesh reference", "template choice"]
+  },
+  {
+    "label": "Validation and Identity",
+    "tags": ["duplicate identity", "immutable fields", "atomic update"]
+  },
+  {
+    "label": "Status and Output",
+    "tags": ["parent status", "ready condition", "list summary"]
+  }
+]

@@ -1,0 +1,18 @@
+[
+  {
+    "label": "Access Defaults",
+    "tags": ["access defaults", "stored upgrade", "optional fields"]
+  },
+  {
+    "label": "Authentication Rules",
+    "tags": ["digest algorithm", "credential reference", "disabled auth"]
+  },
+  {
+    "label": "Permissions Model",
+    "tags": ["permission roles", "role validation", "duplicate roles"]
+  },
+  {
+    "label": "Encryption and Errors",
+    "tags": ["certificate sources", "client mode", "sorted errors"]
+  }
+]
