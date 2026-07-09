@@ -1,0 +1,18 @@
+[
+  {
+    "label": "Topology Model",
+    "tags": ["regional topology", "local exposure", "remote regions"]
+  },
+  {
+    "label": "Security Validation",
+    "tags": ["region encryption", "key stores", "trust warnings"]
+  },
+  {
+    "label": "Operational Status",
+    "tags": ["telemetry probe", "placement defaults", "region conditions"]
+  },
+  {
+    "label": "Lifecycle Policies",
+    "tags": ["config refresh", "migration restriction", "extension references"]
+  }
+]
