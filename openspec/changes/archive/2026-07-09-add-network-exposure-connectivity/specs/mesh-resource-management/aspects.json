@@ -1,0 +1,10 @@
+[
+  {
+    "label": "Shell Command Surface",
+    "tags": ["mesh shell", "endpoint lookup", "cli operation"]
+  },
+  {
+    "label": "Shell Error Handling",
+    "tags": ["missing mesh", "unexposed mesh", "json errors"]
+  }
+]

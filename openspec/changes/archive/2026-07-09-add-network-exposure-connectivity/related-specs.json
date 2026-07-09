@@ -1,0 +1,6 @@
+[
+  "mesh-resource-management/add-meshctl-mesh-crud",
+  "mesh-resource-management/add-mesh-lifecycle-topology",
+  "one-shot-operations/add-one-shot-operations",
+  "vault-resource-management/add-vault-resource-management"
+]

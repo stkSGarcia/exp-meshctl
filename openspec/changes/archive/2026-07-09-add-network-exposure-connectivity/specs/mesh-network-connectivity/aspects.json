@@ -1,0 +1,18 @@
+[
+  {
+    "label": "Exposure Configuration",
+    "tags": ["optional exposure", "access modes", "external reachability"]
+  },
+  {
+    "label": "Mode Field Validation",
+    "tags": ["field allowlists", "forbidden paths", "type validation"]
+  },
+  {
+    "label": "Connection Status Details",
+    "tags": ["computed endpoints", "https protocol", "status projection"]
+  },
+  {
+    "label": "Management Endpoint Control",
+    "tags": ["admin endpoint", "immutable flag", "management status"]
+  }
+]
